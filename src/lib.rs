@@ -7,6 +7,7 @@ use iced::{Element, Task};
 use uuid::Uuid;
 
 use self::state::{AppState, QueueGenerationResult};
+use crate::models::PartOfSpeech;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -17,14 +18,14 @@ pub enum Message {
     ToggleWordExpand(Uuid),
 
     // Meaning operations
-    CreateMeaning(Uuid, String, String), // word_id, definition, pos
-    SaveMeaning(Uuid),                   // word_id (create from input)
-    ToggleMeaning(Uuid),                 // meaning_id
-    CancelMeaningInput(Uuid),            // word_id
-    ToggleMeaningInput(Uuid),            // word_id
+    CreateMeaning(Uuid, String, PartOfSpeech), // word_id, definition, pos
+    SaveMeaning(Uuid),                         // word_id (create from input)
+    ToggleMeaning(Uuid),                       // meaning_id
+    CancelMeaningInput(Uuid),                  // word_id
+    ToggleMeaningInput(Uuid),                  // word_id
     DeleteMeaning(Uuid),
     MeaningDefInputChanged(Uuid, String), // word_id, definition
-    MeaningPosInputChanged(Uuid, String), // word_id, pos
+    MeaningPosSelected(Uuid, PartOfSpeech), // word_id, pos
 
     // Tag operations
     CreateTag(String),
@@ -34,6 +35,14 @@ pub enum Message {
     WordsMeaningToggleTagDropdown(Uuid), // meaning_id
     WordsMeaningTagSearchChanged(String),
     AddTagToMeaningSearch(Uuid, String), // meaning_id, tag_name
+
+    // Batch tag operations for selected meanings
+    BatchAddTagToSelectedMeanings(Uuid),      // tag_id
+    BatchRemoveTagFromSelectedMeanings(Uuid), // tag_id
+    ToggleMeaningsAddTagDropdown,             // Toggle Add Tag dropdown
+    ToggleMeaningsRemoveTagDropdown,          // Toggle Remove Tag dropdown
+    MeaningsTagSearchChanged(String),         // Search for add
+    MeaningsTagRemoveSearchChanged(String),   // Search for remove
 
     // Cloze operations
     DeleteCloze(Uuid),
@@ -113,9 +122,11 @@ impl App {
             &self.state.selection.selected_meaning_ids,
             &self.state.ui.words.expanded_word_ids,
             &self.state.ui.words.meaning_inputs,
-            &self.state.ui.words.cloze_inputs,
             &self.state.ui.words.active_tag_dropdown,
             &self.state.ui.words.tag_search_input,
+            &self.state.ui.words.meanings_tag_dropdown_state,
+            &self.state.ui.words.meanings_tag_search_input,
+            &self.state.ui.words.meanings_tag_remove_search_input,
         );
 
         let right_panel = ui::queue_view(

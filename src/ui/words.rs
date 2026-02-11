@@ -1,9 +1,11 @@
 use crate::Message;
+use crate::models::PartOfSpeech;
 use crate::registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry};
-use crate::state::ui::MeaningInputState;
+use crate::state::ui::{MeaningInputState, TagDropdownState};
 use iced::Element;
-use iced::widget::{Button, Column, Row, Text, TextInput, button};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button};
 use std::collections::{HashMap, HashSet};
+use strum::VariantArray;
 use uuid::Uuid;
 
 pub fn view<'state>(
@@ -17,13 +19,16 @@ pub fn view<'state>(
     selected_meaning_ids: &'state HashSet<Uuid>,
     expanded_word_ids: &'state HashSet<Uuid>,
     meaning_inputs: &'state HashMap<Uuid, MeaningInputState>,
-    cloze_inputs: &'state HashMap<Uuid, String>,
     active_tag_dropdown: &'state Option<Uuid>,
     tag_search_input: &str,
+    meanings_tag_dropdown_state: &'state TagDropdownState,
+    meanings_tag_search_input: &str,
+    meanings_tag_remove_search_input: &str,
 ) -> Element<'state, crate::Message> {
     let all_words: Vec<_> = word_registry.iter().map(|(_, w)| w).collect();
     let all_tags: Vec<_> = tag_registry.iter().map(|(_, t)| t).collect();
     let selected_count = selected_word_ids.len();
+    let selected_meaning_count = selected_meaning_ids.len();
 
     // Filter words by tag filter
     let filtered_words: Vec<Uuid> = if tag_filter.is_empty() {
@@ -82,10 +87,156 @@ pub fn view<'state>(
             .padding([8, 16])
     };
 
+    // Add Tag and Remove Tag buttons for selected meanings
+    let add_tag_btn = if selected_meaning_count > 0 {
+        Button::new(Text::new("Add Tag"))
+            .style(button::secondary)
+            .padding([8, 16])
+            .on_press(Message::ToggleMeaningsAddTagDropdown)
+    } else {
+        Button::new(Text::new("Add Tag"))
+            .style(button::secondary)
+            .padding([8, 16])
+    };
+
+    let remove_tag_btn = if selected_meaning_count > 0 {
+        Button::new(Text::new("Remove Tag"))
+            .style(button::secondary)
+            .padding([8, 16])
+            .on_press(Message::ToggleMeaningsRemoveTagDropdown)
+    } else {
+        Button::new(Text::new("Remove Tag"))
+            .style(button::secondary)
+            .padding([8, 16])
+    };
+
+    // Compute common tags for Remove Tag dropdown
+    let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
+        let mut common_tags: Option<HashSet<Uuid>> = None;
+        for &meaning_id in selected_meaning_ids {
+            if let Some(meaning) = meaning_registry.get_by_id(meaning_id) {
+                if let Some(ref mut tags) = common_tags {
+                    tags.retain(|t| meaning.tag_ids.contains(t));
+                } else {
+                    common_tags = Some(meaning.tag_ids.clone());
+                }
+            }
+        }
+        common_tags.unwrap_or_default().into_iter().collect()
+    } else {
+        vec![]
+    };
+
+    // Filter tags for Add Tag dropdown (tags not on all selected meanings)
+    let tags_for_add: Vec<_> = if selected_meaning_count > 0 {
+        all_tags
+            .iter()
+            .filter(|tag| {
+                let on_all_meanings = selected_meaning_ids.iter().all(|&mid| {
+                    meaning_registry
+                        .get_by_id(mid)
+                        .map(|m| m.tag_ids.contains(&tag.id))
+                        .unwrap_or(false)
+                });
+                !on_all_meanings
+                    && tag
+                        .name
+                        .to_lowercase()
+                        .contains(&meanings_tag_search_input.to_lowercase())
+            })
+            .collect()
+    } else {
+        vec![]
+    };
+
+    // Filter common tags for Remove Tag dropdown
+    let tags_for_remove: Vec<_> = common_tag_ids
+        .iter()
+        .filter_map(|tag_id| tag_registry.get_by_id(*tag_id))
+        .filter(|tag| {
+            tag.name
+                .to_lowercase()
+                .contains(&meanings_tag_remove_search_input.to_lowercase())
+        })
+        .collect();
+
+    // Batch tag dropdown
+    let batch_tag_dropdown: Option<Element<_>> = match meanings_tag_dropdown_state {
+        TagDropdownState::Add => {
+            let search = TextInput::new("Search tags...", meanings_tag_search_input)
+                .on_input(Message::MeaningsTagSearchChanged)
+                .width(iced::Length::Fill);
+            let tag_items: Vec<Element<_>> = tags_for_add
+                .iter()
+                .map(|tag| {
+                    Button::new(Text::new(&tag.name))
+                        .on_press(Message::BatchAddTagToSelectedMeanings(tag.id))
+                        .width(iced::Length::Fill)
+                        .into()
+                })
+                .collect();
+            let empty_msg = if tags_for_add.is_empty() {
+                Text::new("No tags available").size(12)
+            } else {
+                Text::new("")
+            };
+            Some(
+                Container::new(
+                    Column::new()
+                        .push(Text::new("Add Tag to Selected Meanings").size(14))
+                        .push(iced::widget::rule::horizontal(1))
+                        .push(search)
+                        .push(empty_msg)
+                        .push(Column::with_children(tag_items).spacing(5))
+                        .spacing(5)
+                        .padding(10),
+                )
+                .width(iced::Length::Fixed(250.0))
+                .into(),
+            )
+        }
+        TagDropdownState::Remove => {
+            let search = TextInput::new("Search tags...", meanings_tag_remove_search_input)
+                .on_input(Message::MeaningsTagRemoveSearchChanged)
+                .width(iced::Length::Fill);
+            let tag_items: Vec<Element<_>> = tags_for_remove
+                .iter()
+                .map(|tag| {
+                    Button::new(Text::new(&tag.name))
+                        .on_press(Message::BatchRemoveTagFromSelectedMeanings(tag.id))
+                        .width(iced::Length::Fill)
+                        .into()
+                })
+                .collect();
+            let empty_msg = if tags_for_remove.is_empty() {
+                Text::new("No common tags").size(12)
+            } else {
+                Text::new("")
+            };
+            Some(
+                Container::new(
+                    Column::new()
+                        .push(Text::new("Remove Tag from Selected Meanings").size(14))
+                        .push(iced::widget::rule::horizontal(1))
+                        .push(search)
+                        .push(empty_msg)
+                        .push(Column::with_children(tag_items).spacing(5))
+                        .spacing(5)
+                        .padding(10),
+                )
+                .width(iced::Length::Fixed(250.0))
+                .into(),
+            )
+        }
+        TagDropdownState::None => None,
+    };
+
     let selection_bar = Row::new()
         .push(select_all_btn)
         .push(deselect_all_btn)
         .push(Text::new("").width(iced::Length::Fill))
+        .push(add_tag_btn)
+        .push(remove_tag_btn)
         .push(queue_btn)
         .push(delete_btn)
         .spacing(10);
@@ -162,9 +313,12 @@ pub fn view<'state>(
                 if let Some(input_state) = meaning_inputs.get(&word.id)
                     && input_state.visible
                 {
-                    let pos_input = TextInput::new("POS...", &input_state.pos)
-                        .on_input(move |v| Message::MeaningPosInputChanged(word.id, v))
-                        .width(iced::Length::Fixed(80.0));
+                    let pos_options = PartOfSpeech::VARIANTS;
+                    let pos_pick_list =
+                        PickList::new(pos_options, Some(input_state.pos), move |pos| {
+                            Message::MeaningPosSelected(word.id, pos)
+                        })
+                        .width(iced::Length::Fixed(120.0));
 
                     let def_input = TextInput::new("Definition...", &input_state.definition)
                         .on_input(move |v| Message::MeaningDefInputChanged(word.id, v))
@@ -183,7 +337,7 @@ pub fn view<'state>(
                     word_column = word_column
                         .push(
                             Row::new()
-                                .push(pos_input)
+                                .push(pos_pick_list)
                                 .push(def_input)
                                 .push(save_btn)
                                 .push(cancel_btn)
@@ -250,25 +404,6 @@ pub fn view<'state>(
                         )
                         .spacing(5)
                         .into();
-
-                        // Cloze input
-                        let cloze_input_text =
-                            cloze_inputs.get(&meaning.id).cloned().unwrap_or_default();
-                        let add_cloze_row = Row::new()
-                            .push(
-                                TextInput::new("Add cloze...", &cloze_input_text)
-                                    .on_input(move |v| Message::ClozeInputChanged(meaning.id, v))
-                                    .width(iced::Length::Fill),
-                            )
-                            .push(
-                                Button::new(Text::new("Add"))
-                                    .style(button::primary)
-                                    .padding([4, 8])
-                                    .on_press(Message::CreateCloze(
-                                        meaning.id,
-                                        cloze_input_text.clone(),
-                                    )),
-                            );
 
                         // Actions
                         let delete_meaning_btn = Button::new(Text::new("Delete"))
@@ -353,7 +488,6 @@ pub fn view<'state>(
                                                     .size(12),
                                             )
                                             .push(cloze_list)
-                                            .push(add_cloze_row)
                                             .push(delete_meaning_btn)
                                             .spacing(5),
                                     ),
@@ -391,7 +525,15 @@ pub fn view<'state>(
         .push(selection_bar)
         .push(filter_section)
         .push(input_section)
-        .push(iced::widget::rule::horizontal(1))
+        .push(iced::widget::rule::horizontal(1));
+
+    let main_column = if let Some(dropdown) = batch_tag_dropdown {
+        main_column.push(dropdown)
+    } else {
+        main_column
+    };
+
+    let main_column = main_column
         .push(
             iced::widget::scrollable(Column::with_children(word_items).spacing(10))
                 .height(iced::Length::Fill),

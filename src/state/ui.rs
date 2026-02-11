@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
+use crate::models::PartOfSpeech;
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum TagDropdownState {
     #[default]
@@ -37,13 +39,26 @@ pub struct WordsUiState {
     pub tag_search_input: String,
     pub tag_remove_search_input: String,
     pub active_tag_dropdown: Option<Uuid>,
+    pub meanings_tag_dropdown_state: TagDropdownState,
+    pub meanings_tag_search_input: String,
+    pub meanings_tag_remove_search_input: String,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MeaningInputState {
     pub definition: String,
-    pub pos: String,
+    pub pos: PartOfSpeech,
     pub visible: bool,
+}
+
+impl Default for MeaningInputState {
+    fn default() -> Self {
+        Self {
+            definition: String::new(),
+            pos: PartOfSpeech::Noun,
+            visible: false,
+        }
+    }
 }
 
 impl WordsUiState {
@@ -58,6 +73,9 @@ impl WordsUiState {
             tag_search_input: String::new(),
             tag_remove_search_input: String::new(),
             active_tag_dropdown: None,
+            meanings_tag_dropdown_state: TagDropdownState::None,
+            meanings_tag_search_input: String::new(),
+            meanings_tag_remove_search_input: String::new(),
         }
     }
 }

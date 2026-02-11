@@ -1,5 +1,5 @@
 use crate::{
-    models::{Meaning, Tag, Word},
+    models::{Meaning, PartOfSpeech, Tag, Word},
     registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry},
 };
 
@@ -41,7 +41,7 @@ impl DataState {
         let greeting = Meaning::builder()
             .word_id(hello.id)
             .definition("a greeting".to_string())
-            .pos("noun".to_string())
+            .pos(PartOfSpeech::Noun)
             .build();
 
         self.meaning_registry.insert(greeting.clone());

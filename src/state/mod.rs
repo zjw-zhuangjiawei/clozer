@@ -93,21 +93,17 @@ impl AppState {
             // Meaning operations
             Message::CreateMeaning(word_id, definition, pos) => {
                 let trimmed_def = definition.trim();
-                let trimmed_pos = pos.trim();
-                if !trimmed_def.is_empty() && !trimmed_pos.is_empty() {
+                if !trimmed_def.is_empty() {
                     let meaning = Meaning::builder()
                         .word_id(word_id)
                         .definition(trimmed_def.to_string())
-                        .pos(trimmed_pos.to_string())
+                        .pos(pos)
                         .build();
 
                     self.data.meaning_registry.insert(meaning.clone());
 
                     // Update Word.meaning_ids
                     self.data.word_registry.add_meaning(word_id, meaning.id);
-
-                    // Hide input
-                    self.ui.words.meaning_inputs.remove(&word_id);
                 }
             }
             Message::SaveMeaning(word_id) => {
@@ -116,7 +112,7 @@ impl AppState {
                     let meaning = Meaning::builder()
                         .word_id(word_id)
                         .definition(input.definition.clone())
-                        .pos(input.pos.clone())
+                        .pos(input.pos)
                         .build();
 
                     self.data.meaning_registry.insert(meaning.clone());
@@ -146,8 +142,8 @@ impl AppState {
                     .or_default()
                     .definition = value;
             }
-            Message::MeaningPosInputChanged(word_id, value) => {
-                self.ui.words.meaning_inputs.entry(word_id).or_default().pos = value;
+            Message::MeaningPosSelected(word_id, pos) => {
+                self.ui.words.meaning_inputs.entry(word_id).or_default().pos = pos;
             }
             Message::DeleteMeaning(meaning_id) => {
                 // Get word_id for cleanup
@@ -223,6 +219,50 @@ impl AppState {
                         self.ui.words.tag_search_input.clear();
                     }
                 }
+            }
+
+            // Batch tag operations for selected meanings
+            Message::BatchAddTagToSelectedMeanings(tag_id) => {
+                for &meaning_id in &self.selection.selected_meaning_ids {
+                    self.data.meaning_registry.add_tag(meaning_id, tag_id);
+                }
+                self.ui.words.meanings_tag_dropdown_state = TagDropdownState::None;
+                self.ui.words.meanings_tag_search_input.clear();
+            }
+            Message::BatchRemoveTagFromSelectedMeanings(tag_id) => {
+                for &meaning_id in &self.selection.selected_meaning_ids {
+                    self.data.meaning_registry.remove_tag(meaning_id, tag_id);
+                }
+                self.ui.words.meanings_tag_dropdown_state = TagDropdownState::None;
+                self.ui.words.meanings_tag_remove_search_input.clear();
+            }
+            Message::ToggleMeaningsAddTagDropdown => {
+                self.ui.words.meanings_tag_dropdown_state =
+                    if self.ui.words.meanings_tag_dropdown_state == TagDropdownState::Add {
+                        TagDropdownState::None
+                    } else {
+                        TagDropdownState::Add
+                    };
+                if self.ui.words.meanings_tag_dropdown_state == TagDropdownState::Add {
+                    self.ui.words.meanings_tag_search_input.clear();
+                }
+            }
+            Message::ToggleMeaningsRemoveTagDropdown => {
+                self.ui.words.meanings_tag_dropdown_state =
+                    if self.ui.words.meanings_tag_dropdown_state == TagDropdownState::Remove {
+                        TagDropdownState::None
+                    } else {
+                        TagDropdownState::Remove
+                    };
+                if self.ui.words.meanings_tag_dropdown_state == TagDropdownState::Remove {
+                    self.ui.words.meanings_tag_remove_search_input.clear();
+                }
+            }
+            Message::MeaningsTagSearchChanged(value) => {
+                self.ui.words.meanings_tag_search_input = value;
+            }
+            Message::MeaningsTagRemoveSearchChanged(value) => {
+                self.ui.words.meanings_tag_remove_search_input = value;
             }
 
             // Cloze operations
