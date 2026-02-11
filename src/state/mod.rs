@@ -198,13 +198,11 @@ impl AppState {
                     } else {
                         Some(meaning_id)
                     };
-                self.ui.words.tag_search_input.clear();
             }
-            Message::WordsMeaningTagSearchChanged(value) => {
-                self.ui.words.tag_search_input = value;
+            Message::WordsMeaningTagSearchChanged(_value) => {
+                // No-op: tag search is handled per-meaning via meanings_tag_search_input
             }
             Message::AddTagToMeaningSearch(meaning_id, tag_name) => {
-                self.ui.words.tag_search_input = tag_name.clone();
                 // Check if we should auto-create the tag
                 let trimmed = tag_name.trim();
                 if !trimmed.is_empty() {
@@ -216,7 +214,6 @@ impl AppState {
                     if let Some((_, tag)) = existing {
                         self.data.meaning_registry.add_tag(meaning_id, tag.id);
                         self.ui.words.active_tag_dropdown = None;
-                        self.ui.words.tag_search_input.clear();
                     }
                 }
             }
@@ -362,36 +359,6 @@ impl AppState {
             }
             Message::WordsClearTagFilter => {
                 self.ui.words.tag_filter.clear();
-            }
-            Message::WordsToggleTagDropdown => {
-                self.ui.words.tag_dropdown_state =
-                    if self.ui.words.tag_dropdown_state == TagDropdownState::Add {
-                        TagDropdownState::None
-                    } else {
-                        TagDropdownState::Add
-                    };
-                if self.ui.words.tag_dropdown_state == TagDropdownState::Add {
-                    self.ui.words.tag_search_input.clear();
-                    self.ui.words.tag_remove_search_input.clear();
-                }
-            }
-            Message::WordsTagSearchChanged(value) => {
-                self.ui.words.tag_search_input = value;
-            }
-            Message::WordsToggleRemoveTagDropdown => {
-                self.ui.words.tag_dropdown_state =
-                    if self.ui.words.tag_dropdown_state == TagDropdownState::Remove {
-                        TagDropdownState::None
-                    } else {
-                        TagDropdownState::Remove
-                    };
-                if self.ui.words.tag_dropdown_state == TagDropdownState::Remove {
-                    self.ui.words.tag_remove_search_input.clear();
-                    self.ui.words.tag_search_input.clear();
-                }
-            }
-            Message::WordsTagRemoveSearchChanged(value) => {
-                self.ui.words.tag_remove_search_input = value;
             }
 
             // UI - Tags

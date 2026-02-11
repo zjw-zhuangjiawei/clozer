@@ -20,7 +20,6 @@ pub fn view<'state>(
     expanded_word_ids: &'state HashSet<Uuid>,
     meaning_inputs: &'state HashMap<Uuid, MeaningInputState>,
     active_tag_dropdown: &'state Option<Uuid>,
-    tag_search_input: &str,
     meanings_tag_dropdown_state: &'state TagDropdownState,
     meanings_tag_search_input: &str,
     meanings_tag_remove_search_input: &str,
@@ -420,47 +419,17 @@ pub fn view<'state>(
                         let tag_dropdown: Option<Element<_>> = if *active_tag_dropdown
                             == Some(meaning.id)
                         {
-                            let search_input =
-                                TextInput::new("Search or create tag...", tag_search_input)
-                                    .on_input(move |v| {
-                                        Message::AddTagToMeaningSearch(meaning.id, v)
-                                    })
-                                    .width(iced::Length::Fill);
+                            let search_input = TextInput::new("Search or create tag...", "")
+                                .on_input(move |v| Message::AddTagToMeaningSearch(meaning.id, v))
+                                .width(iced::Length::Fill);
 
-                            let filtered_tags: Vec<_> = all_tags
-                                .iter()
-                                .filter(|tag| {
-                                    !meaning.tag_ids.contains(&tag.id)
-                                        && tag
-                                            .name
-                                            .to_lowercase()
-                                            .contains(&tag_search_input.to_lowercase())
-                                })
-                                .collect();
-
-                            let tag_items: Vec<Element<_>> = filtered_tags
-                                .iter()
-                                .map(|tag| {
-                                    Button::new(Text::new(&tag.name))
-                                        .on_press(Message::AddTagToMeaning(meaning.id, tag.id))
-                                        .width(iced::Length::Fill)
-                                        .into()
-                                })
-                                .collect();
-
-                            let create_info = if !tag_search_input.trim().is_empty() {
-                                Text::new(format!("[+] Create: \"{}\"", tag_search_input.trim()))
-                                    .size(12)
-                            } else {
-                                Text::new("Enter a tag name").size(12)
-                            };
+                            let create_info = Text::new("Enter a tag name").size(12);
 
                             Some(
                                 Column::new()
                                     .push(search_input)
                                     .push(iced::widget::rule::horizontal(1))
                                     .push(create_info)
-                                    .push(Column::with_children(tag_items).spacing(5))
                                     .spacing(5)
                                     .padding(10)
                                     .into(),

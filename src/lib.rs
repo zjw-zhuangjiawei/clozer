@@ -63,10 +63,6 @@ pub enum Message {
     WordsInputChanged(String),
     WordsTagFilterChanged(String),
     WordsClearTagFilter,
-    WordsToggleTagDropdown,
-    WordsTagSearchChanged(String),
-    WordsToggleRemoveTagDropdown,
-    WordsTagRemoveSearchChanged(String),
 
     // UI - Tags
     TagsInputChanged(String),
@@ -123,7 +119,6 @@ impl App {
             &self.state.ui.words.expanded_word_ids,
             &self.state.ui.words.meaning_inputs,
             &self.state.ui.words.active_tag_dropdown,
-            &self.state.ui.words.tag_search_input,
             &self.state.ui.words.meanings_tag_dropdown_state,
             &self.state.ui.words.meanings_tag_search_input,
             &self.state.ui.words.meanings_tag_remove_search_input,
