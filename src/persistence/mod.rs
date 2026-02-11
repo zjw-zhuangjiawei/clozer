@@ -1,0 +1,12 @@
+//! Persistence layer using redb and postcard serialization.
+//!
+//! This module provides data persistence for the Clozer application.
+
+pub mod db;
+pub mod dto;
+
+pub use crate::models::ClozeSegment;
+pub use db::{Db, DbError};
+pub use dto::{
+    ClozeDto, MeaningDto, ModelDto, ProviderDto, QueueItemDto, QueueItemStatusDto, TagDto, WordDto,
+};

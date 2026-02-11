@@ -1,4 +1,5 @@
 pub mod models;
+pub mod persistence;
 pub mod registry;
 pub mod state;
 pub mod ui;

@@ -24,7 +24,7 @@ pub enum PartOfSpeech {
     Abbreviation,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, TypedBuilder)]
+#[derive(Debug, Clone, TypedBuilder)]
 #[builder(mutators(
     fn with_tag(&mut self, tag_id: Uuid) {
         self.tag_ids.insert(tag_id);
