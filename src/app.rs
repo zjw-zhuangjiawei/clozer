@@ -3,8 +3,8 @@
 //! Contains the App struct that coordinates state and UI rendering.
 
 use iced::Element;
-use std::path::PathBuf;
 
+use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
@@ -13,28 +13,22 @@ use crate::state::AppState;
 #[derive(Debug)]
 pub struct App {
     state: AppState,
+    config: AppConfig,
 }
 
 impl App {
-    /// Returns the database path.
-    ///
-    /// TODO: Use proper platform-specific data directory in release mode
-    /// - Linux: ~/.local/share/clozer/data.redb
-    /// - macOS: ~/Library/Application Support/Clozer/data.redb
-    /// - Windows: %APPDATA%/Clozer/data.redb
-    ///
-    /// Development: uses project directory
-    fn db_path() -> PathBuf {
-        PathBuf::from("data.redb")
-    }
-
     /// Creates a new App instance with database persistence.
-    pub fn new() -> Self {
-        let db_path = Self::db_path();
+    pub fn new(config: AppConfig) -> Self {
+        let db_path = config.data_dir.join("data.redb");
         let db = Db::new(&db_path).expect("Failed to create database");
         let state = AppState::builder().db(db).build();
 
-        Self { state }
+        Self { state, config }
+    }
+
+    /// Returns a reference to the application configuration.
+    pub fn config(&self) -> &AppConfig {
+        &self.config
     }
 
     /// Creates a new App with sample data loaded.
