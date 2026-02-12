@@ -10,7 +10,7 @@ pub use self::queue::{QueueGenerationResult, QueueState};
 pub use self::selection::SelectionState;
 pub use self::ui::UiState;
 
-use crate::Message;
+use crate::message::Message;
 use crate::models::{Meaning, Word};
 use crate::state::ui::TagDropdownState;
 use iced::Task;
