@@ -1,10 +1,12 @@
 use crate::models::Model;
+use crate::persistence::DbError;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ModelRegistry {
     models: HashMap<Uuid, Model>,
+    dirty_ids: HashSet<Uuid>,
     by_name: HashMap<String, Uuid>,
     by_provider: HashMap<Uuid, HashSet<Uuid>>,
 }
@@ -13,6 +15,7 @@ impl ModelRegistry {
     pub fn new() -> Self {
         Self {
             models: HashMap::new(),
+            dirty_ids: HashSet::new(),
             by_name: HashMap::new(),
             by_provider: HashMap::new(),
         }
@@ -20,6 +23,7 @@ impl ModelRegistry {
 
     pub fn add(&mut self, model: Model) {
         self.models.insert(model.id, model.clone());
+        self.dirty_ids.insert(model.id);
         self.by_name.insert(model.name.clone(), model.id);
         self.by_provider
             .entry(model.provider_id)
@@ -29,6 +33,10 @@ impl ModelRegistry {
 
     pub fn get(&self, id: Uuid) -> Option<&Model> {
         self.models.get(&id)
+    }
+
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Model> {
+        self.models.get_mut(&id)
     }
 
     pub fn get_by_name(&self, name: &str) -> Option<&Model> {
@@ -53,6 +61,7 @@ impl ModelRegistry {
 
     pub fn delete(&mut self, id: Uuid) {
         if let Some(model) = self.models.remove(&id) {
+            self.dirty_ids.insert(id);
             self.by_name.remove(&model.name);
             if let Some(provider_models) = self.by_provider.get_mut(&model.provider_id) {
                 provider_models.remove(&id);
@@ -69,6 +78,39 @@ impl ModelRegistry {
 
     pub fn is_empty(&self) -> bool {
         self.models.is_empty()
+    }
+
+    // Persistence
+    /// Load all models from database
+    pub fn load_all(&mut self, db: &crate::persistence::Db) {
+        if let Ok(items) = db.iter_models() {
+            for (id, dto) in items {
+                let model = crate::models::Model::from(dto);
+                self.models.insert(id, model.clone());
+                self.by_name.insert(model.name.clone(), id);
+                self.by_provider
+                    .entry(model.provider_id)
+                    .or_default()
+                    .insert(id);
+            }
+        }
+    }
+
+    /// Flush all dirty entities to the database
+    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        for id in &self.dirty_ids {
+            if let Some(model) = self.models.get(id) {
+                let dto = crate::persistence::ModelDto::from(model);
+                db.save_model(*id, &dto)?;
+            }
+        }
+        self.dirty_ids.clear();
+        Ok(())
+    }
+
+    /// Check if there are any dirty entities
+    pub fn has_dirty(&self) -> bool {
+        !self.dirty_ids.is_empty()
     }
 }
 

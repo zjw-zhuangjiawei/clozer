@@ -1,22 +1,26 @@
 use crate::models::Word;
-use std::collections::HashMap;
+use crate::persistence::DbError;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct WordRegistry {
     words: HashMap<Uuid, Word>,
+    dirty_ids: HashSet<Uuid>,
 }
 
 impl WordRegistry {
     pub fn new() -> Self {
         Self {
             words: HashMap::new(),
+            dirty_ids: HashSet::new(),
         }
     }
 
     // CRUD
     pub fn insert(&mut self, word: Word) {
-        self.words.insert(word.id, word);
+        self.words.insert(word.id, word.clone());
+        self.dirty_ids.insert(word.id);
     }
 
     pub fn get_by_id(&self, id: Uuid) -> Option<&Word> {
@@ -28,7 +32,12 @@ impl WordRegistry {
     }
 
     pub fn delete(&mut self, id: Uuid) -> bool {
-        self.words.remove(&id).is_some()
+        if self.words.remove(&id).is_some() {
+            self.dirty_ids.insert(id);
+            true
+        } else {
+            false
+        }
     }
 
     // Iterators
@@ -49,6 +58,7 @@ impl WordRegistry {
     pub fn add_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
         if let Some(word) = self.words.get_mut(&word_id) {
             word.meaning_ids.insert(meaning_id);
+            self.dirty_ids.insert(word_id);
             true
         } else {
             false
@@ -57,9 +67,41 @@ impl WordRegistry {
 
     pub fn remove_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
         if let Some(word) = self.words.get_mut(&word_id) {
-            word.meaning_ids.remove(&meaning_id)
+            let removed = word.meaning_ids.remove(&meaning_id);
+            if removed {
+                self.dirty_ids.insert(word_id);
+            }
+            removed
         } else {
             false
         }
+    }
+
+    // Persistence
+    /// Load all words from database
+    pub fn load_all(&mut self, db: &crate::persistence::Db) {
+        if let Ok(items) = db.iter_words() {
+            for dto in items {
+                let word = Word::from(dto);
+                self.words.insert(word.id, word);
+            }
+        }
+    }
+
+    /// Flush all dirty entities to the database
+    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        for id in &self.dirty_ids {
+            if let Some(word) = self.words.get(id) {
+                let dto = crate::persistence::WordDto::from(word);
+                db.save_word(*id, &dto)?;
+            }
+        }
+        self.dirty_ids.clear();
+        Ok(())
+    }
+
+    /// Check if there are any dirty entities
+    pub fn has_dirty(&self) -> bool {
+        !self.dirty_ids.is_empty()
     }
 }

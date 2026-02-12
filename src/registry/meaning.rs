@@ -1,4 +1,5 @@
 use crate::models::Meaning;
+use crate::persistence::DbError;
 use either::Either;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -6,6 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, Default, Clone)]
 pub struct MeaningRegistry {
     meanings: HashMap<Uuid, Meaning>,
+    dirty_ids: HashSet<Uuid>,
     by_word: HashMap<Uuid, HashSet<Uuid>>,
     by_tag: HashMap<Uuid, HashSet<Uuid>>,
 }
@@ -14,6 +16,7 @@ impl MeaningRegistry {
     pub fn new() -> Self {
         Self {
             meanings: HashMap::new(),
+            dirty_ids: HashSet::new(),
             by_word: HashMap::new(),
             by_tag: HashMap::new(),
         }
@@ -26,6 +29,7 @@ impl MeaningRegistry {
         let tag_ids = meaning.tag_ids.clone();
 
         self.meanings.insert(meaning_id, meaning);
+        self.dirty_ids.insert(meaning_id);
 
         // Update by_word index
         self.by_word.entry(word_id).or_default().insert(meaning_id);
@@ -46,6 +50,8 @@ impl MeaningRegistry {
 
     pub fn delete(&mut self, id: Uuid) -> bool {
         if let Some(meaning) = self.meanings.remove(&id) {
+            self.dirty_ids.insert(id);
+
             // Remove from by_word
             if let Some(meaning_ids) = self.by_word.get_mut(&meaning.word_id) {
                 meaning_ids.remove(&id);
@@ -72,6 +78,7 @@ impl MeaningRegistry {
     pub fn delete_by_word(&mut self, word_id: Uuid) {
         if let Some(meaning_ids) = self.by_word.remove(&word_id) {
             for meaning_id in meaning_ids {
+                self.dirty_ids.insert(meaning_id);
                 if let Some(meaning) = self.meanings.remove(&meaning_id) {
                     for tag_id in meaning.tag_ids {
                         if let Some(ids) = self.by_tag.get_mut(&tag_id) {
@@ -133,6 +140,7 @@ impl MeaningRegistry {
         if let Some(meaning) = self.meanings.get_mut(&meaning_id) {
             meaning.tag_ids.insert(tag_id);
             self.by_tag.entry(tag_id).or_default().insert(meaning_id);
+            self.dirty_ids.insert(meaning_id);
             true
         } else {
             false
@@ -144,12 +152,50 @@ impl MeaningRegistry {
         if let Some(meaning) = self.meanings.get_mut(&meaning_id) {
             removed = meaning.tag_ids.remove(&tag_id);
         }
-        if removed && let Some(meaning_ids) = self.by_tag.get_mut(&tag_id) {
-            meaning_ids.remove(&meaning_id);
-            if meaning_ids.is_empty() {
-                self.by_tag.remove(&tag_id);
+        if removed {
+            self.dirty_ids.insert(meaning_id);
+            if let Some(ids) = self.by_tag.get_mut(&tag_id) {
+                ids.remove(&meaning_id);
+                if ids.is_empty() {
+                    self.by_tag.remove(&tag_id);
+                }
             }
         }
         removed
+    }
+
+    // Persistence
+    /// Load all meanings from database
+    pub fn load_all(&mut self, db: &crate::persistence::Db) {
+        if let Ok(items) = db.iter_meanings() {
+            for dto in items {
+                let meaning = Meaning::from(dto);
+                self.meanings.insert(meaning.id, meaning.clone());
+                self.by_word
+                    .entry(meaning.word_id)
+                    .or_default()
+                    .insert(meaning.id);
+                for tag_id in &meaning.tag_ids {
+                    self.by_tag.entry(*tag_id).or_default().insert(meaning.id);
+                }
+            }
+        }
+    }
+
+    /// Flush all dirty entities to the database
+    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        for id in &self.dirty_ids {
+            if let Some(meaning) = self.meanings.get(id) {
+                let dto = crate::persistence::MeaningDto::from(meaning);
+                db.save_meaning(*id, &dto)?;
+            }
+        }
+        self.dirty_ids.clear();
+        Ok(())
+    }
+
+    /// Check if there are any dirty entities
+    pub fn has_dirty(&self) -> bool {
+        !self.dirty_ids.is_empty()
     }
 }

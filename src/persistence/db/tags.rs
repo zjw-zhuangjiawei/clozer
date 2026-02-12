@@ -39,17 +39,17 @@ impl Db {
     }
 
     /// Iterates over all tags.
-    pub fn iter_tags(
-        &self,
-    ) -> Result<impl Iterator<Item = (uuid::Uuid, TagDto)>, crate::persistence::DbError> {
+    pub fn iter_tags(&self) -> Result<impl Iterator<Item = TagDto>, crate::persistence::DbError> {
         let t = self.read()?;
         let table = t.open_table(TAGS_TABLE)?;
-        let items: Vec<(uuid::Uuid, TagDto)> = table
+        let items: Vec<TagDto> = table
             .iter()?
             .filter_map(|r| r.ok())
-            .filter_map(|(id, bytes)| {
-                let data = deserialize(&bytes.value()).ok()?;
-                Some((key_to_uuid(id.value()), data))
+            .filter_map(|(key, bytes)| {
+                let id = key_to_uuid(key.value());
+                let mut dto: TagDto = deserialize(&bytes.value()).ok()?;
+                dto.id = id;
+                Some(dto)
             })
             .collect();
         Ok(items.into_iter())

@@ -44,15 +44,17 @@ impl Db {
     /// Iterates over all clozes.
     pub fn iter_clozes(
         &self,
-    ) -> Result<impl Iterator<Item = (uuid::Uuid, ClozeDto)>, crate::persistence::DbError> {
+    ) -> Result<impl Iterator<Item = ClozeDto>, crate::persistence::DbError> {
         let t = self.read()?;
         let table = t.open_table(CLOZES_TABLE)?;
-        let items: Vec<(uuid::Uuid, ClozeDto)> = table
+        let items: Vec<ClozeDto> = table
             .iter()?
             .filter_map(|r| r.ok())
-            .filter_map(|(id, bytes)| {
-                let data = deserialize(&bytes.value()).ok()?;
-                Some((key_to_uuid(id.value()), data))
+            .filter_map(|(key, bytes)| {
+                let id = key_to_uuid(key.value());
+                let mut dto: ClozeDto = deserialize(&bytes.value()).ok()?;
+                dto.id = id;
+                Some(dto)
             })
             .collect();
         Ok(items.into_iter())

@@ -39,6 +39,7 @@ pub enum DbError {
 }
 
 /// Main database wrapper.
+#[derive(Debug)]
 pub struct Db {
     db: Database,
 }

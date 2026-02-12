@@ -12,42 +12,35 @@ pub use self::ui::UiState;
 
 use crate::message::Message;
 use crate::models::{Meaning, Word};
+use crate::persistence::Db;
 use crate::state::ui::TagDropdownState;
 use iced::Task;
+use typed_builder::TypedBuilder;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, TypedBuilder)]
 pub struct AppState {
+    #[builder(default = DataState::new())]
     pub data: DataState,
+    #[builder(default = QueueState::new())]
     pub queue: QueueState,
+    #[builder(default = GeneratorState::new())]
     pub generator: GeneratorState,
+    #[builder(default = SelectionState::new())]
     pub selection: SelectionState,
+    #[builder(default = UiState::new())]
     pub ui: UiState,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub db: Db,
 }
 
 impl AppState {
-    pub fn new() -> Self {
-        Self {
-            data: DataState::new(),
-            queue: QueueState::new(),
-            generator: GeneratorState::new(),
-            selection: SelectionState::new(),
-            ui: UiState::new(),
-        }
-    }
-
+    /// TODO: Remove in production - for development only
+    #[allow(dead_code)]
     pub fn with_sample_data(mut self) -> Self {
         self.data = self.data.with_sample_data();
         self
     }
 
     // Unified Update Handler
-
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // Word operations

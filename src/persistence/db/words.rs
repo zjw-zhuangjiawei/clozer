@@ -42,17 +42,17 @@ impl Db {
     }
 
     /// Iterates over all words.
-    pub fn iter_words(
-        &self,
-    ) -> Result<impl Iterator<Item = (uuid::Uuid, WordDto)>, crate::persistence::DbError> {
+    pub fn iter_words(&self) -> Result<impl Iterator<Item = WordDto>, crate::persistence::DbError> {
         let t = self.read()?;
         let table = t.open_table(WORDS_TABLE)?;
-        let items: Vec<(uuid::Uuid, WordDto)> = table
+        let items: Vec<WordDto> = table
             .iter()?
             .filter_map(|r| r.ok())
-            .filter_map(|(id, bytes)| {
-                let data = deserialize(&bytes.value()).ok()?;
-                Some((key_to_uuid(id.value()), data))
+            .filter_map(|(key, bytes)| {
+                let id = key_to_uuid(key.value());
+                let mut dto: WordDto = deserialize(&bytes.value()).ok()?;
+                dto.id = id;
+                Some(dto)
             })
             .collect();
         Ok(items.into_iter())

@@ -11,12 +11,7 @@ use serde::Deserialize;
 /// Configuration loaded from environment variables.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
-pub struct EnvConfig {
-    pub api_key: Option<String>,
-    pub provider: Option<String>,
-    pub model: Option<String>,
-    pub base_url: Option<String>,
-}
+pub struct EnvConfig {}
 
 impl EnvConfig {
     /// Loads configuration from environment variables with `CLOZER_` prefix.

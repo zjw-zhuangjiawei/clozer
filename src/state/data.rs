@@ -1,6 +1,10 @@
 use crate::{
     models::{Meaning, PartOfSpeech, Tag, Word},
-    registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry},
+    persistence::DbError,
+    registry::{
+        ClozeRegistry, MeaningRegistry, ModelRegistry, ProviderRegistry, QueueRegistry,
+        TagRegistry, WordRegistry,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -9,6 +13,9 @@ pub struct DataState {
     pub meaning_registry: MeaningRegistry,
     pub tag_registry: TagRegistry,
     pub cloze_registry: ClozeRegistry,
+    pub model_registry: ModelRegistry,
+    pub provider_registry: ProviderRegistry,
+    pub queue_registry: QueueRegistry,
 }
 
 impl Default for DataState {
@@ -24,7 +31,44 @@ impl DataState {
             meaning_registry: MeaningRegistry::new(),
             tag_registry: TagRegistry::new(),
             cloze_registry: ClozeRegistry::new(),
+            model_registry: ModelRegistry::new(),
+            provider_registry: ProviderRegistry::new(),
+            queue_registry: QueueRegistry::new(),
         }
+    }
+
+    /// Load all data from database
+    pub fn load_all(&mut self, db: &crate::persistence::Db) {
+        self.word_registry.load_all(db);
+        self.meaning_registry.load_all(db);
+        self.tag_registry.load_all(db);
+        self.cloze_registry.load_all(db);
+        self.model_registry.load_all(db);
+        self.provider_registry.load_all(db);
+        self.queue_registry.load_all(db);
+    }
+
+    /// Flush all dirty entities across registries to the database
+    pub fn flush_all(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        self.word_registry.flush_dirty(db)?;
+        self.meaning_registry.flush_dirty(db)?;
+        self.tag_registry.flush_dirty(db)?;
+        self.cloze_registry.flush_dirty(db)?;
+        self.model_registry.flush_dirty(db)?;
+        self.provider_registry.flush_dirty(db)?;
+        self.queue_registry.flush_dirty(db)?;
+        Ok(())
+    }
+
+    /// Check if any registry has dirty entities
+    pub fn has_dirty(&self) -> bool {
+        self.word_registry.has_dirty()
+            || self.meaning_registry.has_dirty()
+            || self.tag_registry.has_dirty()
+            || self.cloze_registry.has_dirty()
+            || self.model_registry.has_dirty()
+            || self.provider_registry.has_dirty()
+            || self.queue_registry.has_dirty()
     }
 
     pub fn with_sample_data(mut self) -> Self {
