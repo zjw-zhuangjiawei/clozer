@@ -255,26 +255,6 @@ impl AppState {
                 self.ui.words.meanings_tag_remove_search_input = value;
             }
 
-            // Cloze operations
-            Message::DeleteCloze(cloze_id) => {
-                self.data.cloze_registry.delete(cloze_id);
-            }
-            Message::CreateCloze(meaning_id, sentence) => {
-                let trimmed = sentence.trim();
-                if !trimmed.is_empty() {
-                    let segments = crate::models::Cloze::parse_from_sentence(trimmed);
-                    let cloze = crate::models::Cloze::builder()
-                        .meaning_id(meaning_id)
-                        .segments(segments)
-                        .build();
-                    self.data.cloze_registry.insert(cloze);
-                    self.ui.words.cloze_inputs.remove(&meaning_id);
-                }
-            }
-            Message::ClozeInputChanged(meaning_id, value) => {
-                self.ui.words.cloze_inputs.insert(meaning_id, value);
-            }
-
             // Selection - Words
             Message::ToggleWord(word_id) => {
                 if self.selection.selected_word_ids.contains(&word_id) {

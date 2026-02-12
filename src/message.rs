@@ -43,11 +43,6 @@ pub enum Message {
     MeaningsTagSearchChanged(String),         // Search for add
     MeaningsTagRemoveSearchChanged(String),   // Search for remove
 
-    // Cloze operations
-    DeleteCloze(Uuid),
-    CreateCloze(Uuid, String),       // meaning_id, sentence
-    ClozeInputChanged(Uuid, String), // meaning_id, sentence
-
     // Selection - Words
     ToggleWord(Uuid),
     SelectAllWords,

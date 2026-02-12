@@ -388,15 +388,9 @@ pub fn view<'state>(
 
                         // Cloze list
                         let cloze_list: Element<_> = Column::with_children(
-                            cloze_vec.clone().into_iter().map(|(id, cloze)| {
+                            cloze_vec.clone().into_iter().map(|(_id, cloze)| {
                                 Row::new()
                                     .push(Text::new(cloze.render_blanks()))
-                                    .push(
-                                        Button::new(Text::new("×"))
-                                            .style(button::secondary)
-                                            .padding([2, 6])
-                                            .on_press(Message::DeleteCloze(*id)),
-                                    )
                                     .spacing(5)
                                     .into()
                             }),
