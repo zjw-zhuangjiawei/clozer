@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use crate::config::LogLevel;
+
 /// Configuration loaded from command-line arguments.
 #[derive(Debug, Clone, Parser)]
 pub struct CliConfig {
@@ -16,6 +18,10 @@ pub struct CliConfig {
     /// Path to the config file
     #[clap(short, long)]
     pub config_file: Option<PathBuf>,
+
+    /// Log level (trace, debug, info, warn, error)
+    #[clap(long, value_enum)]
+    pub log_level: Option<LogLevel>,
 }
 
 impl CliConfig {

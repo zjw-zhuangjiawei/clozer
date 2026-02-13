@@ -10,6 +10,7 @@ use serde::Deserialize;
 pub struct EnvConfig {
     pub data_dir: Option<PathBuf>,
     pub config_file: Option<String>,
+    pub log_level: Option<super::LogLevel>,
 }
 
 impl EnvConfig {

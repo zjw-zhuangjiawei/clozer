@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 use iced::{Element, Subscription, Theme};
 
-use crate::config::{AppConfig, CliConfig, EnvConfig};
+use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
@@ -30,15 +30,7 @@ impl App {
     }
 
     /// Creates a new App instance and opens the initial window.
-    pub fn new(
-        cli_args: impl IntoIterator<Item = std::ffi::OsString>,
-        env_vars: impl IntoIterator<Item = (String, String)>,
-    ) -> (Self, iced::Task<Message>) {
-        // Load configuration
-        let cli = CliConfig::load(cli_args);
-        let env = EnvConfig::load(env_vars).expect("Failed to load env config");
-        let config = AppConfig::load(cli, env).expect("Failed to load app config");
-
+    pub fn new(config: AppConfig) -> (Self, iced::Task<Message>) {
         // Initialize database
         let db_path = config.data_dir.join("data.redb");
         let db = Db::new(&db_path).expect("Failed to create database");

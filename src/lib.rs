@@ -15,4 +15,4 @@ pub mod registry;
 pub mod state;
 pub mod ui;
 
-pub use self::config::{AppConfig, CliConfig, EnvConfig};
+pub use self::config::{AppConfig, CliConfig, EnvConfig, LogLevel};

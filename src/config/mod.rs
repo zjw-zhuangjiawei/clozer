@@ -10,12 +10,47 @@ pub mod constants;
 pub mod env;
 pub mod file;
 
+use clap::ValueEnum;
 pub use cli::CliConfig;
 pub use constants::paths;
 pub use env::EnvConfig;
 pub use file::{FileConfig, GeneralConfig};
+use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
+
+/// Log level enum for configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl LogLevel {
+    /// Convert to tracing::Level.
+    pub fn to_tracing_level(self) -> tracing::Level {
+        match self {
+            LogLevel::Trace => tracing::Level::TRACE,
+            LogLevel::Debug => tracing::Level::DEBUG,
+            LogLevel::Info => tracing::Level::INFO,
+            LogLevel::Warn => tracing::Level::WARN,
+            LogLevel::Error => tracing::Level::ERROR,
+        }
+    }
+
+    /// Default log level.
+    pub const DEFAULT: Self = LogLevel::Info;
+}
+
+impl Default for LogLevel {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
 
 /// Unified application configuration.
 #[derive(Debug, Clone)]
@@ -25,6 +60,9 @@ pub struct AppConfig {
 
     /// Path to the config file
     pub config_file: PathBuf,
+
+    /// Log level
+    pub log_level: LogLevel,
 }
 
 impl Default for AppConfig {
@@ -32,6 +70,7 @@ impl Default for AppConfig {
         Self {
             data_dir: paths::data_dir(),
             config_file: paths::config_file(),
+            log_level: LogLevel::DEFAULT,
         }
     }
 }
@@ -66,6 +105,7 @@ impl AppConfig {
         FileConfig {
             general: GeneralConfig {
                 data_dir: Some(self.data_dir.clone()),
+                log_level: Some(self.log_level),
             },
         }
     }
@@ -96,9 +136,17 @@ impl AppConfig {
             .or(file_config.general.data_dir)
             .unwrap_or_else(paths::data_dir);
 
+        // Resolve log level with priority: CLI > env > file > default
+        let log_level = cli
+            .log_level
+            .or(env.log_level)
+            .or(file_config.general.log_level)
+            .unwrap_or_default();
+
         Ok(Self {
             data_dir,
             config_file,
+            log_level,
         })
     }
 }
