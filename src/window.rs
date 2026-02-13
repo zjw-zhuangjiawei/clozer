@@ -18,7 +18,10 @@ impl WindowType {
     /// Returns the window settings for this window type.
     pub fn window_settings(&self) -> iced::window::Settings {
         match self {
-            WindowType::Main => iced::window::Settings::default(),
+            WindowType::Main => iced::window::Settings {
+                exit_on_close_request: false,
+                ..Default::default()
+            },
         }
     }
 }

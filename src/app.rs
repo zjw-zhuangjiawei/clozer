@@ -79,12 +79,21 @@ impl App {
                 self.windows.insert(id, window);
                 iced::Task::none()
             }
+            Message::WindowCloseRequested(id) => {
+                // Custom close handling: perform cleanup then close the window
+                // Any cleanup logic (save data, etc.) can be added here
+                // Then explicitly close the window
+                iced::window::close(id)
+            }
             Message::WindowClosed(id) => {
-                self.windows.remove(&id);
-                if self.windows.is_empty() {
-                    iced::exit()
-                } else {
-                    iced::Task::none()
+                let Some(window) = self.windows.remove(&id) else {
+                    unreachable!()
+                };
+                match window {
+                    Window::Main(_) => {
+                        self.config.save_to_file();
+                        iced::exit()
+                    }
                 }
             }
             // All other messages go directly to app_state
@@ -144,6 +153,14 @@ impl App {
 
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::window::close_events().map(Message::WindowClosed)
+        // Use close_requests to intercept close events before window closes
+        // This allows custom handling (cleanup, confirmation dialogs, etc.)
+        iced::event::listen_with(|event, _status, id| match event {
+            iced::Event::Window(iced::window::Event::CloseRequested) => {
+                Some(Message::WindowCloseRequested(id))
+            }
+            iced::Event::Window(iced::window::Event::Closed) => Some(Message::WindowClosed(id)),
+            _ => None,
+        })
     }
 }

@@ -17,6 +17,7 @@ use crate::window::WindowType;
 pub enum Message {
     // Window management
     WindowOpened(iced::window::Id, WindowType),
+    WindowCloseRequested(iced::window::Id),
     WindowClosed(iced::window::Id),
 
     // Word operations

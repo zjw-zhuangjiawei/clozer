@@ -354,6 +354,7 @@ impl AppState {
 
             // Window management - handled at app level
             Message::WindowOpened(_, _) => {}
+            Message::WindowCloseRequested(_) => {}
             Message::WindowClosed(_) => {}
 
             // Queue
