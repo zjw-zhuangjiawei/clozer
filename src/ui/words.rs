@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::message::Message;
 use crate::models::PartOfSpeech;
 use crate::registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry};
 use crate::state::ui::{MeaningInputState, TagDropdownState};
@@ -23,7 +23,7 @@ pub fn view<'state>(
     meanings_tag_dropdown_state: &'state TagDropdownState,
     meanings_tag_search_input: &str,
     meanings_tag_remove_search_input: &str,
-) -> Element<'state, crate::Message> {
+) -> Element<'state, Message> {
     let all_words: Vec<_> = word_registry.iter().map(|(_, w)| w).collect();
     let all_tags: Vec<_> = tag_registry.iter().map(|(_, t)| t).collect();
     let selected_count = selected_word_ids.len();

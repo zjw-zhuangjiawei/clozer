@@ -14,7 +14,7 @@ use crate::message::Message;
 use crate::models::{Meaning, Word};
 use crate::persistence::Db;
 use crate::state::ui::TagDropdownState;
-use iced::{Subscription, Task};
+use iced::Task;
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, TypedBuilder)]
@@ -352,9 +352,9 @@ impl AppState {
                 self.ui.tags.selected_ids.remove(&id);
             }
 
-            // Window
-            Message::WindowCloseRequested(id) => {}
-            Message::WindowClose(id) => {}
+            // Window management - handled at app level
+            Message::WindowOpened(_, _) => {}
+            Message::WindowClosed(_) => {}
 
             // Queue
             Message::QueueSelectToggle(item_id) => {

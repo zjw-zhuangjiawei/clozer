@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::message::Message;
 use crate::models::Cloze;
 use crate::registry::{QueueItemStatus, QueueRegistry, WordRegistry};
 use crate::state::generator::Generator;

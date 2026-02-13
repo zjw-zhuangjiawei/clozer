@@ -1,4 +1,4 @@
-use crate::Message;
+use crate::message::Message;
 use crate::registry::{MeaningRegistry, QueueItemStatus, QueueRegistry, WordRegistry};
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text, button, text_input};
@@ -49,8 +49,8 @@ pub fn view<'state>(
     queue_registry: &'state QueueRegistry,
     meaning_registry: &'state MeaningRegistry,
     word_registry: &'state WordRegistry,
-) -> Element<'state, crate::Message> {
-    let items: Vec<Element<'state, crate::Message>> = queue_registry
+) -> Element<'state, Message> {
+    let items: Vec<Element<'state, Message>> = queue_registry
         .get_items()
         .map(|queue_item| {
             let content = meaning_content(queue_item.meaning_id, meaning_registry, word_registry);
@@ -60,7 +60,7 @@ pub fn view<'state>(
             let status_text = status_label(&status);
             let status_text_for_row = status_text.clone();
 
-            let select_indicator: Element<'state, crate::Message> =
+            let select_indicator: Element<'state, Message> =
                 if matches!(status, QueueItemStatus::Pending) {
                     let indicator_text = if selected { "[x]" } else { "[ ]" };
                     Button::new(Text::new(indicator_text))
@@ -120,7 +120,7 @@ pub fn view<'state>(
         .get_items()
         .any(|i| matches!(i.status, QueueItemStatus::Completed));
 
-    let clear_button: Element<'state, crate::Message> = if has_completed {
+    let clear_button: Element<'state, Message> = if has_completed {
         Button::new(Text::new("Clear Done"))
             .style(button::secondary)
             .padding([8, 16])

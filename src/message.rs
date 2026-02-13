@@ -1,15 +1,24 @@
 //! Application messages for event handling.
 //!
 //! Contains all message variants used in the Elm-like architecture.
+//! The Message enum is flat - all application messages are at the top level.
 
 use uuid::Uuid;
 
 use crate::models::PartOfSpeech;
 use crate::state::QueueGenerationResult;
+use crate::window::WindowType;
 
 /// Application messages for event handling.
+///
+/// This is a flat enum containing all window management messages
+/// and application operation messages.
 #[derive(Debug, Clone)]
 pub enum Message {
+    // Window management
+    WindowOpened(iced::window::Id, WindowType),
+    WindowClosed(iced::window::Id),
+
     // Word operations
     CreateWord(String),
     DeleteWord(Uuid),
@@ -63,10 +72,6 @@ pub enum Message {
     TagsToggleCollapse(Uuid),
     TagsSelectTag(Uuid),
     TagsDeselectTag(Uuid),
-
-    // Window
-    WindowCloseRequested(iced::window::Id),
-    WindowClose(iced::window::Id),
 
     // Queue
     QueueSelectToggle(Uuid),
