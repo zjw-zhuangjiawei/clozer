@@ -44,7 +44,10 @@ impl App {
         let db = Db::new(&db_path).expect("Failed to create database");
 
         // Create app state with database (takes ownership of db)
-        let app_state = AppState::builder().db(db).build();
+        let mut app_state = AppState::builder().db(db).build();
+
+        // Load existing data from database
+        app_state.data.load_all(&app_state.db);
 
         let app = Self {
             config,
@@ -91,6 +94,10 @@ impl App {
                 };
                 match window {
                     Window::Main(_) => {
+                        // Flush any unsaved data to database
+                        if let Err(e) = self.app_state.data.flush_all(&self.app_state.db) {
+                            tracing::error!("Failed to flush data on shutdown: {}", e);
+                        }
                         self.config.save_to_file();
                         iced::exit()
                     }
