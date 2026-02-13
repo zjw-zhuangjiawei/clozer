@@ -2,9 +2,9 @@
 //!
 //! Contains the App struct that coordinates state and UI rendering.
 
-use iced::Element;
+use iced::{Element, Subscription};
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, CliConfig, EnvConfig};
 use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
@@ -18,17 +18,24 @@ pub struct App {
 
 impl App {
     /// Creates a new App instance with database persistence.
-    pub fn new(config: AppConfig) -> Self {
+    ///
+    /// # Arguments
+    ///
+    /// - `cli_args`: Iterator over command-line arguments
+    /// - `env_vars`: Iterator over environment variables (name, value) pairs
+    pub fn new(
+        cli_args: impl IntoIterator<Item = std::ffi::OsString>,
+        env_vars: impl IntoIterator<Item = (String, String)>,
+    ) -> Self {
+        let cli = CliConfig::load(cli_args);
+        let env = EnvConfig::load(env_vars).expect("Failed to load env config");
+        let config = AppConfig::load(cli, env).expect("Failed to load app config");
+
         let db_path = config.data_dir.join("data.redb");
         let db = Db::new(&db_path).expect("Failed to create database");
         let state = AppState::builder().db(db).build();
 
         Self { state, config }
-    }
-
-    /// Returns a reference to the application configuration.
-    pub fn config(&self) -> &AppConfig {
-        &self.config
     }
 
     /// Creates a new App with sample data loaded.
@@ -84,5 +91,9 @@ impl App {
                 .padding(10),
         ]
         .into()
+    }
+
+    pub fn subscription_window_close(&self) -> Subscription<Message> {
+        iced::window::close_events().map(Message::WindowClose)
     }
 }

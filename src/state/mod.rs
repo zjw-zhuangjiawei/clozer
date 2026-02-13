@@ -14,7 +14,7 @@ use crate::message::Message;
 use crate::models::{Meaning, Word};
 use crate::persistence::Db;
 use crate::state::ui::TagDropdownState;
-use iced::Task;
+use iced::{Subscription, Task};
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, TypedBuilder)]
@@ -351,6 +351,10 @@ impl AppState {
             Message::TagsDeselectTag(id) => {
                 self.ui.tags.selected_ids.remove(&id);
             }
+
+            // Window
+            Message::WindowCloseRequested(id) => {}
+            Message::WindowClose(id) => {}
 
             // Queue
             Message::QueueSelectToggle(item_id) => {

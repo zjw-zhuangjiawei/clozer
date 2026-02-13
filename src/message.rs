@@ -64,6 +64,10 @@ pub enum Message {
     TagsSelectTag(Uuid),
     TagsDeselectTag(Uuid),
 
+    // Window
+    WindowCloseRequested(iced::window::Id),
+    WindowClose(iced::window::Id),
+
     // Queue
     QueueSelectToggle(Uuid),
     QueueSelectAll,

@@ -24,4 +24,9 @@ impl FileConfig {
     pub fn load(s: impl AsRef<str>) -> Result<FileConfig, toml::de::Error> {
         toml::from_str(s.as_ref())
     }
+
+    /// Serializes configuration to a TOML string.
+    pub fn dump(&self) -> String {
+        toml::to_string_pretty(self).expect("Failed to serialize config")
+    }
 }

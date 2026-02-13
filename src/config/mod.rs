@@ -37,6 +37,17 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
+    /// Saves the current configuration to the config file.
+    pub fn save_to_file(&self) {
+        if let Some(parent) = self.config_file.parent() {
+            std::fs::create_dir_all(parent).expect("Failed to create config directory");
+        }
+
+        let file_config = self.construct_file_config();
+        let content = file_config.dump();
+        std::fs::write(&self.config_file, content).expect("Failed to write config file");
+    }
+
     /// Constructs a `FileConfig` from this `AppConfig`.
     ///
     /// This method is used when saving configuration changes

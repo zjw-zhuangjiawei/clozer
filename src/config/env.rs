@@ -14,7 +14,7 @@ pub struct EnvConfig {
 
 impl EnvConfig {
     /// Loads configuration from environment variables with `CLOZER_` prefix.
-    pub fn load() -> Result<Self, envy::Error> {
-        envy::prefixed("CLOZER_").from_env()
+    pub fn load(envs: impl IntoIterator<Item = (String, String)>) -> Result<Self, envy::Error> {
+        envy::prefixed("CLOZER_").from_iter(envs)
     }
 }
