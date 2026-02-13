@@ -43,6 +43,9 @@ impl QueueState {
             .cloned()
             .collect();
 
+        let count = items.len();
+        tracing::info!("Processing queue: {} pending items", count);
+
         let tasks = items.into_iter().map(|item| {
             let meaning = meaning_registry.get_by_id(item.meaning_id).unwrap().clone();
             let word = word_registry.get_by_id(meaning.word_id).unwrap().clone();

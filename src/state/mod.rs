@@ -48,10 +48,12 @@ impl AppState {
                 let trimmed = content.trim();
                 if !trimmed.is_empty() {
                     let word = Word::builder().content(trimmed.to_string()).build();
+                    tracing::debug!("Creating word: {} (id={})", word.content, word.id);
                     self.data.word_registry.insert(word);
                 }
             }
             Message::DeleteWord(word_id) => {
+                tracing::debug!("Deleting word: {}", word_id);
                 // Delete all clozes for meanings of this word
                 for (meaning_id, _) in self.data.meaning_registry.iter_by_word(word_id) {
                     self.data.cloze_registry.delete_by_meaning(*meaning_id);
@@ -63,6 +65,8 @@ impl AppState {
                 self.selection.selected_word_ids.remove(&word_id);
             }
             Message::DeleteSelected => {
+                let count = self.selection.selected_word_ids.len();
+                tracing::debug!("Deleting {} selected words", count);
                 for &id in &self.selection.selected_word_ids {
                     // Delete clozes for meanings
                     for (meaning_id, _) in self.data.meaning_registry.iter_by_word(id) {
@@ -93,6 +97,12 @@ impl AppState {
                         .pos(pos)
                         .build();
 
+                    tracing::debug!(
+                        "Creating meaning for word {}: {} ({})",
+                        word_id,
+                        meaning.definition,
+                        meaning.pos
+                    );
                     self.data.meaning_registry.insert(meaning.clone());
 
                     // Update Word.meaning_ids

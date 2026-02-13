@@ -16,6 +16,11 @@ fn main() {
         .with_max_level(app_config.log_level.to_tracing_level())
         .init();
 
+    // Application startup
+    tracing::info!("Clozer starting up");
+    tracing::info!("Data directory: {:?}", app_config.data_dir);
+    tracing::info!("Log level: {:?}", app_config.log_level);
+
     let _ = iced::daemon(
         move || {
             let (app, task) = App::new(app_config.clone());

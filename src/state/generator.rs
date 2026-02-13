@@ -152,6 +152,12 @@ impl Generator {
     }
 
     pub async fn generate(&self, word: &Word, meaning: &Meaning) -> Cloze {
+        tracing::debug!(
+            "Generating cloze for word: {} ({})",
+            word.content,
+            meaning.pos
+        );
+
         let prompt = format!(
             r#"Generate a cloze deletion sentence for "{content}" with definition "{definition}" ({pos}).
 Use brackets to mark the blank: [answer]
@@ -161,6 +167,8 @@ Return ONLY the sentence."#,
             definition = meaning.definition,
             pos = meaning.pos
         );
+
+        let start = std::time::Instant::now();
         let sentence = match &self.agent {
             AgentWrapper::OpenAI(a) => a.prompt(&prompt).await.unwrap(),
             AgentWrapper::Anthropic(a) => a.prompt(&prompt).await.unwrap(),
@@ -170,6 +178,9 @@ Return ONLY the sentence."#,
             AgentWrapper::Perplexity(a) => a.prompt(&prompt).await.unwrap(),
             AgentWrapper::XAI(a) => a.prompt(&prompt).await.unwrap(),
         };
+        let elapsed = start.elapsed().as_millis();
+        tracing::debug!("LLM request completed in {}ms", elapsed);
+
         let segments = Cloze::parse_from_sentence(&sentence);
         Cloze::builder()
             .meaning_id(meaning.id)

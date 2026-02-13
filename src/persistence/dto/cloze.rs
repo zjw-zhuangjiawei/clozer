@@ -6,11 +6,9 @@ use uuid::Uuid;
 
 // Cloze segment DTO for serialization.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(rename_all = "snake_case", tag = "type", content = "content")]
 pub enum ClozeSegmentDto {
-    #[serde(rename = "text")]
     Text(String),
-    #[serde(rename = "blank")]
     Blank(String),
 }
 

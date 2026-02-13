@@ -33,13 +33,22 @@ impl App {
     pub fn new(config: AppConfig) -> (Self, iced::Task<Message>) {
         // Initialize database
         let db_path = config.data_dir.join("data.redb");
+        tracing::debug!("Initializing database at {:?}", db_path);
         let db = Db::new(&db_path).expect("Failed to create database");
 
         // Create app state with database (takes ownership of db)
         let mut app_state = AppState::builder().db(db).build();
 
         // Load existing data from database
+        tracing::debug!("Loading data from database");
         app_state.data.load_all(&app_state.db);
+        tracing::debug!(
+            "Data loaded: {} words, {} meanings, {} tags, {} clozes",
+            app_state.data.word_registry.count(),
+            app_state.data.meaning_registry.count(),
+            app_state.data.tag_registry.count(),
+            app_state.data.cloze_registry.count(),
+        );
 
         let app = Self {
             config,
@@ -49,6 +58,7 @@ impl App {
 
         // Open initial main window
         let window_type = WindowType::Main;
+        tracing::debug!("Opening main window");
         let (_, open_task) = iced::window::open(window_type.window_settings());
 
         let task = open_task.map(move |id| Message::WindowOpened(id, window_type));
@@ -87,10 +97,12 @@ impl App {
                 match window {
                     Window::Main(_) => {
                         // Flush any unsaved data to database
+                        tracing::debug!("Flushing dirty data on shutdown");
                         if let Err(e) = self.app_state.data.flush_all(&self.app_state.db) {
                             tracing::error!("Failed to flush data on shutdown: {}", e);
                         }
                         self.config.save_to_file();
+                        tracing::info!("Clozer shutting down");
                         iced::exit()
                     }
                 }
