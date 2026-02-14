@@ -27,16 +27,9 @@ fn main() {
     tracing::info!("Data directory: {:?}", app_config.data_dir);
     tracing::info!("Log level: {:?}", app_config.log_level);
 
-    let _ = iced::daemon(
-        move || {
-            let (app, task) = App::new(app_config.clone());
-            (app.with_sample_data(), task)
-        },
-        App::update,
-        App::view,
-    )
-    .title(App::title)
-    .subscription(App::subscription)
-    .theme(App::theme)
-    .run();
+    let _ = iced::daemon(move || App::new(app_config.clone()), App::update, App::view)
+        .title(App::title)
+        .subscription(App::subscription)
+        .theme(App::theme)
+        .run();
 }

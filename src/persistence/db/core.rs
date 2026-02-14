@@ -23,10 +23,10 @@ pub fn deserialize<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, po
 
 /// Converts Uuid to bytes key for redb.
 pub fn uuid_to_key(id: uuid::Uuid) -> [u8; 16] {
-    *id.as_bytes()
+    id.into_bytes()
 }
 
 /// Converts bytes key back to Uuid.
 pub fn key_to_uuid(key: [u8; 16]) -> uuid::Uuid {
-    uuid::Uuid::from_bytes_le(key)
+    uuid::Uuid::from_bytes(key)
 }
