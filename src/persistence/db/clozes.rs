@@ -13,9 +13,12 @@ impl Db {
         data: &ClozeDto,
     ) -> Result<(), crate::persistence::DbError> {
         let t = self.write()?;
-        let mut table = t.open_table(CLOZES_TABLE)?;
-        let bytes = serialize(data)?;
-        table.insert(&uuid_to_key(id), &bytes)?;
+        {
+            let mut table = t.open_table(CLOZES_TABLE)?;
+            let bytes = serialize(data)?;
+            table.insert(&uuid_to_key(id), &bytes)?;
+        }
+        t.commit()?;
         Ok(())
     }
 
@@ -36,8 +39,11 @@ impl Db {
     /// Deletes a cloze from the database.
     pub fn delete_cloze(&self, id: uuid::Uuid) -> Result<(), crate::persistence::DbError> {
         let t = self.write()?;
-        let mut table = t.open_table(CLOZES_TABLE)?;
-        table.remove(&uuid_to_key(id))?;
+        {
+            let mut table = t.open_table(CLOZES_TABLE)?;
+            table.remove(&uuid_to_key(id))?;
+        }
+        t.commit()?;
         Ok(())
     }
 

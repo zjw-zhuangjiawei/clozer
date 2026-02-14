@@ -10,9 +10,9 @@ mod core;
 pub use core::*;
 mod clozes;
 mod meanings;
-mod models;
-mod providers;
-mod queue;
+// mod models;
+// mod providers;
+// mod queue;
 mod tags;
 mod words;
 
@@ -36,6 +36,9 @@ pub enum DbError {
 
     #[error("Storage error: {0}")]
     Storage(#[from] redb::StorageError),
+
+    #[error("Commit error: {0}")]
+    Commit(#[from] redb::CommitError),
 }
 
 /// Main database wrapper.

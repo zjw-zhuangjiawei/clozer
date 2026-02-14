@@ -28,3 +28,11 @@ envy = "0.4.2"
 dirs = "5.0.1"
 clap = { version = "4.5.57", features = ["derive"] }
 toml = "0.9.8"
+
+[[bin]]
+name = "clozer"
+path = "src/main.rs"
+
+[[bin]]
+name = "inspect-db"
+path = "inspect-db/main.rs"

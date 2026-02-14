@@ -7,9 +7,9 @@ pub const WORDS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new
 pub const MEANINGS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("meanings");
 pub const CLOZES_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("clozes");
 pub const TAGS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("tags");
-pub const PROVIDERS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("providers");
-pub const MODELS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("models");
-pub const QUEUE_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("queue");
+// pub const PROVIDERS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("providers");
+// pub const MODELS_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("models");
+// pub const QUEUE_TABLE: TableDefinition<[u8; 16], Vec<u8>> = TableDefinition::new("queue");
 
 /// Serializes data to bytes using postcard.
 pub fn serialize<T: serde::Serialize>(data: &T) -> Result<Vec<u8>, postcard::Error> {

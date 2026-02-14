@@ -1,5 +1,5 @@
 use crate::models::Model;
-use crate::persistence::DbError;
+// use crate::persistence::DbError;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -80,38 +80,35 @@ impl ModelRegistry {
         self.models.is_empty()
     }
 
-    // Persistence
-    /// Load all models from database
-    pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_models() {
-            for (id, dto) in items {
-                let model = crate::models::Model::from(dto);
-                self.models.insert(id, model.clone());
-                self.by_name.insert(model.name.clone(), id);
-                self.by_provider
-                    .entry(model.provider_id)
-                    .or_default()
-                    .insert(id);
-            }
-        }
-    }
+    // Persistence (commented out - no DB)
+    // pub fn load_all(&mut self, db: &crate::persistence::Db) {
+    //     if let Ok(items) = db.iter_models() {
+    //         for (id, dto) in items {
+    //             let model = crate::models::Model::from(dto);
+    //             self.models.insert(id, model.clone());
+    //             self.by_name.insert(model.name.clone(), id);
+    //             self.by_provider
+    //                 .entry(model.provider_id)
+    //                 .or_default()
+    //                 .insert(id);
+    //         }
+    //     }
+    // }
 
-    /// Flush all dirty entities to the database
-    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        for id in &self.dirty_ids {
-            if let Some(model) = self.models.get(id) {
-                let dto = crate::persistence::ModelDto::from(model);
-                db.save_model(*id, &dto)?;
-            }
-        }
-        self.dirty_ids.clear();
-        Ok(())
-    }
+    // pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+    //     for id in &self.dirty_ids {
+    //         if let Some(model) = self.models.get(id) {
+    //             let dto = crate::persistence::ModelDto::from(model);
+    //             db.save_model(*id, &dto)?;
+    //         }
+    //     }
+    //     self.dirty_ids.clear();
+    //     Ok(())
+    // }
 
-    /// Check if there are any dirty entities
-    pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
-    }
+    // pub fn has_dirty(&self) -> bool {
+    //     !self.dirty_ids.is_empty()
+    // }
 }
 
 impl Default for ModelRegistry {

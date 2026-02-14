@@ -43,9 +43,10 @@ impl DataState {
         self.meaning_registry.load_all(db);
         self.tag_registry.load_all(db);
         self.cloze_registry.load_all(db);
-        self.model_registry.load_all(db);
-        self.provider_registry.load_all(db);
-        self.queue_registry.load_all(db);
+        // model/provider/queue persistence commented out
+        // self.model_registry.load_all(db);
+        // self.provider_registry.load_all(db);
+        // self.queue_registry.load_all(db);
     }
 
     /// Flush all dirty entities across registries to the database
@@ -54,9 +55,10 @@ impl DataState {
         self.meaning_registry.flush_dirty(db)?;
         self.tag_registry.flush_dirty(db)?;
         self.cloze_registry.flush_dirty(db)?;
-        self.model_registry.flush_dirty(db)?;
-        self.provider_registry.flush_dirty(db)?;
-        self.queue_registry.flush_dirty(db)?;
+        // model/provider/queue persistence commented out
+        // self.model_registry.flush_dirty(db)?;
+        // self.provider_registry.flush_dirty(db)?;
+        // self.queue_registry.flush_dirty(db)?;
         Ok(())
     }
 
@@ -66,9 +68,10 @@ impl DataState {
             || self.meaning_registry.has_dirty()
             || self.tag_registry.has_dirty()
             || self.cloze_registry.has_dirty()
-            || self.model_registry.has_dirty()
-            || self.provider_registry.has_dirty()
-            || self.queue_registry.has_dirty()
+        // model/provider/queue persistence commented out
+        // || self.model_registry.has_dirty()
+        // || self.provider_registry.has_dirty()
+        // || self.queue_registry.has_dirty()
     }
 
     pub fn with_sample_data(mut self) -> Self {

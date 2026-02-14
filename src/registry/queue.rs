@@ -1,4 +1,4 @@
-use crate::persistence::DbError;
+// use crate::persistence::DbError;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -156,57 +156,54 @@ impl QueueRegistry {
             .retain(|_, item| item.status != QueueItemStatus::Completed);
     }
 
-    // Persistence
-    /// Load all queue items from database
-    pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_queue() {
-            for (id, dto) in items {
-                let status = match dto.status {
-                    crate::persistence::QueueItemStatusDto::Pending => QueueItemStatus::Pending,
-                    crate::persistence::QueueItemStatusDto::Processing => {
-                        QueueItemStatus::Processing
-                    }
-                    crate::persistence::QueueItemStatusDto::Completed => QueueItemStatus::Completed,
-                    crate::persistence::QueueItemStatusDto::Failed => {
-                        QueueItemStatus::Failed(String::new())
-                    }
-                };
-                let item = QueueItem {
-                    id,
-                    meaning_id: dto.meaning_id,
-                    status,
-                    selected: false, // DTO doesn't store selected
-                };
-                self.items.insert(id, item);
-            }
-        }
-    }
+    // Persistence (commented out - no DB)
+    // pub fn load_all(&mut self, db: &crate::persistence::Db) {
+    //     if let Ok(items) = db.iter_queue() {
+    //         for (id, dto) in items {
+    //             let status = match dto.status {
+    //                 crate::persistence::QueueItemStatusDto::Pending => QueueItemStatus::Pending,
+    //                 crate::persistence::QueueItemStatusDto::Processing => {
+    //                     QueueItemStatus::Processing
+    //                 }
+    //                 crate::persistence::QueueItemStatusDto::Completed => QueueItemStatus::Completed,
+    //                 crate::persistence::QueueItemStatusDto::Failed => {
+    //                     QueueItemStatus::Failed(String::new())
+    //                 }
+    //             };
+    //             let item = QueueItem {
+    //                 id,
+    //                 meaning_id: dto.meaning_id,
+    //                 status,
+    //                 selected: false, // DTO doesn't store selected
+    //             };
+    //             self.items.insert(id, item);
+    //         }
+    //     }
+    // }
 
-    /// Flush all dirty entities to the database
-    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        for id in &self.dirty_ids {
-            if let Some(item) = self.items.get(id) {
-                let status = match item.status {
-                    QueueItemStatus::Pending => crate::persistence::QueueItemStatusDto::Pending,
-                    QueueItemStatus::Processing => {
-                        crate::persistence::QueueItemStatusDto::Processing
-                    }
-                    QueueItemStatus::Completed => crate::persistence::QueueItemStatusDto::Completed,
-                    QueueItemStatus::Failed(_) => crate::persistence::QueueItemStatusDto::Failed,
-                };
-                let dto = crate::persistence::QueueItemDto {
-                    meaning_id: item.meaning_id,
-                    status,
-                };
-                db.save_queue_item(*id, &dto)?;
-            }
-        }
-        self.dirty_ids.clear();
-        Ok(())
-    }
+    // pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+    //     for id in &self.dirty_ids {
+    //         if let Some(item) = self.items.get(id) {
+    //             let status = match item.status {
+    //                 QueueItemStatus::Pending => crate::persistence::QueueItemStatusDto::Pending,
+    //                 QueueItemStatus::Processing => {
+    //                     crate::persistence::QueueItemStatusDto::Processing
+    //                 }
+    //                 QueueItemStatus::Completed => crate::persistence::QueueItemStatusDto::Completed,
+    //                 QueueItemStatus::Failed(_) => crate::persistence::QueueItemStatusDto::Failed,
+    //             };
+    //             let dto = crate::persistence::QueueItemDto {
+    //                 meaning_id: item.meaning_id,
+    //                 status,
+    //             };
+    //             db.save_queue_item(*id, &dto)?;
+    //         }
+    //     }
+    //     self.dirty_ids.clear();
+    //     Ok(())
+    // }
 
-    /// Check if there are any dirty entities
-    pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
-    }
+    // pub fn has_dirty(&self) -> bool {
+    //     !self.dirty_ids.is_empty()
+    // }
 }

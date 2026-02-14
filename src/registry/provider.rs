@@ -1,5 +1,5 @@
 use crate::models::Provider;
-use crate::persistence::DbError;
+// use crate::persistence::DbError;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -56,34 +56,31 @@ impl ProviderRegistry {
         self.providers.is_empty()
     }
 
-    // Persistence
-    /// Load all providers from database
-    pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_providers() {
-            for (id, dto) in items {
-                let provider = crate::models::Provider::from(dto);
-                self.providers.insert(id, provider.clone());
-                self.by_name.insert(provider.name.clone(), id);
-            }
-        }
-    }
+    // Persistence (commented out - no DB)
+    // pub fn load_all(&mut self, db: &crate::persistence::Db) {
+    //     if let Ok(items) = db.iter_providers() {
+    //         for (id, dto) in items {
+    //             let provider = crate::models::Provider::from(dto);
+    //             self.providers.insert(id, provider.clone());
+    //             self.by_name.insert(provider.name.clone(), id);
+    //         }
+    //     }
+    // }
 
-    /// Flush all dirty entities to the database
-    pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        for id in &self.dirty_ids {
-            if let Some(provider) = self.providers.get(id) {
-                let dto = crate::persistence::ProviderDto::from(provider);
-                db.save_provider(*id, &dto)?;
-            }
-        }
-        self.dirty_ids.clear();
-        Ok(())
-    }
+    // pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+    //     for id in &self.dirty_ids {
+    //         if let Some(provider) = self.providers.get(id) {
+    //             let dto = crate::persistence::ProviderDto::from(provider);
+    //             db.save_provider(*id, &dto)?;
+    //         }
+    //     }
+    //     self.dirty_ids.clear();
+    //     Ok(())
+    // }
 
-    /// Check if there are any dirty entities
-    pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
-    }
+    // pub fn has_dirty(&self) -> bool {
+    //     !self.dirty_ids.is_empty()
+    // }
 }
 
 impl Default for ProviderRegistry {
