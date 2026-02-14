@@ -1,3 +1,5 @@
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
 use clozer::App;
 use clozer::config::{AppConfig, CliConfig, EnvConfig};
 
@@ -12,8 +14,12 @@ fn main() {
     let app_config = AppConfig::load(cli, env).unwrap_or_default();
 
     // Initialize tracing with configured log level
-    tracing_subscriber::fmt()
-        .with_max_level(app_config.log_level.to_tracing_level())
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::filter::Targets::new()
+                .with_target("clozer", app_config.log_level.into_tracing_level()),
+        )
         .init();
 
     // Application startup

@@ -31,8 +31,7 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    /// Convert to tracing::Level.
-    pub fn to_tracing_level(self) -> tracing::Level {
+    pub const fn into_tracing_level(self) -> tracing::Level {
         match self {
             LogLevel::Trace => tracing::Level::TRACE,
             LogLevel::Debug => tracing::Level::DEBUG,
