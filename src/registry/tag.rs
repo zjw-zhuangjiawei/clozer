@@ -1,19 +1,19 @@
 use crate::models::Tag;
 use crate::persistence::DbError;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct TagRegistry {
-    tags: HashMap<Uuid, Tag>,
-    dirty_ids: HashSet<Uuid>,
+    tags: BTreeMap<Uuid, Tag>,
+    dirty_ids: BTreeSet<Uuid>,
 }
 
 impl TagRegistry {
     pub fn new() -> Self {
         Self {
-            tags: HashMap::new(),
-            dirty_ids: HashSet::new(),
+            tags: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
         }
     }
 

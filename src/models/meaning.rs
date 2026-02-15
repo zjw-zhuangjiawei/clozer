@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use strum::{Display, VariantArray};
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
@@ -37,5 +37,5 @@ pub struct Meaning {
     pub definition: String,
     pub pos: PartOfSpeech,
     #[builder(default, via_mutators)]
-    pub tag_ids: HashSet<Uuid>,
+    pub tag_ids: BTreeSet<Uuid>,
 }

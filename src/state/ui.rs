@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 use crate::models::PartOfSpeech;
@@ -31,8 +31,8 @@ impl UiState {
 #[derive(Debug, Default, Clone)]
 pub struct WordsUiState {
     pub word_input: String,
-    pub expanded_word_ids: HashSet<Uuid>,
-    pub meaning_inputs: HashMap<Uuid, MeaningInputState>,
+    pub expanded_word_ids: BTreeSet<Uuid>,
+    pub meaning_inputs: BTreeMap<Uuid, MeaningInputState>,
     pub tag_filter: String,
     pub active_tag_dropdown: Option<Uuid>,
     pub meanings_tag_dropdown_state: TagDropdownState,
@@ -61,8 +61,8 @@ impl WordsUiState {
     pub fn new() -> Self {
         Self {
             word_input: String::new(),
-            expanded_word_ids: HashSet::new(),
-            meaning_inputs: HashMap::new(),
+            expanded_word_ids: BTreeSet::new(),
+            meaning_inputs: BTreeMap::new(),
             tag_filter: String::new(),
             active_tag_dropdown: None,
             meanings_tag_dropdown_state: TagDropdownState::None,
@@ -75,8 +75,8 @@ impl WordsUiState {
 #[derive(Debug, Clone)]
 pub struct TagsUiState {
     pub input: String,
-    pub collapsed_ids: HashSet<Uuid>,
-    pub selected_ids: HashSet<Uuid>,
+    pub collapsed_ids: BTreeSet<Uuid>,
+    pub selected_ids: BTreeSet<Uuid>,
 }
 
 impl Default for TagsUiState {
@@ -89,8 +89,8 @@ impl TagsUiState {
     pub fn new() -> Self {
         Self {
             input: String::new(),
-            collapsed_ids: HashSet::new(),
-            selected_ids: HashSet::new(),
+            collapsed_ids: BTreeSet::new(),
+            selected_ids: BTreeSet::new(),
         }
     }
 }

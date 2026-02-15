@@ -4,7 +4,7 @@ use crate::registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry}
 use crate::state::ui::{MeaningInputState, TagDropdownState};
 use iced::Element;
 use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use strum::VariantArray;
 use uuid::Uuid;
 
@@ -15,10 +15,10 @@ pub fn view<'state>(
     tag_registry: &'state TagRegistry,
     input: &str,
     tag_filter: &str,
-    selected_word_ids: &'state HashSet<Uuid>,
-    selected_meaning_ids: &'state HashSet<Uuid>,
-    expanded_word_ids: &'state HashSet<Uuid>,
-    meaning_inputs: &'state HashMap<Uuid, MeaningInputState>,
+    selected_word_ids: &'state BTreeSet<Uuid>,
+    selected_meaning_ids: &'state BTreeSet<Uuid>,
+    expanded_word_ids: &'state BTreeSet<Uuid>,
+    meaning_inputs: &'state BTreeMap<Uuid, MeaningInputState>,
     active_tag_dropdown: &'state Option<Uuid>,
     meanings_tag_dropdown_state: &'state TagDropdownState,
     meanings_tag_search_input: &str,
@@ -111,7 +111,7 @@ pub fn view<'state>(
 
     // Compute common tags for Remove Tag dropdown
     let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
-        let mut common_tags: Option<HashSet<Uuid>> = None;
+        let mut common_tags: Option<BTreeSet<Uuid>> = None;
         for &meaning_id in selected_meaning_ids {
             if let Some(meaning) = meaning_registry.get_by_id(meaning_id) {
                 if let Some(ref mut tags) = common_tags {

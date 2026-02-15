@@ -1,20 +1,20 @@
 use crate::models::Provider;
 // use crate::persistence::DbError;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ProviderRegistry {
-    providers: HashMap<Uuid, Provider>,
-    dirty_ids: HashSet<Uuid>,
+    providers: BTreeMap<Uuid, Provider>,
+    dirty_ids: BTreeSet<Uuid>,
     by_name: HashMap<String, Uuid>,
 }
 
 impl ProviderRegistry {
     pub fn new() -> Self {
         Self {
-            providers: HashMap::new(),
-            dirty_ids: HashSet::new(),
+            providers: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
             by_name: HashMap::new(),
         }
     }

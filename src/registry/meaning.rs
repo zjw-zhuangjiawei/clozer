@@ -1,24 +1,24 @@
 use crate::models::Meaning;
 use crate::persistence::DbError;
 use either::Either;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct MeaningRegistry {
-    meanings: HashMap<Uuid, Meaning>,
-    dirty_ids: HashSet<Uuid>,
-    by_word: HashMap<Uuid, HashSet<Uuid>>,
-    by_tag: HashMap<Uuid, HashSet<Uuid>>,
+    meanings: BTreeMap<Uuid, Meaning>,
+    dirty_ids: BTreeSet<Uuid>,
+    by_word: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    by_tag: BTreeMap<Uuid, BTreeSet<Uuid>>,
 }
 
 impl MeaningRegistry {
     pub fn new() -> Self {
         Self {
-            meanings: HashMap::new(),
-            dirty_ids: HashSet::new(),
-            by_word: HashMap::new(),
-            by_tag: HashMap::new(),
+            meanings: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
+            by_word: BTreeMap::new(),
+            by_tag: BTreeMap::new(),
         }
     }
 

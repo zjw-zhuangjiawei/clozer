@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
@@ -15,5 +15,5 @@ pub struct Tag {
     #[builder(default)]
     pub parent_id: Option<Uuid>,
     #[builder(default, via_mutators)]
-    pub children_ids: HashSet<Uuid>,
+    pub children_ids: BTreeSet<Uuid>,
 }

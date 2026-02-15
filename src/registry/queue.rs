@@ -1,5 +1,5 @@
 // use crate::persistence::DbError;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,15 +31,15 @@ impl QueueItem {
 
 #[derive(Debug, Default, Clone)]
 pub struct QueueRegistry {
-    items: HashMap<Uuid, QueueItem>,
-    dirty_ids: HashSet<Uuid>,
+    items: BTreeMap<Uuid, QueueItem>,
+    dirty_ids: BTreeSet<Uuid>,
 }
 
 impl QueueRegistry {
     pub fn new() -> Self {
         Self {
-            items: HashMap::new(),
-            dirty_ids: HashSet::new(),
+            items: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
         }
     }
 

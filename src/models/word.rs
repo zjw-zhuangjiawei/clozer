@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
@@ -13,5 +13,5 @@ pub struct Word {
     pub id: Uuid,
     pub content: String,
     #[builder(default, via_mutators)]
-    pub meaning_ids: HashSet<Uuid>,
+    pub meaning_ids: BTreeSet<Uuid>,
 }

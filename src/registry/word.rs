@@ -1,19 +1,19 @@
 use crate::models::Word;
 use crate::persistence::DbError;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct WordRegistry {
-    words: HashMap<Uuid, Word>,
-    dirty_ids: HashSet<Uuid>,
+    words: BTreeMap<Uuid, Word>,
+    dirty_ids: BTreeSet<Uuid>,
 }
 
 impl WordRegistry {
     pub fn new() -> Self {
         Self {
-            words: HashMap::new(),
-            dirty_ids: HashSet::new(),
+            words: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
         }
     }
 

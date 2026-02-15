@@ -1,21 +1,21 @@
 use crate::models::Cloze;
 use crate::persistence::DbError;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
 pub struct ClozeRegistry {
-    clozes: HashMap<Uuid, Cloze>,
-    dirty_ids: HashSet<Uuid>,
-    by_meaning: HashMap<Uuid, HashSet<Uuid>>,
+    clozes: BTreeMap<Uuid, Cloze>,
+    dirty_ids: BTreeSet<Uuid>,
+    by_meaning: BTreeMap<Uuid, BTreeSet<Uuid>>,
 }
 
 impl ClozeRegistry {
     pub fn new() -> Self {
         Self {
-            clozes: HashMap::new(),
-            dirty_ids: HashSet::new(),
-            by_meaning: HashMap::new(),
+            clozes: BTreeMap::new(),
+            dirty_ids: BTreeSet::new(),
+            by_meaning: BTreeMap::new(),
         }
     }
 
