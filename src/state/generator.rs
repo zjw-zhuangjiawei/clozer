@@ -90,7 +90,8 @@ impl GeneratorState {
 
     /// Gets the currently selected model, if any.
     pub fn selected_model(&self) -> Option<&Model> {
-        self.selected_model_id.and_then(|id| self.model_registry.get(id))
+        self.selected_model_id
+            .and_then(|id| self.model_registry.get(id))
     }
 
     pub fn generator(&self) -> Arc<Generator> {

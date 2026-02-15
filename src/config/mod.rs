@@ -155,7 +155,11 @@ impl AppConfig {
                 }
             },
             Err(e) => {
-                tracing::debug!("No config file found at {:?}, using defaults: {}", config_file, e);
+                tracing::debug!(
+                    "No config file found at {:?}, using defaults: {}",
+                    config_file,
+                    e
+                );
                 FileConfig::default()
             }
         };

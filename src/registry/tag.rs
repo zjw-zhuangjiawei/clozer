@@ -72,30 +72,31 @@ impl TagRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        let mut successful = Vec::new();
         let mut errors = 0;
-        for id in &self.dirty_ids {
-            if let Some(tag) = self.tags.get(id) {
+        let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
+        for id in dirty_ids {
+            if let Some(tag) = self.tags.get(&id) {
                 let dto = crate::persistence::TagDto::from(tag);
-                match db.save_tag(*id, &dto) {
-                    Ok(_) => successful.push(*id),
+                match db.save_tag(id, &dto) {
+                    Ok(_) => {
+                        self.dirty_ids.remove(&id);
+                    }
                     Err(e) => {
                         errors += 1;
                         tracing::error!(tag_id = %id, error = %e, "Failed to save tag");
                     }
                 }
             } else {
-                match db.delete_tag(*id) {
-                    Ok(_) => successful.push(*id),
+                match db.delete_tag(id) {
+                    Ok(_) => {
+                        self.dirty_ids.remove(&id);
+                    }
                     Err(e) => {
                         errors += 1;
                         tracing::error!(tag_id = %id, error = %e, "Failed to delete tag");
                     }
                 }
             }
-        }
-        for id in successful {
-            self.dirty_ids.remove(&id);
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some tags failed to persist");

@@ -98,30 +98,31 @@ impl WordRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        let mut successful = Vec::new();
         let mut errors = 0;
-        for id in &self.dirty_ids {
-            if let Some(word) = self.words.get(id) {
+        let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
+        for id in dirty_ids {
+            if let Some(word) = self.words.get(&id) {
                 let dto = crate::persistence::WordDto::from(word);
-                match db.save_word(*id, &dto) {
-                    Ok(_) => successful.push(*id),
+                match db.save_word(id, &dto) {
+                    Ok(_) => {
+                        self.dirty_ids.remove(&id);
+                    }
                     Err(e) => {
                         errors += 1;
                         tracing::error!(word_id = %id, error = %e, "Failed to save word");
                     }
                 }
             } else {
-                match db.delete_word(*id) {
-                    Ok(_) => successful.push(*id),
+                match db.delete_word(id) {
+                    Ok(_) => {
+                        self.dirty_ids.remove(&id);
+                    }
                     Err(e) => {
                         errors += 1;
                         tracing::error!(word_id = %id, error = %e, "Failed to delete word");
                     }
                 }
             }
-        }
-        for id in successful {
-            self.dirty_ids.remove(&id);
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some words failed to persist");

@@ -1,10 +1,7 @@
 use crate::{
     models::{Meaning, PartOfSpeech, Tag, Word},
     persistence::DbError,
-    registry::{
-        ClozeRegistry, MeaningRegistry, QueueRegistry,
-        TagRegistry, WordRegistry,
-    },
+    registry::{ClozeRegistry, MeaningRegistry, QueueRegistry, TagRegistry, WordRegistry},
 };
 
 #[derive(Debug, Clone)]

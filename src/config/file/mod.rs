@@ -1,4 +1,4 @@
- //! File-based configuration using serde.
+//! File-based configuration using serde.
 //!
 //! Reads configuration from config file (e.g., clozer.toml).
 

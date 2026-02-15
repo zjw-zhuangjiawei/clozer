@@ -7,7 +7,4 @@ pub mod dto;
 
 pub use crate::models::ClozeSegment;
 pub use db::{Db, DbError};
-pub use dto::{
-    ClozeDto, ClozeSegmentDto, MeaningDto, PartOfSpeechDto,
-    TagDto, WordDto,
-};
+pub use dto::{ClozeDto, ClozeSegmentDto, MeaningDto, PartOfSpeechDto, TagDto, WordDto};

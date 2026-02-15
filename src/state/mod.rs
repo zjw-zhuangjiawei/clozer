@@ -150,12 +150,11 @@ impl AppState {
             }
             Message::DeleteMeaning(meaning_id) => {
                 // Get word_id for cleanup
-                let word_id =
-                    if let Some(meaning) = self.data.meaning_registry.get(meaning_id) {
-                        meaning.word_id
-                    } else {
-                        return Task::none();
-                    };
+                let word_id = if let Some(meaning) = self.data.meaning_registry.get(meaning_id) {
+                    meaning.word_id
+                } else {
+                    return Task::none();
+                };
 
                 // Delete clozes
                 self.data.cloze_registry.delete_by_meaning(meaning_id);
