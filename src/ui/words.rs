@@ -26,7 +26,6 @@ pub fn view<'state>(
 ) -> Element<'state, Message> {
     let all_words: Vec<_> = word_registry.iter().map(|(_, w)| w).collect();
     let all_tags: Vec<_> = tag_registry.iter().map(|(_, t)| t).collect();
-    let selected_count = selected_word_ids.len();
     let selected_meaning_count = selected_meaning_ids.len();
 
     // Filter words by tag filter
@@ -64,24 +63,30 @@ pub fn view<'state>(
         .padding([8, 16])
         .on_press(Message::DeselectAllWords);
 
-    let queue_btn = if selected_count > 0 {
-        Button::new(Text::new(format!("Add to Queue ({})", selected_count)))
-            .style(button::primary)
-            .padding([8, 16])
-            .on_press(Message::QueueSelected)
+    let queue_btn = if selected_meaning_count > 0 {
+        Button::new(Text::new(format!(
+            "Add to Queue ({})",
+            selected_meaning_count
+        )))
+        .style(button::primary)
+        .padding([8, 16])
+        .on_press(Message::QueueSelected)
     } else {
-        Button::new(Text::new(format!("Add to Queue ({})", selected_count)))
-            .style(button::secondary)
-            .padding([8, 16])
+        Button::new(Text::new(format!(
+            "Add to Queue ({})",
+            selected_meaning_count
+        )))
+        .style(button::secondary)
+        .padding([8, 16])
     };
 
-    let delete_btn = if selected_count > 0 {
-        Button::new(Text::new(format!("Delete ({})", selected_count)))
+    let delete_btn = if selected_meaning_count > 0 {
+        Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
             .style(button::danger)
             .padding([8, 16])
             .on_press(Message::DeleteSelected)
     } else {
-        Button::new(Text::new(format!("Delete ({})", selected_count)))
+        Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
             .style(button::secondary)
             .padding([8, 16])
     };

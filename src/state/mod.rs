@@ -65,19 +65,13 @@ impl AppState {
                 self.selection.selected_word_ids.remove(&word_id);
             }
             Message::DeleteSelected => {
-                let count = self.selection.selected_word_ids.len();
-                tracing::debug!("Deleting {} selected words", count);
-                for &id in &self.selection.selected_word_ids {
+                for &meaning_id in &self.selection.selected_meaning_ids {
                     // Delete clozes for meanings
-                    for (meaning_id, _) in self.data.meaning_registry.iter_by_word(id) {
-                        self.data.cloze_registry.delete_by_meaning(*meaning_id);
-                    }
+                    self.data.cloze_registry.delete_by_meaning(meaning_id);
                     // Delete meanings
-                    self.data.meaning_registry.delete_by_word(id);
-                    // Delete word
-                    self.data.word_registry.delete(id);
+                    self.data.meaning_registry.delete(meaning_id);
                 }
-                self.selection.selected_word_ids.clear();
+                self.selection.selected_meaning_ids.clear();
             }
             Message::ToggleWordExpand(word_id) => {
                 if self.ui.words.expanded_word_ids.contains(&word_id) {
@@ -383,12 +377,11 @@ impl AppState {
                 self.queue.queue_registry.deselect_all();
             }
             Message::QueueSelected => {
-                // Queue all meanings of selected words
-                for &word_id in &self.selection.selected_word_ids {
-                    for (meaning_id, _) in self.data.meaning_registry.iter_by_word(word_id) {
-                        self.queue.queue_registry.enqueue(*meaning_id);
-                    }
+                // Queue all selected meanings
+                for &meaning_id in &self.selection.selected_meaning_ids {
+                    self.queue.queue_registry.enqueue(meaning_id);
                 }
+                self.selection.selected_meaning_ids.clear();
             }
             Message::QueueProcess => {
                 let generator = self.generator.generator();
