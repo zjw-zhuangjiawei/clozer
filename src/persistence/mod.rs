@@ -1,4 +1,4 @@
-//! Persistence layer using redb and postcard serialization.
+//! Persistence layer using redb and rmp-serde serialization.
 //!
 //! This module provides data persistence for the Clozer application.
 

@@ -25,8 +25,11 @@ pub enum DbError {
     #[error("Database error: {0}")]
     Redb(#[from] redb::DatabaseError),
 
-    #[error("Serialization error: {0}")]
-    Serialization(#[from] postcard::Error),
+    #[error("Serialization error (decode): {0}")]
+    SerializationDecode(#[from] rmp_serde::decode::Error),
+
+    #[error("Serialization error (encode): {0}")]
+    SerializationEncode(#[from] rmp_serde::encode::Error),
 
     #[error("Transaction error: {0}")]
     Transaction(#[from] redb::TransactionError),
