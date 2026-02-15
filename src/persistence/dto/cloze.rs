@@ -14,19 +14,24 @@ pub enum ClozeSegmentDto {
 
 impl From<&ClozeSegment> for ClozeSegmentDto {
     fn from(segment: &ClozeSegment) -> Self {
-        match segment {
+        let result = match segment {
             ClozeSegment::Text(s) => ClozeSegmentDto::Text(s.clone()),
             ClozeSegment::Blank(a) => ClozeSegmentDto::Blank(a.clone()),
-        }
+        };
+        tracing::trace!(?segment, "ClozeSegment -> ClozeSegmentDto");
+        result
     }
 }
 
 impl From<ClozeSegmentDto> for ClozeSegment {
     fn from(dto: ClozeSegmentDto) -> Self {
-        match dto {
+        let result = match dto {
             ClozeSegmentDto::Text(s) => ClozeSegment::Text(s),
             ClozeSegmentDto::Blank(a) => ClozeSegment::Blank(a),
-        }
+        };
+        // Note: Can't log dto after move, so just log the conversion
+        tracing::trace!("ClozeSegmentDto -> ClozeSegment");
+        result
     }
 }
 
@@ -40,6 +45,7 @@ pub struct ClozeDto {
 
 impl From<&Cloze> for ClozeDto {
     fn from(cloze: &Cloze) -> Self {
+        tracing::trace!(cloze_id = %cloze.id, "Cloze -> ClozeDto");
         ClozeDto {
             id: cloze.id,
             segments: cloze.segments.iter().map(ClozeSegmentDto::from).collect(),
@@ -50,6 +56,7 @@ impl From<&Cloze> for ClozeDto {
 
 impl From<ClozeDto> for Cloze {
     fn from(dto: ClozeDto) -> Self {
+        tracing::trace!(cloze_id = %dto.id, meaning_id = %dto.meaning_id, "ClozeDto -> Cloze");
         Cloze {
             id: dto.id,
             meaning_id: dto.meaning_id,

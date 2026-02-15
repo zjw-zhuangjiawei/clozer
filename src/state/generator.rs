@@ -12,6 +12,7 @@ use rig::providers::openai;
 use rig::providers::perplexity;
 use rig::providers::xai;
 use std::sync::Arc;
+use tracing::instrument;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -178,13 +179,17 @@ impl Generator {
         Self { agent }
     }
 
+    /// Generates a cloze deletion sentence for the given word and meaning.
+    #[instrument(
+        skip(self),
+        fields(
+            word.id = %word.id,
+            word.content = %word.content,
+            meaning.id = %meaning.id,
+            pos = %meaning.pos
+        )
+    )]
     pub async fn generate(&self, word: &Word, meaning: &Meaning) -> Cloze {
-        tracing::debug!(
-            "Generating cloze for word: {} ({})",
-            word.content,
-            meaning.pos
-        );
-
         let prompt = format!(
             r#"Generate a cloze deletion sentence for "{content}" with definition "{definition}" ({pos}).
 Use brackets to mark the blank: [answer]
@@ -206,7 +211,7 @@ Return ONLY the sentence."#,
             AgentWrapper::XAI(a) => a.prompt(&prompt).await.unwrap(),
         };
         let elapsed = start.elapsed().as_millis();
-        tracing::debug!("LLM request completed in {}ms", elapsed);
+        tracing::debug!(elapsed_ms = elapsed, "LLM request completed");
 
         let segments = Cloze::parse_from_sentence(&sentence);
         Cloze::builder()

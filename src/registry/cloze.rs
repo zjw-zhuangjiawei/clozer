@@ -20,7 +20,8 @@ impl ClozeRegistry {
     }
 
     pub fn add(&mut self, cloze: Cloze) {
-        let Cloze { id, meaning_id, .. } = cloze.clone();
+        let Cloze { id, meaning_id, segments } = cloze.clone();
+        tracing::debug!(cloze_id = %id, meaning_id = %meaning_id, segments_count = segments.len(), "Adding cloze to registry");
         self.clozes.insert(id, cloze.clone());
         self.dirty_ids.insert(id);
         self.by_meaning.entry(meaning_id).or_default().insert(id);
@@ -89,27 +90,68 @@ impl ClozeRegistry {
     // Persistence
     /// Load all clozes from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_clozes() {
-            for dto in items {
-                let cloze = Cloze::from(dto);
-                self.clozes.insert(cloze.id, cloze.clone());
-                self.by_meaning
-                    .entry(cloze.meaning_id)
-                    .or_default()
-                    .insert(cloze.id);
+        tracing::debug!("ClozeRegistry: Loading clozes from database");
+        let count = self.clozes.len();
+        match db.iter_clozes() {
+            Ok(items) => {
+                for dto in items {
+                    tracing::trace!(cloze_id = %dto.id, meaning_id = %dto.meaning_id, "Converting cloze DTO to model");
+                    let cloze = Cloze::from(dto);
+                    tracing::trace!(cloze_id = %cloze.id, segments_count = cloze.segments.len(), "Inserting cloze into registry");
+                    self.clozes.insert(cloze.id, cloze.clone());
+                    self.by_meaning
+                        .entry(cloze.meaning_id)
+                        .or_default()
+                        .insert(cloze.id);
+                }
+            }
+            Err(e) => {
+                tracing::error!(error = %e, source = "cloze_registry", "Failed to load clozes from database");
             }
         }
+        let loaded = self.clozes.len() - count;
+        tracing::debug!(count = loaded, "ClozeRegistry: Loaded clozes from database");
     }
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        tracing::debug!(dirty_count = self.dirty_ids.len(), "ClozeRegistry: Flushing dirty clozes");
+        let mut successful = Vec::new();
+        let mut errors = 0;
         for id in &self.dirty_ids {
+            tracing::trace!(cloze_id = %id, "Processing dirty cloze");
             if let Some(cloze) = self.clozes.get(id) {
+                tracing::trace!(cloze_id = %id, meaning_id = %cloze.meaning_id, segments = cloze.segments.len(), "Converting cloze to DTO");
                 let dto = crate::persistence::ClozeDto::from(cloze);
-                db.save_cloze(*id, &dto)?;
+                tracing::trace!(cloze_id = %id, "Saving cloze to database");
+                match db.save_cloze(*id, &dto) {
+                    Ok(_) => {
+                        tracing::debug!(cloze_id = %id, "Successfully saved cloze");
+                        successful.push(*id);
+                    }
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(cloze_id = %id, error = %e, "Failed to save cloze");
+                    }
+                }
+            } else {
+                tracing::trace!(cloze_id = %id, "Cloze not in registry, deleting from database");
+                match db.delete_cloze(*id) {
+                    Ok(_) => successful.push(*id),
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(cloze_id = %id, error = %e, "Failed to delete cloze");
+                    }
+                }
             }
         }
-        self.dirty_ids.clear();
+        for id in &successful {
+            self.dirty_ids.remove(id);
+        }
+        if errors > 0 {
+            tracing::warn!(errors = errors, "Some clozes failed to persist");
+        }
+        tracing::debug!(saved = successful.len(), errors = errors, "ClozeRegistry: Flush complete");
         Ok(())
     }
 

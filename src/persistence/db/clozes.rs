@@ -12,13 +12,16 @@ impl Db {
         id: uuid::Uuid,
         data: &ClozeDto,
     ) -> Result<(), crate::persistence::DbError> {
+        tracing::debug!(cloze_id = %id, "Saving cloze to database");
         let t = self.write()?;
         {
             let mut table = t.open_table(CLOZES_TABLE)?;
             let bytes = serialize(data)?;
+            tracing::trace!(cloze_id = %id, byte_count = bytes.len(), "Serialized cloze");
             table.insert(&uuid_to_key(id), &bytes)?;
         }
         t.commit()?;
+        tracing::debug!(cloze_id = %id, "Saved cloze to database");
         Ok(())
     }
 
@@ -44,6 +47,7 @@ impl Db {
             table.remove(&uuid_to_key(id))?;
         }
         t.commit()?;
+        tracing::debug!("Deleted cloze {}", id);
         Ok(())
     }
 
@@ -51,6 +55,7 @@ impl Db {
     pub fn iter_clozes(
         &self,
     ) -> Result<impl Iterator<Item = ClozeDto>, crate::persistence::DbError> {
+        tracing::debug!("Loading clozes from database");
         let t = self.read()?;
         let table = t.open_table(CLOZES_TABLE)?;
         let items: Vec<ClozeDto> = table
@@ -58,11 +63,20 @@ impl Db {
             .filter_map(|r| r.ok())
             .filter_map(|(key, bytes)| {
                 let id = key_to_uuid(key.value());
-                let mut dto: ClozeDto = deserialize(&bytes.value()).ok()?;
+                tracing::trace!(cloze_id = %id, byte_count = bytes.value().len(), "Deserializing cloze");
+                let mut dto: ClozeDto = match deserialize(&bytes.value()) {
+                    Ok(dto) => dto,
+                    Err(e) => {
+                        tracing::error!(cloze_id = %id, error = %e, "Failed to deserialize cloze");
+                        return None;
+                    }
+                };
                 dto.id = id;
+                tracing::trace!(cloze_id = %id, segments_count = dto.segments.len(), "Loaded cloze");
                 Some(dto)
             })
             .collect();
+        tracing::debug!(count = items.len(), "Loaded clozes from database");
         Ok(items.into_iter())
     }
 

@@ -167,30 +167,59 @@ impl MeaningRegistry {
     // Persistence
     /// Load all meanings from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_meanings() {
-            for dto in items {
-                let meaning = Meaning::from(dto);
-                self.meanings.insert(meaning.id, meaning.clone());
-                self.by_word
-                    .entry(meaning.word_id)
-                    .or_default()
-                    .insert(meaning.id);
-                for tag_id in &meaning.tag_ids {
-                    self.by_tag.entry(*tag_id).or_default().insert(meaning.id);
+        let count = self.meanings.len();
+        match db.iter_meanings() {
+            Ok(items) => {
+                for dto in items {
+                    let meaning = Meaning::from(dto);
+                    self.meanings.insert(meaning.id, meaning.clone());
+                    self.by_word
+                        .entry(meaning.word_id)
+                        .or_default()
+                        .insert(meaning.id);
+                    for tag_id in &meaning.tag_ids {
+                        self.by_tag.entry(*tag_id).or_default().insert(meaning.id);
+                    }
                 }
             }
+            Err(e) => {
+                tracing::error!(error = %e, source = "meaning_registry", "Failed to load meanings from database");
+            }
         }
+        let loaded = self.meanings.len() - count;
+        tracing::debug!(count = loaded, "Loaded meanings from database");
     }
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let mut successful = Vec::new();
+        let mut errors = 0;
         for id in &self.dirty_ids {
             if let Some(meaning) = self.meanings.get(id) {
                 let dto = crate::persistence::MeaningDto::from(meaning);
-                db.save_meaning(*id, &dto)?;
+                match db.save_meaning(*id, &dto) {
+                    Ok(_) => successful.push(*id),
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(meaning_id = %id, error = %e, "Failed to save meaning");
+                    }
+                }
+            } else {
+                match db.delete_meaning(*id) {
+                    Ok(_) => successful.push(*id),
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(meaning_id = %id, error = %e, "Failed to delete meaning");
+                    }
+                }
             }
         }
-        self.dirty_ids.clear();
+        for id in successful {
+            self.dirty_ids.remove(&id);
+        }
+        if errors > 0 {
+            tracing::warn!(errors = errors, "Some meanings failed to persist");
+        }
         Ok(())
     }
 

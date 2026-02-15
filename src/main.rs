@@ -13,19 +13,36 @@ fn main() {
     // Load app config with log level
     let app_config = AppConfig::load(cli, env).unwrap_or_default();
 
-    // Initialize tracing with configured log level
+    // Initialize tracing with structured logging
+    // Use target-based filtering and compact format for cleaner output
+    let log_level = app_config.log_level.into_tracing_level();
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_file(true)
+                .with_line_number(true),
+        )
         .with(
             tracing_subscriber::filter::Targets::new()
-                .with_target("clozer", app_config.log_level.into_tracing_level()),
+                .with_target("clozer", log_level)
+                // Reduce noise from dependencies at info level
+                .with_default(if log_level >= tracing::Level::DEBUG {
+                    tracing::Level::WARN
+                } else {
+                    log_level
+                }),
         )
         .init();
 
-    // Application startup
-    tracing::info!("Clozer starting up");
-    tracing::info!("Data directory: {:?}", app_config.data_dir);
-    tracing::info!("Log level: {:?}", app_config.log_level);
+    // Application startup - use structured fields
+    tracing::info!(
+        target: "clozer::startup",
+        data_dir = ?app_config.data_dir,
+        log_level = ?app_config.log_level,
+        "Clozer starting up"
+    );
 
     let _ = iced::daemon(move || App::new(app_config.clone()), App::update, App::view)
         .title(App::title)

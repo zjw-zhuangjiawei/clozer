@@ -54,23 +54,52 @@ impl TagRegistry {
     // Persistence
     /// Load all tags from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
-        if let Ok(items) = db.iter_tags() {
-            for dto in items {
-                let tag = crate::models::Tag::from(dto);
-                self.tags.insert(tag.id, tag);
+        let count = self.tags.len();
+        match db.iter_tags() {
+            Ok(items) => {
+                for dto in items {
+                    let tag = crate::models::Tag::from(dto);
+                    self.tags.insert(tag.id, tag);
+                }
+            }
+            Err(e) => {
+                tracing::error!(error = %e, source = "tag_registry", "Failed to load tags from database");
             }
         }
+        let loaded = self.tags.len() - count;
+        tracing::debug!(count = loaded, "Loaded tags from database");
     }
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let mut successful = Vec::new();
+        let mut errors = 0;
         for id in &self.dirty_ids {
             if let Some(tag) = self.tags.get(id) {
                 let dto = crate::persistence::TagDto::from(tag);
-                db.save_tag(*id, &dto)?;
+                match db.save_tag(*id, &dto) {
+                    Ok(_) => successful.push(*id),
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(tag_id = %id, error = %e, "Failed to save tag");
+                    }
+                }
+            } else {
+                match db.delete_tag(*id) {
+                    Ok(_) => successful.push(*id),
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(tag_id = %id, error = %e, "Failed to delete tag");
+                    }
+                }
             }
         }
-        self.dirty_ids.clear();
+        for id in successful {
+            self.dirty_ids.remove(&id);
+        }
+        if errors > 0 {
+            tracing::warn!(errors = errors, "Some tags failed to persist");
+        }
         Ok(())
     }
 

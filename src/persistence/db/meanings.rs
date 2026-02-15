@@ -19,6 +19,7 @@ impl Db {
             table.insert(&uuid_to_key(id), &bytes)?;
         }
         t.commit()?;
+        tracing::debug!("Saved meaning {}", id);
         Ok(())
     }
 
@@ -44,6 +45,7 @@ impl Db {
             table.remove(&uuid_to_key(id))?;
         }
         t.commit()?;
+        tracing::debug!("Deleted meaning {}", id);
         Ok(())
     }
 
@@ -63,6 +65,7 @@ impl Db {
                 Some(dto)
             })
             .collect();
+        tracing::debug!("Loaded {} meanings", items.len());
         Ok(items.into_iter())
     }
 
