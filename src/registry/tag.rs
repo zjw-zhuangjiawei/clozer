@@ -17,13 +17,17 @@ impl TagRegistry {
         }
     }
 
-    pub fn insert(&mut self, tag: Tag) {
+    pub fn add(&mut self, tag: Tag) {
         self.tags.insert(tag.id, tag.clone());
         self.dirty_ids.insert(tag.id);
     }
 
-    pub fn get_by_id(&self, id: Uuid) -> Option<&Tag> {
+    pub fn get(&self, id: Uuid) -> Option<&Tag> {
         self.tags.get(&id)
+    }
+
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Tag> {
+        self.tags.get_mut(&id)
     }
 
     pub fn delete(&mut self, id: Uuid) -> bool {

@@ -18,16 +18,16 @@ impl WordRegistry {
     }
 
     // CRUD
-    pub fn insert(&mut self, word: Word) {
+    pub fn add(&mut self, word: Word) {
         self.words.insert(word.id, word.clone());
         self.dirty_ids.insert(word.id);
     }
 
-    pub fn get_by_id(&self, id: Uuid) -> Option<&Word> {
+    pub fn get(&self, id: Uuid) -> Option<&Word> {
         self.words.get(&id)
     }
 
-    pub fn get_by_id_mut(&mut self, id: Uuid) -> Option<&mut Word> {
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Word> {
         self.words.get_mut(&id)
     }
 

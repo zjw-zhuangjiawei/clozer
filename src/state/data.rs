@@ -2,7 +2,7 @@ use crate::{
     models::{Meaning, PartOfSpeech, Tag, Word},
     persistence::DbError,
     registry::{
-        ClozeRegistry, MeaningRegistry, ModelRegistry, ProviderRegistry, QueueRegistry,
+        ClozeRegistry, MeaningRegistry, QueueRegistry,
         TagRegistry, WordRegistry,
     },
 };
@@ -13,8 +13,6 @@ pub struct DataState {
     pub meaning_registry: MeaningRegistry,
     pub tag_registry: TagRegistry,
     pub cloze_registry: ClozeRegistry,
-    pub model_registry: ModelRegistry,
-    pub provider_registry: ProviderRegistry,
     pub queue_registry: QueueRegistry,
 }
 
@@ -31,8 +29,6 @@ impl DataState {
             meaning_registry: MeaningRegistry::new(),
             tag_registry: TagRegistry::new(),
             cloze_registry: ClozeRegistry::new(),
-            model_registry: ModelRegistry::new(),
-            provider_registry: ProviderRegistry::new(),
             queue_registry: QueueRegistry::new(),
         }
     }
@@ -80,9 +76,9 @@ impl DataState {
         let world = Word::builder().content("World".to_string()).build();
         let rust = Word::builder().content("Rust".to_string()).build();
 
-        self.word_registry.insert(hello.clone());
-        self.word_registry.insert(world.clone());
-        self.word_registry.insert(rust.clone());
+        self.word_registry.add(hello.clone());
+        self.word_registry.add(world.clone());
+        self.word_registry.add(rust.clone());
 
         // Create a meaning for "Hello"
         let greeting = Meaning::builder()
@@ -91,16 +87,16 @@ impl DataState {
             .pos(PartOfSpeech::Noun)
             .build();
 
-        self.meaning_registry.insert(greeting.clone());
+        self.meaning_registry.add(greeting.clone());
 
         // Update word with meaning reference and re-insert
         let mut hello_with_meaning = hello.clone();
         hello_with_meaning.meaning_ids.insert(greeting.id);
-        self.word_registry.insert(hello_with_meaning);
+        self.word_registry.add(hello_with_meaning);
 
         // Create tag
         let my_tag = Tag::builder().name("My Tag".to_string()).build();
-        self.tag_registry.insert(my_tag);
+        self.tag_registry.add(my_tag);
 
         self
     }

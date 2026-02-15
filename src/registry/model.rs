@@ -1,3 +1,4 @@
+use crate::config::AiConfig;
 use crate::models::Model;
 // use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -18,6 +19,19 @@ impl ModelRegistry {
             dirty_ids: BTreeSet::new(),
             by_name: HashMap::new(),
             by_provider: BTreeMap::new(),
+        }
+    }
+
+    /// Loads models from configuration.
+    pub fn load_from_config(&mut self, config: &AiConfig) {
+        for (id, model_config) in &config.models {
+            let model = Model::from(model_config.clone());
+            self.models.insert(*id, model.clone());
+            self.by_name.insert(model.name.clone(), *id);
+            self.by_provider
+                .entry(model.provider_id)
+                .or_default()
+                .insert(*id);
         }
     }
 

@@ -1,9 +1,11 @@
-//! File-based configuration using serde.
+ //! File-based configuration using serde.
 //!
 //! Reads configuration from config file (e.g., clozer.toml).
 
+pub mod ai;
 pub mod general;
 
+pub use ai::{AiConfig, ModelConfig, ProviderConfig};
 pub use general::GeneralConfig;
 
 use serde::{Deserialize, Serialize};
@@ -13,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct FileConfig {
     pub general: GeneralConfig,
+    pub ai: AiConfig,
 }
 
 impl FileConfig {

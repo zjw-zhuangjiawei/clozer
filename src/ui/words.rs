@@ -44,7 +44,7 @@ pub fn view<'state>(
             .filter(|word| {
                 word.meaning_ids.iter().any(|meaning_id| {
                     meaning_registry
-                        .get_by_id(*meaning_id)
+                        .get(*meaning_id)
                         .map(|m| m.tag_ids.iter().any(|tid| matching_tag_ids.contains(tid)))
                         .unwrap_or(false)
                 })
@@ -113,7 +113,7 @@ pub fn view<'state>(
     let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
         let mut common_tags: Option<BTreeSet<Uuid>> = None;
         for &meaning_id in selected_meaning_ids {
-            if let Some(meaning) = meaning_registry.get_by_id(meaning_id) {
+            if let Some(meaning) = meaning_registry.get(meaning_id) {
                 if let Some(ref mut tags) = common_tags {
                     tags.retain(|t| meaning.tag_ids.contains(t));
                 } else {
@@ -133,7 +133,7 @@ pub fn view<'state>(
             .filter(|tag| {
                 let on_all_meanings = selected_meaning_ids.iter().all(|&mid| {
                     meaning_registry
-                        .get_by_id(mid)
+                        .get(mid)
                         .map(|m| m.tag_ids.contains(&tag.id))
                         .unwrap_or(false)
                 });
@@ -151,7 +151,7 @@ pub fn view<'state>(
     // Filter common tags for Remove Tag dropdown
     let tags_for_remove: Vec<_> = common_tag_ids
         .iter()
-        .filter_map(|tag_id| tag_registry.get_by_id(*tag_id))
+        .filter_map(|tag_id| tag_registry.get(*tag_id))
         .filter(|tag| {
             tag.name
                 .to_lowercase()
@@ -262,7 +262,7 @@ pub fn view<'state>(
     // Word items
     let word_items: Vec<Element<_>> = filtered_words
         .iter()
-        .filter_map(|word_id| word_registry.get_by_id(*word_id))
+        .filter_map(|word_id| word_registry.get(*word_id))
         .map(|word| {
             let is_selected = selected_word_ids.contains(&word.id);
             let is_expanded = expanded_word_ids.contains(&word.id);
@@ -347,7 +347,7 @@ pub fn view<'state>(
 
                 // List meanings for this word
                 for meaning_id in &word.meaning_ids {
-                    if let Some(meaning) = meaning_registry.get_by_id(*meaning_id) {
+                    if let Some(meaning) = meaning_registry.get(*meaning_id) {
                         let cloze_vec: Vec<_> =
                             cloze_registry.iter_by_meaning_id(meaning.id).collect();
 
@@ -373,7 +373,7 @@ pub fn view<'state>(
                             meaning
                                 .tag_ids
                                 .iter()
-                                .filter_map(|tag_id| tag_registry.get_by_id(*tag_id))
+                                .filter_map(|tag_id| tag_registry.get(*tag_id))
                                 .map(|tag| {
                                     let tag_name = tag.name.clone();
                                     Button::new(Text::new(format!("[{}]", tag_name)))

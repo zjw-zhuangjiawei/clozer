@@ -23,7 +23,7 @@ impl MeaningRegistry {
     }
 
     // CRUD
-    pub fn insert(&mut self, meaning: Meaning) {
+    pub fn add(&mut self, meaning: Meaning) {
         let meaning_id = meaning.id;
         let word_id = meaning.word_id;
         let tag_ids = meaning.tag_ids.clone();
@@ -40,11 +40,11 @@ impl MeaningRegistry {
         }
     }
 
-    pub fn get_by_id(&self, id: Uuid) -> Option<&Meaning> {
+    pub fn get(&self, id: Uuid) -> Option<&Meaning> {
         self.meanings.get(&id)
     }
 
-    pub fn get_by_id_mut(&mut self, id: Uuid) -> Option<&mut Meaning> {
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Meaning> {
         self.meanings.get_mut(&id)
     }
 

@@ -49,7 +49,7 @@ impl AppState {
                 if !trimmed.is_empty() {
                     let word = Word::builder().content(trimmed.to_string()).build();
                     tracing::debug!("Creating word: {} (id={})", word.content, word.id);
-                    self.data.word_registry.insert(word);
+                    self.data.word_registry.add(word);
                 }
             }
             Message::DeleteWord(word_id) => {
@@ -103,7 +103,7 @@ impl AppState {
                         meaning.definition,
                         meaning.pos
                     );
-                    self.data.meaning_registry.insert(meaning.clone());
+                    self.data.meaning_registry.add(meaning.clone());
 
                     // Update Word.meaning_ids
                     self.data.word_registry.add_meaning(word_id, meaning.id);
@@ -118,7 +118,7 @@ impl AppState {
                         .pos(input.pos)
                         .build();
 
-                    self.data.meaning_registry.insert(meaning.clone());
+                    self.data.meaning_registry.add(meaning.clone());
 
                     // Update Word.meaning_ids
                     self.data.word_registry.add_meaning(word_id, meaning.id);
@@ -151,7 +151,7 @@ impl AppState {
             Message::DeleteMeaning(meaning_id) => {
                 // Get word_id for cleanup
                 let word_id =
-                    if let Some(meaning) = self.data.meaning_registry.get_by_id(meaning_id) {
+                    if let Some(meaning) = self.data.meaning_registry.get(meaning_id) {
                         meaning.word_id
                     } else {
                         return Task::none();
@@ -180,7 +180,7 @@ impl AppState {
                         let tag = crate::models::Tag::builder()
                             .name(trimmed.to_string())
                             .build();
-                        self.data.tag_registry.insert(tag);
+                        self.data.tag_registry.add(tag);
                     }
                 }
             }
@@ -290,7 +290,7 @@ impl AppState {
                 }
 
                 // Get word_id for this meaning
-                if let Some(meaning) = self.data.meaning_registry.get_by_id(meaning_id) {
+                if let Some(meaning) = self.data.meaning_registry.get(meaning_id) {
                     let word_id = meaning.word_id;
 
                     // Check if ALL meanings of word are selected
@@ -407,7 +407,7 @@ impl AppState {
             }
             Message::QueueGenerationResult(result) => {
                 self.queue.queue_registry.set_completed(result.item_id);
-                self.data.cloze_registry.insert(result.cloze);
+                self.data.cloze_registry.add(result.cloze);
             }
         }
         Task::none()

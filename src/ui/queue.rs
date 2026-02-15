@@ -34,8 +34,8 @@ fn meaning_content(
     meaning_registry: &MeaningRegistry,
     word_registry: &WordRegistry,
 ) -> String {
-    if let Some(meaning) = meaning_registry.get_by_id(meaning_id) {
-        if let Some(word) = word_registry.get_by_id(meaning.word_id) {
+    if let Some(meaning) = meaning_registry.get(meaning_id) {
+        if let Some(word) = word_registry.get(meaning.word_id) {
             format!("{} - {}: {}", word.content, meaning.pos, meaning.definition)
         } else {
             format!("<word: {}>", meaning.word_id)

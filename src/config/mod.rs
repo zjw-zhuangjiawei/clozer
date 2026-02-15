@@ -14,7 +14,7 @@ use clap::ValueEnum;
 pub use cli::CliConfig;
 pub use constants::paths;
 pub use env::EnvConfig;
-pub use file::{FileConfig, GeneralConfig};
+pub use file::{AiConfig, FileConfig, GeneralConfig, ModelConfig, ProviderConfig};
 use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
@@ -62,6 +62,9 @@ pub struct AppConfig {
 
     /// Log level
     pub log_level: LogLevel,
+
+    /// AI configuration
+    pub ai: AiConfig,
 }
 
 impl Default for AppConfig {
@@ -70,6 +73,7 @@ impl Default for AppConfig {
             data_dir: paths::data_dir(),
             config_file: paths::config_file(),
             log_level: LogLevel::DEFAULT,
+            ai: AiConfig::default(),
         }
     }
 }
@@ -106,6 +110,7 @@ impl AppConfig {
                 data_dir: Some(self.data_dir.clone()),
                 log_level: Some(self.log_level),
             },
+            ai: self.ai.clone(),
         }
     }
 
@@ -146,6 +151,7 @@ impl AppConfig {
             data_dir,
             config_file,
             log_level,
+            ai: file_config.ai,
         })
     }
 }

@@ -108,7 +108,7 @@ fn load_from_json(json_path: &Path, db: &Db) -> Result<LoadStats, Box<dyn std::e
     // Create tags
     for tag_dto in &import_data.tags {
         let tag = Tag::builder().name(tag_dto.name.clone()).build();
-        tag_registry.insert(tag);
+        tag_registry.add(tag);
         stats.tags += 1;
     }
 
@@ -134,11 +134,11 @@ fn load_from_json(json_path: &Path, db: &Db) -> Result<LoadStats, Box<dyn std::e
                     .meaning_id(meaning_id)
                     .segments(segments)
                     .build();
-                cloze_registry.insert(cloze);
+                cloze_registry.add(cloze);
                 stats.clozes += 1;
             }
 
-            meaning_registry.insert(meaning);
+            meaning_registry.add(meaning);
             stats.meanings += 1;
         }
 
@@ -146,7 +146,7 @@ fn load_from_json(json_path: &Path, db: &Db) -> Result<LoadStats, Box<dyn std::e
         for meaning_id in &meaning_ids {
             word.meaning_ids.insert(*meaning_id);
         }
-        word_registry.insert(word);
+        word_registry.add(word);
         stats.words += 1;
     }
 

@@ -10,7 +10,7 @@ use iced::{Element, Subscription, Theme};
 use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
-use crate::state::AppState;
+use crate::state::{AppState, GeneratorState};
 use crate::window::{Window, WindowType};
 
 /// Main application struct with multi-window support.
@@ -36,8 +36,12 @@ impl App {
         tracing::debug!("Initializing database at {:?}", db_path);
         let db = Db::new(&db_path).expect("Failed to create database");
 
+        // Create generator state and load AI config
+        let mut generator = GeneratorState::new();
+        generator.load_from_config(&config.ai);
+
         // Create app state with database (takes ownership of db)
-        let mut app_state = AppState::builder().db(db).build();
+        let mut app_state = AppState::builder().db(db).generator(generator).build();
 
         // Load existing data from database
         tracing::debug!("Loading data from database");

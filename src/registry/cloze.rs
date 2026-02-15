@@ -19,14 +19,14 @@ impl ClozeRegistry {
         }
     }
 
-    pub fn insert(&mut self, cloze: Cloze) {
+    pub fn add(&mut self, cloze: Cloze) {
         let Cloze { id, meaning_id, .. } = cloze.clone();
         self.clozes.insert(id, cloze.clone());
         self.dirty_ids.insert(id);
         self.by_meaning.entry(meaning_id).or_default().insert(id);
     }
 
-    pub fn get_by_id(&self, id: Uuid) -> Option<&Cloze> {
+    pub fn get(&self, id: Uuid) -> Option<&Cloze> {
         self.clozes.get(&id)
     }
 
@@ -34,7 +34,7 @@ impl ClozeRegistry {
         self.clozes.iter()
     }
 
-    pub fn get_by_id_mut(&mut self, id: Uuid) -> Option<&mut Cloze> {
+    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Cloze> {
         self.clozes.get_mut(&id)
     }
 

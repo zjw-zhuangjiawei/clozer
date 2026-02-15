@@ -1,3 +1,4 @@
+use crate::config::AiConfig;
 use crate::models::Provider;
 // use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -16,6 +17,15 @@ impl ProviderRegistry {
             providers: BTreeMap::new(),
             dirty_ids: BTreeSet::new(),
             by_name: HashMap::new(),
+        }
+    }
+
+    /// Loads providers from configuration.
+    pub fn load_from_config(&mut self, config: &AiConfig) {
+        for (id, provider_config) in &config.providers {
+            let provider = Provider::from(provider_config.clone());
+            self.providers.insert(*id, provider.clone());
+            self.by_name.insert(provider.name.clone(), *id);
         }
     }
 

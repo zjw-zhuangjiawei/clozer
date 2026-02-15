@@ -1,3 +1,4 @@
+use crate::config::AiConfig;
 use crate::models::{Cloze, Meaning, Model, Provider, ProviderType, Word};
 use crate::registry::{ModelRegistry, ProviderRegistry};
 use rig::agent::Agent;
@@ -28,7 +29,7 @@ pub enum AgentWrapper {
 pub struct GeneratorState {
     pub provider_registry: ProviderRegistry,
     pub model_registry: ModelRegistry,
-    pub selected_model_id: Uuid,
+    pub selected_model_id: Option<Uuid>,
 }
 
 impl Default for GeneratorState {
@@ -39,39 +40,65 @@ impl Default for GeneratorState {
 
 impl GeneratorState {
     pub fn new() -> Self {
-        let mut provider_registry = ProviderRegistry::new();
-        let mut model_registry = ModelRegistry::new();
-
-        // Add sample DeepSeek provider
-        let provider = Provider::builder()
-            .name("DeepSeek".to_string())
-            .provider_type(ProviderType::DeepSeek)
-            .base_url("https://api.deepseek.com".to_string())
-            .api_key("***REMOVED***".to_string())
-            .build();
-
-        let provider_id = provider.id;
-        provider_registry.add(provider);
-
-        // Add sample model
-        let model = Model::builder()
-            .name("DeepSeek Chat".to_string())
-            .provider_id(provider_id)
-            .model_id("deepseek-chat".to_string())
-            .build();
-        let model_id = model.id;
-        model_registry.add(model);
-
         Self {
-            provider_registry,
-            model_registry,
-            selected_model_id: model_id,
+            provider_registry: ProviderRegistry::new(),
+            model_registry: ModelRegistry::new(),
+            selected_model_id: None,
         }
     }
 
+    /// Loads AI configuration (providers and models) into this state.
+    pub fn load_from_config(&mut self, config: &AiConfig) {
+        self.provider_registry.load_from_config(config);
+        self.model_registry.load_from_config(config);
+
+        // Use config's selected_model_id, or auto-select first model if none set
+        if let Some(selected_id) = config.selected_model_id {
+            // Validate the selected model exists
+            if self.model_registry.get(selected_id).is_some() {
+                self.selected_model_id = Some(selected_id);
+            } else {
+                tracing::warn!(
+                    "Config selected_model_id {} not found in models, auto-selecting first",
+                    selected_id
+                );
+                self.selected_model_id = self.model_registry.iter().next().map(|(id, _)| *id);
+            }
+        } else {
+            // Auto-select first model if none selected
+            self.selected_model_id = self.model_registry.iter().next().map(|(id, _)| *id);
+        }
+
+        tracing::debug!(
+            "Loaded AI config: {} providers, {} models, selected_model_id={:?}",
+            self.provider_registry.len(),
+            self.model_registry.len(),
+            self.selected_model_id,
+        );
+    }
+
+    /// Selects a model by ID. Returns true if successful.
+    pub fn select_model(&mut self, model_id: Uuid) -> bool {
+        if self.model_registry.get(model_id).is_some() {
+            self.selected_model_id = Some(model_id);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Gets the currently selected model, if any.
+    pub fn selected_model(&self) -> Option<&Model> {
+        self.selected_model_id.and_then(|id| self.model_registry.get(id))
+    }
+
     pub fn generator(&self) -> Arc<Generator> {
-        let model = self.model_registry.get(self.selected_model_id).unwrap();
-        let provider = self.provider_registry.get(model.provider_id).unwrap();
+        let model_id = self.selected_model_id.expect("No model selected");
+        let model = self.model_registry.get(model_id).expect("Model not found");
+        let provider = self
+            .provider_registry
+            .get(model.provider_id)
+            .expect("Provider not found");
         Arc::new(Generator::new(provider, model))
     }
 }
