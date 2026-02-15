@@ -24,14 +24,14 @@ impl ModelRegistry {
 
     /// Loads models from configuration.
     pub fn load_from_config(&mut self, config: &AiConfig) {
-        for (id, model_config) in &config.models {
+        for model_config in &config.models {
             let model = Model::from(model_config.clone());
-            self.models.insert(*id, model.clone());
-            self.by_name.insert(model.name.clone(), *id);
+            self.models.insert(model.id, model.clone());
+            self.by_name.insert(model.name.clone(), model.id);
             self.by_provider
                 .entry(model.provider_id)
                 .or_default()
-                .insert(*id);
+                .insert(model.id);
         }
     }
 

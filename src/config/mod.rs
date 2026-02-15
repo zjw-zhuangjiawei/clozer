@@ -81,13 +81,24 @@ impl Default for AppConfig {
 impl AppConfig {
     /// Saves the current configuration to the config file.
     pub fn save_to_file(&self) {
-        if let Some(parent) = self.config_file.parent() {
-            std::fs::create_dir_all(parent).expect("Failed to create config directory");
+        tracing::debug!("Saving configuration to file: {:?}", self.config_file);
+
+        if let Some(parent) = self.config_file.parent()
+            && let Err(e) = std::fs::create_dir_all(parent)
+        {
+            tracing::error!("Failed to create config directory: {}", e);
+            return;
         }
 
         let file_config = self.construct_file_config();
         let content = file_config.dump();
-        std::fs::write(&self.config_file, content).expect("Failed to write config file");
+
+        if let Err(e) = std::fs::write(&self.config_file, content) {
+            tracing::error!("Failed to write config file: {}", e);
+            return;
+        }
+
+        tracing::info!("Configuration saved to: {:?}", self.config_file);
     }
 
     /// Constructs a `FileConfig` from this `AppConfig`.
@@ -121,17 +132,33 @@ impl AppConfig {
     /// - `cli`: CLI arguments (highest priority)
     /// - `env`: Environment variables
     pub fn load(cli: CliConfig, env: EnvConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        tracing::debug!("Loading configuration...");
+
         // Resolve config file path
         let config_file = cli
             .config_file
             .or(env.config_file.map(Into::into))
             .unwrap_or_else(paths::config_file);
 
+        tracing::debug!("Config file path: {:?}", config_file);
+
         // Load file config (ignore errors - use defaults if file missing)
-        let file_config = std::fs::read_to_string(&config_file)
-            .ok()
-            .and_then(|s| FileConfig::load(&s).ok())
-            .unwrap_or_default();
+        let file_config = match std::fs::read_to_string(&config_file) {
+            Ok(content) => match FileConfig::load(&content) {
+                Ok(config) => {
+                    tracing::info!("Loaded configuration from file: {:?}", config_file);
+                    config
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse config file, using defaults: {}", e);
+                    FileConfig::default()
+                }
+            },
+            Err(e) => {
+                tracing::debug!("No config file found at {:?}, using defaults: {}", config_file, e);
+                FileConfig::default()
+            }
+        };
 
         // Resolve data directory (file config has lowest priority)
         let data_dir = cli
@@ -146,6 +173,12 @@ impl AppConfig {
             .or(env.log_level)
             .or(file_config.general.log_level)
             .unwrap_or_default();
+
+        tracing::info!(
+            "Configuration loaded: data_dir={:?}, log_level={:?}",
+            data_dir,
+            log_level
+        );
 
         Ok(Self {
             data_dir,

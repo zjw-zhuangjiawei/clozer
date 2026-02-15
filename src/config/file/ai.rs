@@ -1,14 +1,13 @@
-  //! AI configuration for LLM-based cloze generation.
+//! AI configuration for LLM-based cloze generation.
 
 use crate::models::{Model, Provider, ProviderType};
-use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Provider type DTO for configuration file serialization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum ProviderTypeDto {
     OpenAI,
     Anthropic,
@@ -51,6 +50,7 @@ impl From<ProviderTypeDto> for ProviderType {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProviderConfig {
     /// Unique identifier for this provider
+    #[serde(default = "Uuid::new_v4")]
     pub id: Uuid,
 
     /// Unique name for this provider (e.g., "openai", "anthropic")
@@ -89,6 +89,7 @@ impl From<ProviderConfig> for Provider {
 #[serde(default)]
 pub struct ModelConfig {
     /// Unique identifier for this model
+    #[serde(default = "Uuid::new_v4")]
     pub id: Uuid,
 
     /// Unique name for this model (e.g., "gpt-4", "claude-3")
@@ -122,13 +123,13 @@ impl From<ModelConfig> for Model {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AiConfig {
-    /// Map of providers by UUID
+    /// List of providers
     #[serde(default)]
-    pub providers: BTreeMap<Uuid, ProviderConfig>,
+    pub providers: Vec<ProviderConfig>,
 
-    /// Map of models by UUID
+    /// List of models
     #[serde(default)]
-    pub models: BTreeMap<Uuid, ModelConfig>,
+    pub models: Vec<ModelConfig>,
 
     /// Currently selected model ID for cloze generation
     #[serde(default)]

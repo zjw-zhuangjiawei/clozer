@@ -22,10 +22,10 @@ impl ProviderRegistry {
 
     /// Loads providers from configuration.
     pub fn load_from_config(&mut self, config: &AiConfig) {
-        for (id, provider_config) in &config.providers {
+        for provider_config in &config.providers {
             let provider = Provider::from(provider_config.clone());
-            self.providers.insert(*id, provider.clone());
-            self.by_name.insert(provider.name.clone(), *id);
+            self.providers.insert(provider.id, provider.clone());
+            self.by_name.insert(provider.name.clone(), provider.id);
         }
     }
 
