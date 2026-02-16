@@ -1,7 +1,7 @@
 use crate::message::Message;
 use crate::registry::{MeaningRegistry, QueueItemStatus, QueueRegistry, WordRegistry};
 use iced::Element;
-use iced::widget::{Button, Column, Row, Text, button, text_input};
+use iced::widget::{Button, Column, Row, Text, button, svg, text_input};
 
 fn generator_settings_panel<'a>() -> Element<'a, Message> {
     let title = Text::new("Generator Settings").size(16);
@@ -62,13 +62,29 @@ pub fn view<'state>(
 
             let select_indicator: Element<'state, Message> =
                 if matches!(status, QueueItemStatus::Pending) {
-                    let indicator_text = if selected { "[x]" } else { "[ ]" };
-                    Button::new(Text::new(indicator_text))
+                    if selected {
+                        Button::new(
+                            svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                                .width(iced::Length::Fixed(20.0))
+                                .height(iced::Length::Fixed(20.0)),
+                        )
                         .on_press(Message::QueueSelectToggle(item_id))
                         .style(button::secondary)
                         .padding([4, 8])
-                        .width(iced::Length::Fixed(50.0))
+                        .width(iced::Length::Fixed(30.0))
                         .into()
+                    } else {
+                        Button::new(
+                            svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                                .width(iced::Length::Fixed(20.0))
+                                .height(iced::Length::Fixed(20.0)),
+                        )
+                        .on_press(Message::QueueSelectToggle(item_id))
+                        .style(button::secondary)
+                        .padding([4, 8])
+                        .width(iced::Length::Fixed(30.0))
+                        .into()
+                    }
                 } else {
                     Text::new(status_text).into()
                 };

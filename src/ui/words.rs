@@ -3,7 +3,7 @@ use crate::models::PartOfSpeech;
 use crate::registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry};
 use crate::state::ui::{MeaningInputState, TagDropdownState};
 use iced::Element;
-use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button, svg};
 use std::collections::{BTreeMap, BTreeSet};
 use strum::VariantArray;
 use uuid::Uuid;
@@ -273,11 +273,27 @@ pub fn view<'state>(
             let is_expanded = expanded_word_ids.contains(&word.id);
             let meaning_count = word.meaning_ids.len();
 
-            let select_checkbox = Button::new(Text::new(if is_selected { "[x]" } else { "[ ]" }))
+            let select_checkbox = if is_selected {
+                Button::new(
+                    svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                        .width(iced::Length::Fixed(20.0))
+                        .height(iced::Length::Fixed(20.0)),
+                )
                 .style(button::secondary)
                 .padding([2, 6])
                 .on_press(Message::ToggleWord(word.id))
-                .width(iced::Length::Fixed(50.0));
+                .width(iced::Length::Fixed(30.0))
+            } else {
+                Button::new(
+                    svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                        .width(iced::Length::Fixed(20.0))
+                        .height(iced::Length::Fixed(20.0)),
+                )
+                .style(button::secondary)
+                .padding([2, 6])
+                .on_press(Message::ToggleWord(word.id))
+                .width(iced::Length::Fixed(30.0))
+            };
 
             let expand_icon = if is_expanded { "▼" } else { "▶" };
             let expand_btn = Button::new(Text::new(expand_icon))
@@ -357,12 +373,27 @@ pub fn view<'state>(
                             cloze_registry.iter_by_meaning_id(meaning.id).collect();
 
                         let is_meaning_selected = selected_meaning_ids.contains(&meaning.id);
-                        let meaning_checkbox =
-                            Button::new(Text::new(if is_meaning_selected { "[x]" } else { "[ ]" }))
-                                .style(button::secondary)
-                                .padding([2, 6])
-                                .on_press(Message::ToggleMeaning(meaning.id))
-                                .width(iced::Length::Fixed(30.0));
+                        let meaning_checkbox = if is_meaning_selected {
+                            Button::new(
+                                svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                                    .width(iced::Length::Fixed(20.0))
+                                    .height(iced::Length::Fixed(20.0)),
+                            )
+                            .style(button::secondary)
+                            .padding([2, 6])
+                            .on_press(Message::ToggleMeaning(meaning.id))
+                            .width(iced::Length::Fixed(30.0))
+                        } else {
+                            Button::new(
+                                svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                                    .width(iced::Length::Fixed(20.0))
+                                    .height(iced::Length::Fixed(20.0)),
+                            )
+                            .style(button::secondary)
+                            .padding([2, 6])
+                            .on_press(Message::ToggleMeaning(meaning.id))
+                            .width(iced::Length::Fixed(30.0))
+                        };
 
                         // Meaning header
                         let meaning_header = Row::new()
