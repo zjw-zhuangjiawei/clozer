@@ -295,12 +295,10 @@ pub fn view<'state>(
                 .width(iced::Length::Fixed(30.0))
             };
 
-            let expand_icon = if is_expanded { "▼" } else { "▶" };
-            let expand_btn = Button::new(Text::new(expand_icon))
+            let word_text_btn = Button::new(Text::new(word.content.clone()).size(18))
                 .style(button::secondary)
                 .padding([2, 6])
-                .on_press(Message::ToggleWordExpand(word.id))
-                .width(iced::Length::Fixed(30.0));
+                .on_press(Message::ToggleWordExpand(word.id));
 
             let delete_word_btn = Button::new(Text::new("Delete"))
                 .style(button::danger)
@@ -309,8 +307,7 @@ pub fn view<'state>(
 
             let word_row = Row::new()
                 .push(select_checkbox)
-                .push(expand_btn)
-                .push(Text::new(word.content.clone()).size(18))
+                .push(word_text_btn)
                 .push(Text::new(format!("({} meanings)", meaning_count)).size(12))
                 .push(Text::new("").width(iced::Length::Fill))
                 .push(delete_word_btn)
