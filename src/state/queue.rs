@@ -31,13 +31,12 @@ impl QueueState {
     }
 
     pub fn process(
-        &mut self,
+        queue_registry: &mut QueueRegistry,
         generator: &Arc<Generator>,
         word_registry: &WordRegistry,
         meaning_registry: &crate::registry::MeaningRegistry,
     ) -> Task<Message> {
-        let items: Vec<_> = self
-            .queue_registry
+        let items: Vec<_> = queue_registry
             .get_items()
             .filter(|item| item.status == QueueItemStatus::Pending)
             .cloned()
@@ -52,7 +51,7 @@ impl QueueState {
             let generator = Arc::clone(generator);
             let item_id = item.id;
 
-            self.queue_registry.set_processing(item_id);
+            queue_registry.set_processing(item_id);
 
             Task::perform(
                 async move {

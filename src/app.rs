@@ -5,12 +5,12 @@
 
 use std::collections::BTreeMap;
 
-use iced::{Element, Subscription, Theme};
+use iced::{Element, Subscription, Task, Theme};
 
 use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
-use crate::state::{AppState, GeneratorState};
+use crate::state::AppState;
 use crate::window::{Window, WindowType};
 
 /// Main application struct with multi-window support.
@@ -29,22 +29,19 @@ impl App {
         tracing::debug!("Initializing database at {:?}", db_path);
         let db = Db::new(&db_path).expect("Failed to create database");
 
-        // Create generator state and load AI config
-        let mut generator = GeneratorState::new();
-        generator.load_from_config(&config.ai);
-
-        // Create app state with database (takes ownership of db)
-        let mut app_state = AppState::builder().db(db).generator(generator).build();
+        // Load AI config into generator
+        let mut app_state = AppState::new(db);
+        app_state.model.generator.load_from_config(&config.ai);
 
         // Load existing data from database
         tracing::debug!("Loading data from database");
-        app_state.data.load_all(&app_state.db);
+        app_state.model.load_all();
         tracing::debug!(
             "Data loaded: {} words, {} meanings, {} tags, {} clozes",
-            app_state.data.word_registry.count(),
-            app_state.data.meaning_registry.count(),
-            app_state.data.tag_registry.count(),
-            app_state.data.cloze_registry.count(),
+            app_state.model.word_registry.count(),
+            app_state.model.meaning_registry.count(),
+            app_state.model.tag_registry.count(),
+            app_state.model.cloze_registry.count(),
         );
 
         let app = Self {
@@ -94,7 +91,7 @@ impl App {
                 Window::Main(_) => {
                     // Flush any unsaved data to database
                     tracing::debug!("Flushing dirty data on shutdown");
-                    if let Err(e) = self.app_state.data.flush_all(&self.app_state.db) {
+                    if let Err(e) = self.app_state.model.flush_all() {
                         tracing::error!("Failed to flush data on shutdown: {}", e);
                     }
                     self.config.save_to_file();
@@ -104,48 +101,24 @@ impl App {
             }
         }
 
-        // For all other messages, update app_state and sync selection to window
-        let task = self.app_state.update(message);
-
-        // Sync selection state from app_state to MainWindowState
-        // This keeps the window's selection in sync for the view
-        if let Some(Window::Main(main_window)) = self.windows.values_mut().next() {
-            main_window.selected_word_ids = self.app_state.selection.selected_word_ids.clone();
-            main_window.selected_meaning_ids =
-                self.app_state.selection.selected_meaning_ids.clone();
-            main_window.selected_tag_ids = self.app_state.selection.selected_tag_ids.clone();
+        // Get mutable reference to window state for UI operations
+        // For simplicity, use the first window (single-window case)
+        if let Some(Window::Main(window_state)) = self.windows.values_mut().next() {
+            self.app_state.update(message, window_state)
+        } else {
+            // Fallback for no windows
+            Task::none()
         }
-
-        task
     }
 
     /// Renders the application UI for the specified window.
     pub fn view(&self, id: iced::window::Id) -> Element<'_, Message> {
         if let Some(window) = self.windows.get(&id) {
             match window {
-                Window::Main(main_window) => {
-                    let left_panel = crate::ui::words_view(
-                        &self.app_state.data.word_registry,
-                        &self.app_state.data.meaning_registry,
-                        &self.app_state.data.cloze_registry,
-                        &self.app_state.data.tag_registry,
-                        &self.app_state.ui.words.word_input,
-                        &self.app_state.ui.words.tag_filter,
-                        &main_window.selected_word_ids,
-                        &main_window.selected_meaning_ids,
-                        &self.app_state.ui.words.expanded_word_ids,
-                        &self.app_state.ui.words.meaning_inputs,
-                        &self.app_state.ui.words.active_tag_dropdown,
-                        &self.app_state.ui.words.meanings_tag_dropdown_state,
-                        &self.app_state.ui.words.meanings_tag_search_input,
-                        &self.app_state.ui.words.meanings_tag_remove_search_input,
-                    );
+                Window::Main(window_state) => {
+                    let left_panel = crate::ui::words_view(&self.app_state.model, window_state);
 
-                    let right_panel = crate::ui::queue_view(
-                        &self.app_state.queue.queue_registry,
-                        &self.app_state.data.meaning_registry,
-                        &self.app_state.data.word_registry,
-                    );
+                    let right_panel = crate::ui::queue_view(&self.app_state.model);
 
                     iced::widget::row![
                         iced::widget::column![left_panel]

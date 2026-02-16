@@ -1,5 +1,8 @@
+//! Queue view UI component.
+
 use crate::message::Message;
-use crate::registry::{MeaningRegistry, QueueItemStatus, QueueRegistry, WordRegistry};
+use crate::registry::QueueItemStatus;
+use crate::state::Model;
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text, button, svg, text_input};
 
@@ -31,8 +34,8 @@ fn status_label(status: &QueueItemStatus) -> String {
 
 fn meaning_content(
     meaning_id: uuid::Uuid,
-    meaning_registry: &MeaningRegistry,
-    word_registry: &WordRegistry,
+    meaning_registry: &crate::registry::MeaningRegistry,
+    word_registry: &crate::registry::WordRegistry,
 ) -> String {
     if let Some(meaning) = meaning_registry.get(meaning_id) {
         if let Some(word) = word_registry.get(meaning.word_id) {
@@ -45,11 +48,11 @@ fn meaning_content(
     }
 }
 
-pub fn view<'state>(
-    queue_registry: &'state QueueRegistry,
-    meaning_registry: &'state MeaningRegistry,
-    word_registry: &'state WordRegistry,
-) -> Element<'state, Message> {
+pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
+    let queue_registry = &model.queue_registry;
+    let meaning_registry = &model.meaning_registry;
+    let word_registry = &model.word_registry;
+
     let items: Vec<Element<'state, Message>> = queue_registry
         .get_items()
         .map(|queue_item| {

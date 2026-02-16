@@ -1,32 +1,30 @@
+//! Words view UI component.
+
 use crate::message::Message;
 use crate::models::PartOfSpeech;
-use crate::registry::{ClozeRegistry, MeaningRegistry, TagRegistry, WordRegistry};
-use crate::state::ui::{MeaningInputState, TagDropdownState};
+use crate::state::Model;
+use crate::window::{TagDropdownState, WindowState};
 use iced::Element;
 use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button, svg};
-use std::collections::{BTreeMap, BTreeSet};
 use strum::VariantArray;
 use uuid::Uuid;
 
-pub fn view<'state>(
-    word_registry: &'state WordRegistry,
-    meaning_registry: &'state MeaningRegistry,
-    cloze_registry: &'state ClozeRegistry,
-    tag_registry: &'state TagRegistry,
-    input: &str,
-    tag_filter: &str,
-    selected_word_ids: &'state BTreeSet<Uuid>,
-    selected_meaning_ids: &'state BTreeSet<Uuid>,
-    expanded_word_ids: &'state BTreeSet<Uuid>,
-    meaning_inputs: &'state BTreeMap<Uuid, MeaningInputState>,
-    active_tag_dropdown: &'state Option<Uuid>,
-    meanings_tag_dropdown_state: &'state TagDropdownState,
-    meanings_tag_search_input: &str,
-    meanings_tag_remove_search_input: &str,
-) -> Element<'state, Message> {
-    let all_words: Vec<_> = word_registry.iter().map(|(_, w)| w).collect();
-    let all_tags: Vec<_> = tag_registry.iter().map(|(_, t)| t).collect();
-    let selected_meaning_count = selected_meaning_ids.len();
+pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Element<'state, Message> {
+    let all_words: Vec<_> = model.word_registry.iter().map(|(_, w)| w).collect();
+    let all_tags: Vec<_> = model.tag_registry.iter().map(|(_, t)| t).collect();
+    let selected_meaning_count = window.selected_meaning_ids.len();
+
+    // Aliases for cleaner code
+    let word_registry = &model.word_registry;
+    let meaning_registry = &model.meaning_registry;
+    let tag_registry = &model.tag_registry;
+    let cloze_registry = &model.cloze_registry;
+    let tag_filter = &window.words_ui.tag_filter;
+    let meaning_inputs = &window.words_ui.meaning_inputs;
+    let active_tag_dropdown = &window.words_ui.active_tag_dropdown;
+    let meanings_tag_dropdown_state = &window.words_ui.meanings_tag_dropdown_state;
+    let meanings_tag_search_input = &window.words_ui.meanings_tag_search_input;
+    let meanings_tag_remove_search_input = &window.words_ui.meanings_tag_remove_search_input;
 
     // Filter words by tag filter
     let filtered_words: Vec<Uuid> = if tag_filter.is_empty() {
@@ -116,8 +114,8 @@ pub fn view<'state>(
 
     // Compute common tags for Remove Tag dropdown
     let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
-        let mut common_tags: Option<BTreeSet<Uuid>> = None;
-        for &meaning_id in selected_meaning_ids {
+        let mut common_tags: Option<std::collections::BTreeSet<Uuid>> = None;
+        for &meaning_id in &window.selected_meaning_ids {
             if let Some(meaning) = meaning_registry.get(meaning_id) {
                 if let Some(ref mut tags) = common_tags {
                     tags.retain(|t| meaning.tag_ids.contains(t));
@@ -136,7 +134,7 @@ pub fn view<'state>(
         all_tags
             .iter()
             .filter(|tag| {
-                let on_all_meanings = selected_meaning_ids.iter().all(|&mid| {
+                let on_all_meanings = window.selected_meaning_ids.iter().all(|&mid| {
                     meaning_registry
                         .get(mid)
                         .map(|m| m.tag_ids.contains(&tag.id))
@@ -269,8 +267,8 @@ pub fn view<'state>(
         .iter()
         .filter_map(|word_id| word_registry.get(*word_id))
         .map(|word| {
-            let is_selected = selected_word_ids.contains(&word.id);
-            let is_expanded = expanded_word_ids.contains(&word.id);
+            let is_selected = window.selected_word_ids.contains(&word.id);
+            let is_expanded = window.expanded_word_ids.contains(&word.id);
             let meaning_count = word.meaning_ids.len();
 
             let select_checkbox = if is_selected {
@@ -369,7 +367,7 @@ pub fn view<'state>(
                         let cloze_vec: Vec<_> =
                             cloze_registry.iter_by_meaning_id(meaning.id).collect();
 
-                        let is_meaning_selected = selected_meaning_ids.contains(&meaning.id);
+                        let is_meaning_selected = window.selected_meaning_ids.contains(&meaning.id);
                         let meaning_checkbox = if is_meaning_selected {
                             Button::new(
                                 svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
@@ -504,16 +502,16 @@ pub fn view<'state>(
     // Input section
     let input_section = Row::new()
         .push(
-            TextInput::new("Enter word...", input)
+            TextInput::new("Enter word...", &window.words_ui.word_input)
                 .on_input(Message::WordsInputChanged)
-                .on_submit(Message::CreateWord(input.to_string()))
+                .on_submit(Message::CreateWord(window.words_ui.word_input.to_string()))
                 .width(iced::Length::Fill),
         )
         .push(
             Button::new(Text::new("Add Word"))
                 .style(button::primary)
                 .padding([8, 16])
-                .on_press(Message::CreateWord(input.to_string())),
+                .on_press(Message::CreateWord(window.words_ui.word_input.to_string())),
         );
 
     let main_column = Column::new()
