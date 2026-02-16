@@ -1,7 +1,7 @@
 //! Main application struct and entry point.
 //!
 //! Contains the App struct that coordinates state and UI rendering
-//! with multi-window support.
+//! with multi-window support and hierarchical message routing.
 
 use std::collections::BTreeMap;
 
@@ -11,6 +11,7 @@ use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
+use crate::ui::main_window;
 use crate::window::{Window, WindowType};
 
 /// Main application struct with multi-window support.
@@ -71,43 +72,57 @@ impl App {
     }
 
     /// Updates the application state with a message.
+    ///
+    /// Routes messages by type:
+    /// - Window lifecycle messages are handled directly
+    /// - `Message::Main(id, msg)` is routed to the correct window's update handler
+    /// - Global messages (like `QueueGenerationResult`) are handled at the app level
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
-        // Handle window management messages that need the window_id
-        if let Message::WindowOpened(id, window_type) = message {
-            let window = Window::new(window_type);
-            self.windows.insert(id, window);
-            return iced::Task::none();
-        }
+        match message {
+            // Window lifecycle
+            Message::WindowOpened(id, window_type) => {
+                let window = Window::new(window_type);
+                self.windows.insert(id, window);
+                iced::Task::none()
+            }
 
-        if let Message::WindowCloseRequested(id) = message {
-            return iced::window::close(id);
-        }
+            Message::WindowCloseRequested(id) => iced::window::close(id),
 
-        if let Message::WindowClosed(id) = message {
-            let Some(window) = self.windows.remove(&id) else {
-                unreachable!()
-            };
-            match window {
-                Window::Main(_) => {
-                    // Flush any unsaved data to database
-                    tracing::debug!("Flushing dirty data on shutdown");
-                    if let Err(e) = self.app_state.model.flush_all() {
-                        tracing::error!("Failed to flush data on shutdown: {}", e);
+            Message::WindowClosed(id) => {
+                let Some(window) = self.windows.remove(&id) else {
+                    unreachable!()
+                };
+                match window {
+                    Window::Main(_) => {
+                        tracing::debug!("Flushing dirty data on shutdown");
+                        if let Err(e) = self.app_state.model.flush_all() {
+                            tracing::error!("Failed to flush data on shutdown: {}", e);
+                        }
+                        self.config.save_to_file();
+                        tracing::info!("Clozer shutting down");
+                        iced::exit()
                     }
-                    self.config.save_to_file();
-                    tracing::info!("Clozer shutting down");
-                    return iced::exit();
                 }
             }
-        }
 
-        // Get mutable reference to window state for UI operations
-        // For simplicity, use the first window (single-window case)
-        if let Some(Window::Main(window_state)) = self.windows.values_mut().next() {
-            self.app_state.update(message, window_state)
-        } else {
-            // Fallback for no windows
-            Task::none()
+            // Route to specific main window by ID
+            Message::Main(window_id, msg) => {
+                if let Some(Window::Main(window_state)) = self.windows.get_mut(&window_id) {
+                    main_window::update(window_state, msg, &mut self.app_state.model, window_id)
+                } else {
+                    Task::none()
+                }
+            }
+
+            // Global messages
+            Message::QueueGenerationResult(result) => {
+                self.app_state
+                    .model
+                    .queue_registry
+                    .set_completed(result.item_id);
+                self.app_state.model.cloze_registry.add(result.cloze);
+                Task::none()
+            }
         }
     }
 
@@ -116,20 +131,8 @@ impl App {
         if let Some(window) = self.windows.get(&id) {
             match window {
                 Window::Main(window_state) => {
-                    let left_panel = crate::ui::words_view(&self.app_state.model, window_state);
-
-                    let right_panel = crate::ui::queue_view(&self.app_state.model);
-
-                    iced::widget::row![
-                        iced::widget::column![left_panel]
-                            .spacing(20)
-                            .padding(20)
-                            .width(iced::Length::FillPortion(2)),
-                        iced::widget::column![right_panel]
-                            .width(iced::Length::FillPortion(1))
-                            .padding(10),
-                    ]
-                    .into()
+                    main_window::view(window_state, &self.app_state.model)
+                        .map(move |msg| Message::Main(id, msg))
                 }
             }
         } else {
@@ -144,8 +147,6 @@ impl App {
 
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
-        // Use close_requests to intercept close events before window closes
-        // This allows custom handling (cleanup, confirmation dialogs, etc.)
         iced::event::listen_with(|event, _status, id| match event {
             iced::Event::Window(iced::window::Event::CloseRequested) => {
                 Some(Message::WindowCloseRequested(id))

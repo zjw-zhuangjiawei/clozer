@@ -1,30 +1,32 @@
-//! Words view UI component.
+//! Words panel view function.
 
-use crate::message::Message;
+use super::message::WordsMessage;
+use super::state::TagDropdownState;
 use crate::models::PartOfSpeech;
 use crate::state::Model;
-use crate::window::{TagDropdownState, WindowState};
+use crate::ui::components::svg_checkbox;
+use crate::ui::main_window::state::MainWindowState;
 use iced::Element;
-use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button, svg};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button};
 use strum::VariantArray;
 use uuid::Uuid;
 
-pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Element<'state, Message> {
+pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
     let all_words: Vec<_> = model.word_registry.iter().map(|(_, w)| w).collect();
     let all_tags: Vec<_> = model.tag_registry.iter().map(|(_, t)| t).collect();
-    let selected_meaning_count = window.selected_meaning_ids.len();
+    let selected_meaning_count = state.selected_meaning_ids.len();
 
     // Aliases for cleaner code
     let word_registry = &model.word_registry;
     let meaning_registry = &model.meaning_registry;
     let tag_registry = &model.tag_registry;
     let cloze_registry = &model.cloze_registry;
-    let tag_filter = &window.words_ui.tag_filter;
-    let meaning_inputs = &window.words_ui.meaning_inputs;
-    let active_tag_dropdown = &window.words_ui.active_tag_dropdown;
-    let meanings_tag_dropdown_state = &window.words_ui.meanings_tag_dropdown_state;
-    let meanings_tag_search_input = &window.words_ui.meanings_tag_search_input;
-    let meanings_tag_remove_search_input = &window.words_ui.meanings_tag_remove_search_input;
+    let tag_filter = &state.words_ui.tag_filter;
+    let meaning_inputs = &state.words_ui.meaning_inputs;
+    let active_tag_dropdown = &state.words_ui.active_tag_dropdown;
+    let meanings_tag_dropdown_state = &state.words_ui.meanings_tag_dropdown_state;
+    let meanings_tag_search_input = &state.words_ui.meanings_tag_search_input;
+    let meanings_tag_remove_search_input = &state.words_ui.meanings_tag_remove_search_input;
 
     // Filter words by tag filter
     let filtered_words: Vec<Uuid> = if tag_filter.is_empty() {
@@ -54,12 +56,12 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
     let select_all_btn = Button::new(Text::new("Select All"))
         .style(button::secondary)
         .padding([8, 16])
-        .on_press(Message::SelectAllWords);
+        .on_press(WordsMessage::SelectAllWords);
 
     let deselect_all_btn = Button::new(Text::new("Select None"))
         .style(button::secondary)
         .padding([8, 16])
-        .on_press(Message::DeselectAllWords);
+        .on_press(WordsMessage::DeselectAllWords);
 
     let queue_btn = if selected_meaning_count > 0 {
         Button::new(Text::new(format!(
@@ -68,7 +70,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         )))
         .style(button::primary)
         .padding([8, 16])
-        .on_press(Message::QueueSelected)
+        .on_press(WordsMessage::QueueSelected)
     } else {
         Button::new(Text::new(format!(
             "Add to Queue ({})",
@@ -82,7 +84,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
             .style(button::danger)
             .padding([8, 16])
-            .on_press(Message::DeleteSelected)
+            .on_press(WordsMessage::DeleteSelected)
     } else {
         Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
             .style(button::secondary)
@@ -94,7 +96,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         Button::new(Text::new("Add Tag"))
             .style(button::secondary)
             .padding([8, 16])
-            .on_press(Message::ToggleMeaningsAddTagDropdown)
+            .on_press(WordsMessage::ToggleBatchAddTagDropdown)
     } else {
         Button::new(Text::new("Add Tag"))
             .style(button::secondary)
@@ -105,7 +107,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         Button::new(Text::new("Remove Tag"))
             .style(button::secondary)
             .padding([8, 16])
-            .on_press(Message::ToggleMeaningsRemoveTagDropdown)
+            .on_press(WordsMessage::ToggleBatchRemoveTagDropdown)
     } else {
         Button::new(Text::new("Remove Tag"))
             .style(button::secondary)
@@ -115,7 +117,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
     // Compute common tags for Remove Tag dropdown
     let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
         let mut common_tags: Option<std::collections::BTreeSet<Uuid>> = None;
-        for &meaning_id in &window.selected_meaning_ids {
+        for &meaning_id in &state.selected_meaning_ids {
             if let Some(meaning) = meaning_registry.get(meaning_id) {
                 if let Some(ref mut tags) = common_tags {
                     tags.retain(|t| meaning.tag_ids.contains(t));
@@ -134,7 +136,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         all_tags
             .iter()
             .filter(|tag| {
-                let on_all_meanings = window.selected_meaning_ids.iter().all(|&mid| {
+                let on_all_meanings = state.selected_meaning_ids.iter().all(|&mid| {
                     meaning_registry
                         .get(mid)
                         .map(|m| m.tag_ids.contains(&tag.id))
@@ -166,13 +168,13 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
     let batch_tag_dropdown: Option<Element<_>> = match meanings_tag_dropdown_state {
         TagDropdownState::Add => {
             let search = TextInput::new("Search tags...", meanings_tag_search_input)
-                .on_input(Message::MeaningsTagSearchChanged)
+                .on_input(WordsMessage::BatchTagSearchChanged)
                 .width(iced::Length::Fill);
             let tag_items: Vec<Element<_>> = tags_for_add
                 .iter()
                 .map(|tag| {
                     Button::new(Text::new(&tag.name))
-                        .on_press(Message::BatchAddTagToSelectedMeanings(tag.id))
+                        .on_press(WordsMessage::BatchAddTagToSelectedMeanings(tag.id))
                         .width(iced::Length::Fill)
                         .into()
                 })
@@ -199,13 +201,13 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         }
         TagDropdownState::Remove => {
             let search = TextInput::new("Search tags...", meanings_tag_remove_search_input)
-                .on_input(Message::MeaningsTagRemoveSearchChanged)
+                .on_input(WordsMessage::BatchTagRemoveSearchChanged)
                 .width(iced::Length::Fill);
             let tag_items: Vec<Element<_>> = tags_for_remove
                 .iter()
                 .map(|tag| {
                     Button::new(Text::new(&tag.name))
-                        .on_press(Message::BatchRemoveTagFromSelectedMeanings(tag.id))
+                        .on_press(WordsMessage::BatchRemoveTagFromSelectedMeanings(tag.id))
                         .width(iced::Length::Fill)
                         .into()
                 })
@@ -247,7 +249,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
     let filter_section = Row::new()
         .push(
             TextInput::new("Filter by tag...", tag_filter)
-                .on_input(Message::WordsTagFilterChanged)
+                .on_input(WordsMessage::TagFilterChanged)
                 .width(iced::Length::Fill),
         )
         .push(
@@ -255,7 +257,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                 .style(button::secondary)
                 .padding([8, 16])
                 .on_press_maybe(if !tag_filter.is_empty() {
-                    Some(Message::WordsClearTagFilter)
+                    Some(WordsMessage::ClearTagFilter)
                 } else {
                     None
                 }),
@@ -267,41 +269,21 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
         .iter()
         .filter_map(|word_id| word_registry.get(*word_id))
         .map(|word| {
-            let is_selected = window.selected_word_ids.contains(&word.id);
-            let is_expanded = window.expanded_word_ids.contains(&word.id);
+            let is_selected = state.selected_word_ids.contains(&word.id);
+            let is_expanded = state.expanded_word_ids.contains(&word.id);
             let meaning_count = word.meaning_ids.len();
 
-            let select_checkbox = if is_selected {
-                Button::new(
-                    svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                        .width(iced::Length::Fixed(20.0))
-                        .height(iced::Length::Fixed(20.0)),
-                )
-                .style(button::secondary)
-                .padding([2, 6])
-                .on_press(Message::ToggleWord(word.id))
-                .width(iced::Length::Fixed(30.0))
-            } else {
-                Button::new(
-                    svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                        .width(iced::Length::Fixed(20.0))
-                        .height(iced::Length::Fixed(20.0)),
-                )
-                .style(button::secondary)
-                .padding([2, 6])
-                .on_press(Message::ToggleWord(word.id))
-                .width(iced::Length::Fixed(30.0))
-            };
+            let select_checkbox = svg_checkbox(is_selected, WordsMessage::ToggleWord(word.id));
 
             let word_text_btn = Button::new(Text::new(word.content.clone()).size(18))
                 .style(button::secondary)
                 .padding([2, 6])
-                .on_press(Message::ToggleWordExpand(word.id));
+                .on_press(WordsMessage::ToggleWordExpand(word.id));
 
             let delete_word_btn = Button::new(Text::new("Delete"))
                 .style(button::danger)
                 .padding([2, 6])
-                .on_press(Message::DeleteWord(word.id));
+                .on_press(WordsMessage::DeleteWord(word.id));
 
             let word_row = Row::new()
                 .push(select_checkbox)
@@ -320,7 +302,7 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                 let add_meaning_btn = Button::new(Text::new("+ Add Meaning"))
                     .style(button::secondary)
                     .padding([4, 8])
-                    .on_press(Message::ToggleMeaningInput(word.id));
+                    .on_press(WordsMessage::ToggleMeaningInput(word.id));
 
                 word_column = word_column.push(add_meaning_btn);
 
@@ -331,23 +313,23 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                     let pos_options = PartOfSpeech::VARIANTS;
                     let pos_pick_list =
                         PickList::new(pos_options, Some(input_state.pos), move |pos| {
-                            Message::MeaningPosSelected(word.id, pos)
+                            WordsMessage::MeaningPosSelected(word.id, pos)
                         })
                         .width(iced::Length::Fixed(120.0));
 
                     let def_input = TextInput::new("Definition...", &input_state.definition)
-                        .on_input(move |v| Message::MeaningDefInputChanged(word.id, v))
+                        .on_input(move |v| WordsMessage::MeaningDefInputChanged(word.id, v))
                         .width(iced::Length::Fill);
 
                     let save_btn = Button::new(Text::new("Save"))
                         .style(button::primary)
                         .padding([4, 8])
-                        .on_press(Message::SaveMeaning(word.id));
+                        .on_press(WordsMessage::SaveMeaning(word.id));
 
                     let cancel_btn = Button::new(Text::new("Cancel"))
                         .style(button::secondary)
                         .padding([4, 8])
-                        .on_press(Message::CancelMeaningInput(word.id));
+                        .on_press(WordsMessage::CancelMeaningInput(word.id));
 
                     word_column = word_column
                         .push(
@@ -367,28 +349,11 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                         let cloze_vec: Vec<_> =
                             cloze_registry.iter_by_meaning_id(meaning.id).collect();
 
-                        let is_meaning_selected = window.selected_meaning_ids.contains(&meaning.id);
-                        let meaning_checkbox = if is_meaning_selected {
-                            Button::new(
-                                svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                                    .width(iced::Length::Fixed(20.0))
-                                    .height(iced::Length::Fixed(20.0)),
-                            )
-                            .style(button::secondary)
-                            .padding([2, 6])
-                            .on_press(Message::ToggleMeaning(meaning.id))
-                            .width(iced::Length::Fixed(30.0))
-                        } else {
-                            Button::new(
-                                svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                                    .width(iced::Length::Fixed(20.0))
-                                    .height(iced::Length::Fixed(20.0)),
-                            )
-                            .style(button::secondary)
-                            .padding([2, 6])
-                            .on_press(Message::ToggleMeaning(meaning.id))
-                            .width(iced::Length::Fixed(30.0))
-                        };
+                        let is_meaning_selected = state.selected_meaning_ids.contains(&meaning.id);
+                        let meaning_checkbox = svg_checkbox(
+                            is_meaning_selected,
+                            WordsMessage::ToggleMeaning(meaning.id),
+                        );
 
                         // Meaning header
                         let meaning_header = Row::new()
@@ -410,7 +375,9 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                                     Button::new(Text::new(format!("[{}]", tag_name)))
                                         .style(button::secondary)
                                         .padding([2, 6])
-                                        .on_press(Message::RemoveTagFromMeaning(meaning.id, tag.id))
+                                        .on_press(WordsMessage::RemoveTagFromMeaning(
+                                            meaning.id, tag.id,
+                                        ))
                                         .into()
                                 }),
                         )
@@ -433,35 +400,36 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
                         let delete_meaning_btn = Button::new(Text::new("Delete"))
                             .style(button::danger)
                             .padding([2, 6])
-                            .on_press(Message::DeleteMeaning(meaning.id));
+                            .on_press(WordsMessage::DeleteMeaning(meaning.id));
 
                         let add_tag_btn = Button::new(Text::new("+ Tag"))
                             .style(button::secondary)
                             .padding([2, 6])
-                            .on_press(Message::WordsMeaningToggleTagDropdown(meaning.id));
+                            .on_press(WordsMessage::MeaningToggleTagDropdown(meaning.id));
 
                         // Tag dropdown
-                        let tag_dropdown: Option<Element<_>> = if *active_tag_dropdown
-                            == Some(meaning.id)
-                        {
-                            let search_input = TextInput::new("Search or create tag...", "")
-                                .on_input(move |v| Message::AddTagToMeaningSearch(meaning.id, v))
-                                .width(iced::Length::Fill);
+                        let tag_dropdown: Option<Element<_>> =
+                            if *active_tag_dropdown == Some(meaning.id) {
+                                let search_input = TextInput::new("Search or create tag...", "")
+                                    .on_input(move |v| {
+                                        WordsMessage::AddTagToMeaningSearch(meaning.id, v)
+                                    })
+                                    .width(iced::Length::Fill);
 
-                            let create_info = Text::new("Enter a tag name").size(12);
+                                let create_info = Text::new("Enter a tag name").size(12);
 
-                            Some(
-                                Column::new()
-                                    .push(search_input)
-                                    .push(iced::widget::rule::horizontal(1))
-                                    .push(create_info)
-                                    .spacing(5)
-                                    .padding(10)
-                                    .into(),
-                            )
-                        } else {
-                            None
-                        };
+                                Some(
+                                    Column::new()
+                                        .push(search_input)
+                                        .push(iced::widget::rule::horizontal(1))
+                                        .push(create_info)
+                                        .spacing(5)
+                                        .padding(10)
+                                        .into(),
+                                )
+                            } else {
+                                None
+                            };
 
                         word_column = word_column
                             .push(
@@ -502,16 +470,20 @@ pub fn view<'state>(model: &'state Model, window: &'state WindowState) -> Elemen
     // Input section
     let input_section = Row::new()
         .push(
-            TextInput::new("Enter word...", &window.words_ui.word_input)
-                .on_input(Message::WordsInputChanged)
-                .on_submit(Message::CreateWord(window.words_ui.word_input.to_string()))
+            TextInput::new("Enter word...", &state.words_ui.word_input)
+                .on_input(WordsMessage::InputChanged)
+                .on_submit(WordsMessage::CreateWord(
+                    state.words_ui.word_input.to_string(),
+                ))
                 .width(iced::Length::Fill),
         )
         .push(
             Button::new(Text::new("Add Word"))
                 .style(button::primary)
                 .padding([8, 16])
-                .on_press(Message::CreateWord(window.words_ui.word_input.to_string())),
+                .on_press(WordsMessage::CreateWord(
+                    state.words_ui.word_input.to_string(),
+                )),
         );
 
     let main_column = Column::new()

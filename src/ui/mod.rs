@@ -1,5 +1,4 @@
-pub mod queue;
-pub mod words;
+//! UI module with per-window sub-modules and shared components.
 
-pub use self::queue::view as queue_view;
-pub use self::words::view as words_view;
+pub mod components;
+pub mod main_window;

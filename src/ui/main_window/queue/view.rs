@@ -1,12 +1,13 @@
-//! Queue view UI component.
+//! Queue panel view function.
 
-use crate::message::Message;
+use super::message::QueueMessage;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
+use crate::ui::components::svg_checkbox;
 use iced::Element;
-use iced::widget::{Button, Column, Row, Text, button, svg, text_input};
+use iced::widget::{Button, Column, Row, Text, button, text_input};
 
-fn generator_settings_panel<'a>() -> Element<'a, Message> {
+fn generator_settings_panel<'a>() -> Element<'a, QueueMessage> {
     let title = Text::new("Generator Settings").size(16);
     let include_word_checkbox = Text::new("☐ Include word in sentence").size(14);
     let template_dropdown =
@@ -48,12 +49,12 @@ fn meaning_content(
     }
 }
 
-pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
+pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
     let queue_registry = &model.queue_registry;
     let meaning_registry = &model.meaning_registry;
     let word_registry = &model.word_registry;
 
-    let items: Vec<Element<'state, Message>> = queue_registry
+    let items: Vec<Element<'a, QueueMessage>> = queue_registry
         .get_items()
         .map(|queue_item| {
             let content = meaning_content(queue_item.meaning_id, meaning_registry, word_registry);
@@ -63,31 +64,9 @@ pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
             let status_text = status_label(&status);
             let status_text_for_row = status_text.clone();
 
-            let select_indicator: Element<'state, Message> =
+            let select_indicator: Element<'a, QueueMessage> =
                 if matches!(status, QueueItemStatus::Pending) {
-                    if selected {
-                        Button::new(
-                            svg("assets/icon/check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                                .width(iced::Length::Fixed(20.0))
-                                .height(iced::Length::Fixed(20.0)),
-                        )
-                        .on_press(Message::QueueSelectToggle(item_id))
-                        .style(button::secondary)
-                        .padding([4, 8])
-                        .width(iced::Length::Fixed(30.0))
-                        .into()
-                    } else {
-                        Button::new(
-                            svg("assets/icon/check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                                .width(iced::Length::Fixed(20.0))
-                                .height(iced::Length::Fixed(20.0)),
-                        )
-                        .on_press(Message::QueueSelectToggle(item_id))
-                        .style(button::secondary)
-                        .padding([4, 8])
-                        .width(iced::Length::Fixed(30.0))
-                        .into()
-                    }
+                    svg_checkbox(selected, QueueMessage::SelectToggle(item_id))
                 } else {
                     Text::new(status_text).into()
                 };
@@ -95,7 +74,7 @@ pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
             let remove_btn = Button::new(Text::new("remove"))
                 .style(button::secondary)
                 .padding([2, 6])
-                .on_press(Message::QueueRemove(item_id));
+                .on_press(QueueMessage::Remove(item_id));
 
             Row::new()
                 .push(select_indicator)
@@ -125,13 +104,13 @@ pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
             Button::new(Text::new("Select All"))
                 .style(button::secondary)
                 .padding([8, 16])
-                .on_press(Message::QueueSelectAll),
+                .on_press(QueueMessage::SelectAll),
         )
         .push(
             Button::new(Text::new("Select None"))
                 .style(button::secondary)
                 .padding([8, 16])
-                .on_press(Message::QueueDeselectAll),
+                .on_press(QueueMessage::DeselectAll),
         )
         .spacing(5);
 
@@ -139,18 +118,18 @@ pub fn view<'state>(model: &'state Model) -> Element<'state, Message> {
         .get_items()
         .any(|i| matches!(i.status, QueueItemStatus::Completed));
 
-    let clear_button: Element<'state, Message> = if has_completed {
+    let clear_button: Element<'a, QueueMessage> = if has_completed {
         Button::new(Text::new("Clear Done"))
             .style(button::secondary)
             .padding([8, 16])
-            .on_press(Message::QueueClearCompleted)
+            .on_press(QueueMessage::ClearCompleted)
             .into()
     } else {
         Text::new("").into()
     };
 
     let process_button = Button::new(Text::new(format!("Process ({})", selected_count)))
-        .on_press_maybe((selected_count > 0).then_some(Message::QueueProcess))
+        .on_press_maybe((selected_count > 0).then_some(QueueMessage::Process))
         .width(iced::Length::Fill)
         .style(if selected_count > 0 {
             button::primary
