@@ -33,13 +33,6 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// TODO: Remove in production - for development only
-    #[allow(dead_code)]
-    pub fn with_sample_data(mut self) -> Self {
-        self.data = self.data.with_sample_data();
-        self
-    }
-
     // Unified Update Handler
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -304,10 +297,15 @@ impl AppState {
             Message::SelectAllWords => {
                 for (id, _) in self.data.word_registry.iter() {
                     self.selection.selected_word_ids.insert(*id);
+                    // Also select all meanings of this word
+                    for (mid, _) in self.data.meaning_registry.iter_by_word(*id) {
+                        self.selection.selected_meaning_ids.insert(*mid);
+                    }
                 }
             }
             Message::DeselectAllWords => {
                 self.selection.selected_word_ids.clear();
+                self.selection.selected_meaning_ids.clear();
             }
 
             // Selection - Tags
@@ -349,10 +347,10 @@ impl AppState {
                 }
             }
             Message::TagsSelectTag(id) => {
-                self.ui.tags.selected_ids.insert(id);
+                self.selection.selected_tag_ids.insert(id);
             }
             Message::TagsDeselectTag(id) => {
-                self.ui.tags.selected_ids.remove(&id);
+                self.selection.selected_tag_ids.remove(&id);
             }
 
             // Window management - handled at app level

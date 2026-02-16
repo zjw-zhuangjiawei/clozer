@@ -22,13 +22,6 @@ pub struct App {
 }
 
 impl App {
-    /// TODO: Remove in production - for development only
-    #[allow(dead_code)]
-    pub fn with_sample_data(mut self) -> Self {
-        self.app_state = self.app_state.with_sample_data();
-        self
-    }
-
     /// Creates a new App instance and opens the initial window.
     pub fn new(config: AppConfig) -> (Self, iced::Task<Message>) {
         // Initialize database
@@ -82,45 +75,55 @@ impl App {
 
     /// Updates the application state with a message.
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
-        match message {
-            Message::WindowOpened(id, window_type) => {
-                let window = Window::new(window_type);
-                self.windows.insert(id, window);
-                iced::Task::none()
-            }
-            Message::WindowCloseRequested(id) => {
-                // Custom close handling: perform cleanup then close the window
-                // Any cleanup logic (save data, etc.) can be added here
-                // Then explicitly close the window
-                iced::window::close(id)
-            }
-            Message::WindowClosed(id) => {
-                let Some(window) = self.windows.remove(&id) else {
-                    unreachable!()
-                };
-                match window {
-                    Window::Main(_) => {
-                        // Flush any unsaved data to database
-                        tracing::debug!("Flushing dirty data on shutdown");
-                        if let Err(e) = self.app_state.data.flush_all(&self.app_state.db) {
-                            tracing::error!("Failed to flush data on shutdown: {}", e);
-                        }
-                        self.config.save_to_file();
-                        tracing::info!("Clozer shutting down");
-                        iced::exit()
+        // Handle window management messages that need the window_id
+        if let Message::WindowOpened(id, window_type) = message {
+            let window = Window::new(window_type);
+            self.windows.insert(id, window);
+            return iced::Task::none();
+        }
+
+        if let Message::WindowCloseRequested(id) = message {
+            return iced::window::close(id);
+        }
+
+        if let Message::WindowClosed(id) = message {
+            let Some(window) = self.windows.remove(&id) else {
+                unreachable!()
+            };
+            match window {
+                Window::Main(_) => {
+                    // Flush any unsaved data to database
+                    tracing::debug!("Flushing dirty data on shutdown");
+                    if let Err(e) = self.app_state.data.flush_all(&self.app_state.db) {
+                        tracing::error!("Failed to flush data on shutdown: {}", e);
                     }
+                    self.config.save_to_file();
+                    tracing::info!("Clozer shutting down");
+                    return iced::exit();
                 }
             }
-            // All other messages go directly to app_state
-            _ => self.app_state.update(message),
         }
+
+        // For all other messages, update app_state and sync selection to window
+        let task = self.app_state.update(message);
+
+        // Sync selection state from app_state to MainWindowState
+        // This keeps the window's selection in sync for the view
+        if let Some(Window::Main(main_window)) = self.windows.values_mut().next() {
+            main_window.selected_word_ids = self.app_state.selection.selected_word_ids.clone();
+            main_window.selected_meaning_ids =
+                self.app_state.selection.selected_meaning_ids.clone();
+            main_window.selected_tag_ids = self.app_state.selection.selected_tag_ids.clone();
+        }
+
+        task
     }
 
     /// Renders the application UI for the specified window.
     pub fn view(&self, id: iced::window::Id) -> Element<'_, Message> {
         if let Some(window) = self.windows.get(&id) {
             match window {
-                Window::Main(_) => {
+                Window::Main(main_window) => {
                     let left_panel = crate::ui::words_view(
                         &self.app_state.data.word_registry,
                         &self.app_state.data.meaning_registry,
@@ -128,8 +131,8 @@ impl App {
                         &self.app_state.data.tag_registry,
                         &self.app_state.ui.words.word_input,
                         &self.app_state.ui.words.tag_filter,
-                        &self.app_state.selection.selected_word_ids,
-                        &self.app_state.selection.selected_meaning_ids,
+                        &main_window.selected_word_ids,
+                        &main_window.selected_meaning_ids,
                         &self.app_state.ui.words.expanded_word_ids,
                         &self.app_state.ui.words.meaning_inputs,
                         &self.app_state.ui.words.active_tag_dropdown,

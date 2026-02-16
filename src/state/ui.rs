@@ -76,7 +76,6 @@ impl WordsUiState {
 pub struct TagsUiState {
     pub input: String,
     pub collapsed_ids: BTreeSet<Uuid>,
-    pub selected_ids: BTreeSet<Uuid>,
 }
 
 impl Default for TagsUiState {
@@ -90,7 +89,6 @@ impl TagsUiState {
         Self {
             input: String::new(),
             collapsed_ids: BTreeSet::new(),
-            selected_ids: BTreeSet::new(),
         }
     }
 }

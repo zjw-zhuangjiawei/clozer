@@ -1,7 +1,5 @@
-//! Window types and state for multi-window architecture.
-//!
-//! Provides WindowType enum for extensibility and Window enum
-//! for managing different window content types.
+use std::collections::BTreeSet;
+use uuid::Uuid;
 
 /// Window type enum for future extensibility.
 ///
@@ -43,14 +41,21 @@ impl Window {
 
 /// State for the main application window.
 ///
-/// Currently empty - window-specific state can be added here if needed.
-/// All application state is now held at the App level.
+/// Contains flattened selection state for words, meanings, and tags.
 #[derive(Debug, Default)]
-pub struct MainWindowState {}
+pub struct MainWindowState {
+    pub selected_word_ids: BTreeSet<Uuid>,
+    pub selected_meaning_ids: BTreeSet<Uuid>,
+    pub selected_tag_ids: BTreeSet<Uuid>,
+}
 
 impl MainWindowState {
     /// Creates a new MainWindowState.
     pub fn new() -> Self {
-        Self {}
+        Self {
+            selected_word_ids: BTreeSet::new(),
+            selected_meaning_ids: BTreeSet::new(),
+            selected_tag_ids: BTreeSet::new(),
+        }
     }
 }
