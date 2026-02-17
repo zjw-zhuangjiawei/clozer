@@ -5,21 +5,49 @@ use iced::widget::{Button, button, svg};
 
 use crate::assets;
 
-/// Creates an SVG checkbox button that toggles between checked and unchecked states.
+/// Checkbox selection state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CheckboxState {
+    /// Unchecked (empty)
+    Unchecked,
+    /// Checked (filled)
+    Checked,
+    /// Indeterminate (partial selection)
+    Indeterminate,
+}
+
+impl From<bool> for CheckboxState {
+    fn from(checked: bool) -> Self {
+        if checked {
+            CheckboxState::Checked
+        } else {
+            CheckboxState::Unchecked
+        }
+    }
+}
+
+/// Creates an SVG checkbox button with the given state.
 ///
 /// # Parameters
 ///
-/// - `selected`: Whether the checkbox is checked
+/// - `state`: The checkbox state (Checked, Unchecked, or Indeterminate)
 /// - `on_toggle`: Message to emit when the checkbox is toggled
 ///
 /// # Returns
 ///
 /// An `Element` containing the checkbox button
-pub fn svg_checkbox<'a, M: Clone + 'a>(selected: bool, on_toggle: M) -> Element<'a, M> {
-    let icon_name = if selected {
-        "check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
-    } else {
-        "check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
+pub fn svg_checkbox<'a, M: Clone + 'a>(
+    state: impl Into<CheckboxState>,
+    on_toggle: M,
+) -> Element<'a, M> {
+    let icon_name = match state.into() {
+        CheckboxState::Checked => "check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg",
+        CheckboxState::Unchecked => {
+            "check_box_outline_blank_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
+        }
+        CheckboxState::Indeterminate => {
+            "indeterminate_check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
+        }
     };
 
     let handle = assets::get_svg(icon_name)

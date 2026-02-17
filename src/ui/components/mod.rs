@@ -2,4 +2,4 @@
 
 pub mod checkbox;
 
-pub use self::checkbox::svg_checkbox;
+pub use self::checkbox::{CheckboxState, svg_checkbox};

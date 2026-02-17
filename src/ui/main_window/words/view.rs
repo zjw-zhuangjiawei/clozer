@@ -2,13 +2,16 @@
 
 use super::message::WordsMessage;
 use super::state::{ClozeFilter, TagDropdownState, TagDropdownTarget};
+use crate::assets;
 use crate::models::PartOfSpeech;
 use crate::state::Model;
 use crate::ui::AppTheme;
-use crate::ui::components::svg_checkbox;
+use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::main_window::state::MainWindowState;
 use iced::Element;
-use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button, container};
+use iced::widget::{
+    Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
+};
 use strum::VariantArray;
 use uuid::Uuid;
 
@@ -177,18 +180,27 @@ fn build_word_node<'a>(
     let is_partial = words_ui.is_word_partial(word);
 
     // Expand/collapse icon
-    let expand_icon = if is_expanded { "▼" } else { "▶" };
+    let expand_icon_name = if is_expanded {
+        "keyboard_arrow_down_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
+    } else {
+        "keyboard_arrow_right_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
+    };
+    let expand_icon_handle = assets::get_svg(expand_icon_name)
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let expand_icon: Element<'a, WordsMessage> = svg(expand_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0))
+        .into();
 
     // Checkbox state
     let checkbox: Element<'a, WordsMessage> = if word.meaning_ids.is_empty() {
         Text::new("○").into()
     } else if is_partial {
-        // Partial selection - click to deselect all
-        Button::new(Text::new("◫"))
-            .style(button::secondary)
-            .padding([2, 4])
-            .on_press(WordsMessage::ToggleWordSelection(word.id))
-            .into()
+        svg_checkbox(
+            CheckboxState::Indeterminate,
+            WordsMessage::ToggleWordSelection(word.id),
+        )
     } else {
         svg_checkbox(is_selected, WordsMessage::ToggleWordSelection(word.id))
     };
@@ -214,7 +226,7 @@ fn build_word_node<'a>(
 
     // Word header row
     let word_header = Row::new()
-        .push(Text::new(expand_icon).size(12))
+        .push(expand_icon)
         .push(checkbox)
         .push(word_content)
         .push(Text::new(" ").width(iced::Length::Fill))
@@ -283,15 +295,31 @@ fn build_word_node<'a>(
 
 /// Build word action buttons.
 fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
+    // Edit icon
+    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let edit_icon = svg(edit_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+
+    // Delete icon
+    let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let delete_icon = svg(delete_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+
     Row::new()
         .push(
-            Button::new(Text::new("✏"))
+            Button::new(edit_icon)
                 .style(button::secondary)
                 .padding([2, 6])
                 .on_press(WordsMessage::EditWordStart(word_id)),
         )
         .push(
-            Button::new(Text::new("🗑"))
+            Button::new(delete_icon)
                 .style(button::danger)
                 .padding([2, 6])
                 .on_press(WordsMessage::DeleteWord(word_id)),
@@ -438,15 +466,31 @@ fn build_meaning_node<'a>(
 
 /// Build meaning action buttons.
 fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
+    // Edit icon
+    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let edit_icon = svg(edit_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+
+    // Delete icon
+    let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let delete_icon = svg(delete_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+
     Row::new()
         .push(
-            Button::new(Text::new("✏"))
+            Button::new(edit_icon)
                 .style(button::secondary)
                 .padding([2, 6])
                 .on_press(WordsMessage::EditMeaningStart(meaning_id)),
         )
         .push(
-            Button::new(Text::new("🗑"))
+            Button::new(delete_icon)
                 .style(button::danger)
                 .padding([2, 6])
                 .on_press(WordsMessage::DeleteMeaning(meaning_id)),
