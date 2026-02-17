@@ -1,55 +1,65 @@
 //! Words panel message types.
 
 use crate::models::PartOfSpeech;
+use crate::ui::main_window::words::state::ClozeFilter;
 use uuid::Uuid;
 
 /// Messages for the words panel.
 #[derive(Debug, Clone)]
 pub enum WordsMessage {
-    // Word CRUD
-    InputChanged(String),
-    CreateWord(String),
-    DeleteWord(Uuid),
-    DeleteSelected,
-    ToggleWordExpand(Uuid),
+    // Search & Filter
+    SearchChanged(String),
+    FilterByClozeStatus(ClozeFilter),
+    FilterByTag(Option<Uuid>),
+    ClearFilter,
 
     // Selection
-    ToggleWord(Uuid),
-    ToggleMeaning(Uuid),
-    SelectAllWords,
-    DeselectAllWords,
+    ToggleWordSelection(Uuid),
+    ToggleMeaningSelection(Uuid),
+    SelectAll,
+    DeselectAll,
 
-    // Filtering
-    TagFilterChanged(String),
-    ClearTagFilter,
+    // Expand/Collapse
+    ToggleWordExpand(Uuid),
+    ToggleClozeExpand(Uuid),
+    ExpandAll,
+    CollapseAll,
 
-    // Meaning input
-    ToggleMeaningInput(Uuid),
-    MeaningDefInputChanged(Uuid, String),
-    MeaningPosSelected(Uuid, PartOfSpeech),
-    SaveMeaning(Uuid),
-    CancelMeaningInput(Uuid),
+    // Word operations
+    CreateWord(String),
+    EditWordStart(Uuid),
+    EditWordInput(String),
+    EditWordSave(Uuid),
+    EditWordCancel,
+    DeleteWord(Uuid),
+
+    // Meaning operations
+    AddMeaningStart(Uuid),
+    AddMeaningInput(String),
+    AddMeaningPosSelected(PartOfSpeech),
+    AddMeaningSave,
+    AddMeaningCancel,
+    EditMeaningStart(Uuid),
+    EditMeaningInput(String),
+    EditMeaningSave(Uuid),
+    EditMeaningCancel,
     DeleteMeaning(Uuid),
 
-    // Per-meaning tag operations
-    MeaningToggleTagDropdown(Uuid),
-    MeaningTagSearchChanged(String),
-    AddTagToMeaningSearch(Uuid, String),
+    // Tag operations
+    ShowTagDropdown(Uuid),
+    ShowBatchTagDropdown,
+    TagSearchChanged(String),
     AddTagToMeaning(Uuid, Uuid),
+    AddTagToSelected(Uuid),
     RemoveTagFromMeaning(Uuid, Uuid),
+    QuickCreateTag(Uuid, String), // Create tag and add to meaning
+    CloseTagDropdown,
 
-    // Batch tag operations
-    ToggleBatchAddTagDropdown,
-    ToggleBatchRemoveTagDropdown,
-    BatchTagSearchChanged(String),
-    BatchTagRemoveSearchChanged(String),
-    BatchAddTagToSelectedMeanings(Uuid),
-    BatchRemoveTagFromSelectedMeanings(Uuid),
+    // Cloze operations
+    RegenerateCloze(Uuid),
+    DeleteCloze(Uuid),
 
-    // Tag CRUD (triggered from words view)
-    CreateTag(String),
-    DeleteTag(Uuid),
-
-    // Queue trigger
+    // Batch operations
     QueueSelected,
+    DeleteSelected,
 }

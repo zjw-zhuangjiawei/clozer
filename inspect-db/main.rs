@@ -10,9 +10,6 @@ enum TableName {
     Meanings,
     Closes,
     Tags,
-    Providers,
-    Models,
-    Queue,
 }
 
 /// Inspect Clozer database files.
@@ -103,55 +100,6 @@ fn print_tags(db: &Db) {
     }
 }
 
-// Persistence commented out - providers/models/queue not in DB
-// fn print_providers(db: &Db) {
-//     println!("=== PROVIDERS ===");
-//     match db.iter_providers() {
-//         Ok(providers) => {
-//             for (id, provider) in providers {
-//                 println!("id: {}", id);
-//                 println!("name: \"{}\"", provider.name);
-//                 println!("type: {:?}", provider.provider_type);
-//                 println!("base_url: \"{}\"", provider.base_url);
-//                 println!("api_key: \"{}\"", provider.api_key);
-//                 println!();
-//             }
-//         }
-//         Err(e) => eprintln!("Error reading providers: {}", e),
-//     }
-// }
-
-// fn print_models(db: &Db) {
-//     println!("=== MODELS ===");
-//     match db.iter_models() {
-//         Ok(models) => {
-//             for (id, model) in models {
-//                 println!("id: {}", id);
-//                 println!("name: \"{}\"", model.name);
-//                 println!("provider_id: {}", model.provider_id);
-//                 println!("model_id: \"{}\"", model.model_id);
-//                 println!();
-//             }
-//         }
-//         Err(e) => eprintln!("Error reading models: {}", e),
-//     }
-// }
-
-// fn print_queue(db: &Db) {
-//     println!("=== QUEUE ===");
-//     match db.iter_queue() {
-//         Ok(items) => {
-//             for (id, item) in items {
-//                 println!("id: {}", id);
-//                 println!("meaning_id: {}", item.meaning_id);
-//                 println!("status: {:?}", item.status);
-//                 println!();
-//             }
-//         }
-//         Err(e) => eprintln!("Error reading queue: {}", e),
-//     }
-// }
-
 fn main() {
     let args = Args::parse();
 
@@ -168,10 +116,6 @@ fn main() {
         Some(TableName::Meanings) => print_meanings(&db),
         Some(TableName::Closes) => print_clozes(&db),
         Some(TableName::Tags) => print_tags(&db),
-        // Providers/Models/Queue persistence commented out
-        Some(TableName::Providers) | Some(TableName::Models) | Some(TableName::Queue) => {
-            eprintln!("Providers/Models/Queue not persisted to DB")
-        }
         None => {
             print_tags(&db);
             println!();
@@ -180,13 +124,6 @@ fn main() {
             print_meanings(&db);
             println!();
             print_clozes(&db);
-            // Providers/Models/Queue persistence commented out
-            // println!();
-            // print_providers(&db);
-            // println!();
-            // print_models(&db);
-            // println!();
-            // print_queue(&db);
         }
     }
 }

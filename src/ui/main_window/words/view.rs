@@ -1,510 +1,731 @@
 //! Words panel view function.
 
 use super::message::WordsMessage;
-use super::state::TagDropdownState;
+use super::state::{ClozeFilter, TagDropdownState, TagDropdownTarget};
 use crate::models::PartOfSpeech;
 use crate::state::Model;
+use crate::ui::AppTheme;
 use crate::ui::components::svg_checkbox;
 use crate::ui::main_window::state::MainWindowState;
 use iced::Element;
-use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, button, container};
 use strum::VariantArray;
 use uuid::Uuid;
 
+/// Renders the words panel.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
-    let all_words: Vec<_> = model.word_registry.iter().map(|(_, w)| w).collect();
-    let all_tags: Vec<_> = model.tag_registry.iter().map(|(_, t)| t).collect();
-    let selected_meaning_count = state.selected_meaning_ids.len();
+    let words_ui = &state.words_ui;
 
-    // Aliases for cleaner code
-    let word_registry = &model.word_registry;
-    let meaning_registry = &model.meaning_registry;
-    let tag_registry = &model.tag_registry;
-    let cloze_registry = &model.cloze_registry;
-    let tag_filter = &state.words_ui.tag_filter;
-    let meaning_inputs = &state.words_ui.meaning_inputs;
-    let active_tag_dropdown = &state.words_ui.active_tag_dropdown;
-    let meanings_tag_dropdown_state = &state.words_ui.meanings_tag_dropdown_state;
-    let meanings_tag_search_input = &state.words_ui.meanings_tag_search_input;
-    let meanings_tag_remove_search_input = &state.words_ui.meanings_tag_remove_search_input;
+    // Search and filter bar
+    let search_bar = build_search_bar(words_ui, model);
 
-    // Filter words by tag filter
-    let filtered_words: Vec<Uuid> = if tag_filter.is_empty() {
-        all_words.iter().map(|w| w.id).collect()
-    } else {
-        let matching_tag_ids: Vec<Uuid> = all_tags
-            .iter()
-            .filter(|t| t.name.to_lowercase().contains(&tag_filter.to_lowercase()))
-            .map(|t| t.id)
-            .collect();
+    // Word tree
+    let word_tree = build_word_tree(state, model);
 
-        all_words
-            .iter()
-            .filter(|word| {
-                word.meaning_ids.iter().any(|meaning_id| {
-                    meaning_registry
-                        .get(*meaning_id)
-                        .map(|m| m.tag_ids.iter().any(|tid| matching_tag_ids.contains(tid)))
-                        .unwrap_or(false)
-                })
-            })
-            .map(|w| w.id)
-            .collect()
-    };
+    // Action bar (contextual, shows when items selected)
+    let action_bar = build_action_bar(words_ui, model);
 
-    // Selection bar
-    let select_all_btn = Button::new(Text::new("Select All"))
-        .style(button::secondary)
-        .padding([8, 16])
-        .on_press(WordsMessage::SelectAllWords);
+    Column::new()
+        .push(search_bar)
+        .push(iced::widget::rule::horizontal(1))
+        .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
+        .push(action_bar)
+        .spacing(10)
+        .padding(10)
+        .height(iced::Length::Fill)
+        .into()
+}
 
-    let deselect_all_btn = Button::new(Text::new("Select None"))
-        .style(button::secondary)
-        .padding([8, 16])
-        .on_press(WordsMessage::DeselectAllWords);
+/// Build the search and filter bar.
+fn build_search_bar<'a>(
+    words_ui: &'a super::state::WordsUiState,
+    _model: &'a Model,
+) -> Element<'a, WordsMessage> {
+    // Search input
+    let search_input = TextInput::new("Search words or definitions...", &words_ui.search_query)
+        .on_input(WordsMessage::SearchChanged)
+        .width(iced::Length::Fill)
+        .padding(8);
 
-    let queue_btn = if selected_meaning_count > 0 {
-        Button::new(Text::new(format!(
-            "Add to Queue ({})",
-            selected_meaning_count
-        )))
-        .style(button::primary)
-        .padding([8, 16])
-        .on_press(WordsMessage::QueueSelected)
-    } else {
-        Button::new(Text::new(format!(
-            "Add to Queue ({})",
-            selected_meaning_count
-        )))
-        .style(button::secondary)
-        .padding([8, 16])
-    };
+    // Cloze filter dropdown
+    let cloze_filter = PickList::new(
+        vec![
+            ClozeFilter::All,
+            ClozeFilter::HasClozes,
+            ClozeFilter::Pending,
+            ClozeFilter::Failed,
+        ],
+        Some(words_ui.filter.cloze_status),
+        |filter| WordsMessage::FilterByClozeStatus(filter),
+    )
+    .width(iced::Length::Fixed(120.0))
+    .placeholder("Filter");
 
-    let delete_btn = if selected_meaning_count > 0 {
-        Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
-            .style(button::danger)
+    // Clear filter button
+    let clear_btn = if !words_ui.search_query.is_empty()
+        || words_ui.filter.cloze_status != ClozeFilter::All
+        || words_ui.filter.tag_id.is_some()
+    {
+        Button::new(Text::new("Clear"))
+            .style(button::secondary)
             .padding([8, 16])
-            .on_press(WordsMessage::DeleteSelected)
+            .on_press(WordsMessage::ClearFilter)
     } else {
-        Button::new(Text::new(format!("Delete ({})", selected_meaning_count)))
+        Button::new(Text::new("Clear"))
             .style(button::secondary)
             .padding([8, 16])
     };
 
-    // Add Tag and Remove Tag buttons for selected meanings
-    let add_tag_btn = if selected_meaning_count > 0 {
-        Button::new(Text::new("Add Tag"))
-            .style(button::secondary)
-            .padding([8, 16])
-            .on_press(WordsMessage::ToggleBatchAddTagDropdown)
-    } else {
-        Button::new(Text::new("Add Tag"))
-            .style(button::secondary)
-            .padding([8, 16])
-    };
+    Row::new()
+        .push(search_input)
+        .push(cloze_filter)
+        .push(clear_btn)
+        .spacing(10)
+        .align_y(iced::Alignment::Center)
+        .into()
+}
 
-    let remove_tag_btn = if selected_meaning_count > 0 {
-        Button::new(Text::new("Remove Tag"))
-            .style(button::secondary)
-            .padding([8, 16])
-            .on_press(WordsMessage::ToggleBatchRemoveTagDropdown)
-    } else {
-        Button::new(Text::new("Remove Tag"))
-            .style(button::secondary)
-            .padding([8, 16])
-    };
+/// Build the word tree.
+fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
+    let words_ui = &state.words_ui;
 
-    // Compute common tags for Remove Tag dropdown
-    let common_tag_ids: Vec<Uuid> = if selected_meaning_count > 0 {
-        let mut common_tags: Option<std::collections::BTreeSet<Uuid>> = None;
-        for &meaning_id in &state.selected_meaning_ids {
-            if let Some(meaning) = meaning_registry.get(meaning_id) {
-                if let Some(ref mut tags) = common_tags {
-                    tags.retain(|t| meaning.tag_ids.contains(t));
-                } else {
-                    common_tags = Some(meaning.tag_ids.clone());
-                }
-            }
-        }
-        common_tags.unwrap_or_default().into_iter().collect()
-    } else {
-        vec![]
-    };
-
-    // Filter tags for Add Tag dropdown (tags not on all selected meanings)
-    let tags_for_add: Vec<_> = if selected_meaning_count > 0 {
-        all_tags
-            .iter()
-            .filter(|tag| {
-                let on_all_meanings = state.selected_meaning_ids.iter().all(|&mid| {
-                    meaning_registry
-                        .get(mid)
-                        .map(|m| m.tag_ids.contains(&tag.id))
-                        .unwrap_or(false)
-                });
-                !on_all_meanings
-                    && tag
-                        .name
-                        .to_lowercase()
-                        .contains(&meanings_tag_search_input.to_lowercase())
-            })
-            .collect()
-    } else {
-        vec![]
-    };
-
-    // Filter common tags for Remove Tag dropdown
-    let tags_for_remove: Vec<_> = common_tag_ids
+    // Filter words based on search and filter state
+    let filtered_word_ids: Vec<Uuid> = model
+        .word_registry
         .iter()
-        .filter_map(|tag_id| tag_registry.get(*tag_id))
-        .filter(|tag| {
-            tag.name
-                .to_lowercase()
-                .contains(&meanings_tag_remove_search_input.to_lowercase())
-        })
-        .collect();
-
-    // Batch tag dropdown
-    let batch_tag_dropdown: Option<Element<_>> = match meanings_tag_dropdown_state {
-        TagDropdownState::Add => {
-            let search = TextInput::new("Search tags...", meanings_tag_search_input)
-                .on_input(WordsMessage::BatchTagSearchChanged)
-                .width(iced::Length::Fill);
-            let tag_items: Vec<Element<_>> = tags_for_add
-                .iter()
-                .map(|tag| {
-                    Button::new(Text::new(&tag.name))
-                        .on_press(WordsMessage::BatchAddTagToSelectedMeanings(tag.id))
-                        .width(iced::Length::Fill)
-                        .into()
-                })
-                .collect();
-            let empty_msg = if tags_for_add.is_empty() {
-                Text::new("No tags available").size(12)
+        .filter(|(_, word)| {
+            // Search filter
+            let matches_search = if words_ui.search_query.is_empty() {
+                true
             } else {
-                Text::new("")
-            };
-            Some(
-                Container::new(
-                    Column::new()
-                        .push(Text::new("Add Tag to Selected Meanings").size(14))
-                        .push(iced::widget::rule::horizontal(1))
-                        .push(search)
-                        .push(empty_msg)
-                        .push(Column::with_children(tag_items).spacing(5))
-                        .spacing(5)
-                        .padding(10),
-                )
-                .width(iced::Length::Fixed(250.0))
-                .into(),
-            )
-        }
-        TagDropdownState::Remove => {
-            let search = TextInput::new("Search tags...", meanings_tag_remove_search_input)
-                .on_input(WordsMessage::BatchTagRemoveSearchChanged)
-                .width(iced::Length::Fill);
-            let tag_items: Vec<Element<_>> = tags_for_remove
-                .iter()
-                .map(|tag| {
-                    Button::new(Text::new(&tag.name))
-                        .on_press(WordsMessage::BatchRemoveTagFromSelectedMeanings(tag.id))
-                        .width(iced::Length::Fill)
-                        .into()
-                })
-                .collect();
-            let empty_msg = if tags_for_remove.is_empty() {
-                Text::new("No common tags").size(12)
-            } else {
-                Text::new("")
-            };
-            Some(
-                Container::new(
-                    Column::new()
-                        .push(Text::new("Remove Tag from Selected Meanings").size(14))
-                        .push(iced::widget::rule::horizontal(1))
-                        .push(search)
-                        .push(empty_msg)
-                        .push(Column::with_children(tag_items).spacing(5))
-                        .spacing(5)
-                        .padding(10),
-                )
-                .width(iced::Length::Fixed(250.0))
-                .into(),
-            )
-        }
-        TagDropdownState::None => None,
-    };
-
-    let selection_bar = Row::new()
-        .push(select_all_btn)
-        .push(deselect_all_btn)
-        .push(Text::new("").width(iced::Length::Fill))
-        .push(add_tag_btn)
-        .push(remove_tag_btn)
-        .push(queue_btn)
-        .push(delete_btn)
-        .spacing(10);
-
-    // Tag filter input
-    let filter_section = Row::new()
-        .push(
-            TextInput::new("Filter by tag...", tag_filter)
-                .on_input(WordsMessage::TagFilterChanged)
-                .width(iced::Length::Fill),
-        )
-        .push(
-            Button::new(Text::new("Clear"))
-                .style(button::secondary)
-                .padding([8, 16])
-                .on_press_maybe(if !tag_filter.is_empty() {
-                    Some(WordsMessage::ClearTagFilter)
-                } else {
-                    None
-                }),
-        )
-        .spacing(10);
-
-    // Word items
-    let word_items: Vec<Element<_>> = filtered_words
-        .iter()
-        .filter_map(|word_id| word_registry.get(*word_id))
-        .map(|word| {
-            let is_selected = state.selected_word_ids.contains(&word.id);
-            let is_expanded = state.expanded_word_ids.contains(&word.id);
-            let meaning_count = word.meaning_ids.len();
-
-            let select_checkbox = svg_checkbox(is_selected, WordsMessage::ToggleWord(word.id));
-
-            let word_text_btn = Button::new(Text::new(word.content.clone()).size(18))
-                .style(button::secondary)
-                .padding([2, 6])
-                .on_press(WordsMessage::ToggleWordExpand(word.id));
-
-            let delete_word_btn = Button::new(Text::new("Delete"))
-                .style(button::danger)
-                .padding([2, 6])
-                .on_press(WordsMessage::DeleteWord(word.id));
-
-            let word_row = Row::new()
-                .push(select_checkbox)
-                .push(word_text_btn)
-                .push(Text::new(format!("({} meanings)", meaning_count)).size(12))
-                .push(Text::new("").width(iced::Length::Fill))
-                .push(delete_word_btn)
-                .spacing(10)
-                .align_y(iced::Alignment::Center);
-
-            let mut word_column = Column::new().push(word_row).spacing(5).padding(10);
-
-            // Expanded section with meanings
-            if is_expanded {
-                // Add Meaning button
-                let add_meaning_btn = Button::new(Text::new("+ Add Meaning"))
-                    .style(button::secondary)
-                    .padding([4, 8])
-                    .on_press(WordsMessage::ToggleMeaningInput(word.id));
-
-                word_column = word_column.push(add_meaning_btn);
-
-                // Meaning input form
-                if let Some(input_state) = meaning_inputs.get(&word.id)
-                    && input_state.visible
-                {
-                    let pos_options = PartOfSpeech::VARIANTS;
-                    let pos_pick_list =
-                        PickList::new(pos_options, Some(input_state.pos), move |pos| {
-                            WordsMessage::MeaningPosSelected(word.id, pos)
-                        })
-                        .width(iced::Length::Fixed(120.0));
-
-                    let def_input = TextInput::new("Definition...", &input_state.definition)
-                        .on_input(move |v| WordsMessage::MeaningDefInputChanged(word.id, v))
-                        .width(iced::Length::Fill);
-
-                    let save_btn = Button::new(Text::new("Save"))
-                        .style(button::primary)
-                        .padding([4, 8])
-                        .on_press(WordsMessage::SaveMeaning(word.id));
-
-                    let cancel_btn = Button::new(Text::new("Cancel"))
-                        .style(button::secondary)
-                        .padding([4, 8])
-                        .on_press(WordsMessage::CancelMeaningInput(word.id));
-
-                    word_column = word_column
-                        .push(
-                            Row::new()
-                                .push(pos_pick_list)
-                                .push(def_input)
-                                .push(save_btn)
-                                .push(cancel_btn)
-                                .spacing(5),
-                        )
-                        .push(iced::widget::rule::horizontal(1));
+                let query = words_ui.search_query.to_lowercase();
+                // Check word content
+                if word.content.to_lowercase().contains(&query) {
+                    return true;
                 }
-
-                // List meanings for this word
-                for meaning_id in &word.meaning_ids {
-                    if let Some(meaning) = meaning_registry.get(*meaning_id) {
-                        let cloze_vec: Vec<_> =
-                            cloze_registry.iter_by_meaning_id(meaning.id).collect();
-
-                        let is_meaning_selected = state.selected_meaning_ids.contains(&meaning.id);
-                        let meaning_checkbox = svg_checkbox(
-                            is_meaning_selected,
-                            WordsMessage::ToggleMeaning(meaning.id),
-                        );
-
-                        // Meaning header
-                        let meaning_header = Row::new()
-                            .push(meaning_checkbox)
-                            .push(Text::new(format!(
-                                "• {}: {}",
-                                meaning.pos, meaning.definition
-                            )))
-                            .spacing(10);
-
-                        // Tag chips
-                        let tag_chips: Element<_> = Row::with_children(
-                            meaning
-                                .tag_ids
-                                .iter()
-                                .filter_map(|tag_id| tag_registry.get(*tag_id))
-                                .map(|tag| {
-                                    let tag_name = tag.name.clone();
-                                    Button::new(Text::new(format!("[{}]", tag_name)))
-                                        .style(button::secondary)
-                                        .padding([2, 6])
-                                        .on_press(WordsMessage::RemoveTagFromMeaning(
-                                            meaning.id, tag.id,
-                                        ))
-                                        .into()
-                                }),
-                        )
-                        .spacing(5)
-                        .into();
-
-                        // Cloze list
-                        let cloze_list: Element<_> = Column::with_children(
-                            cloze_vec.clone().into_iter().map(|(_id, cloze)| {
-                                Row::new()
-                                    .push(Text::new(cloze.render_blanks()))
-                                    .spacing(5)
-                                    .into()
-                            }),
-                        )
-                        .spacing(5)
-                        .into();
-
-                        // Actions
-                        let delete_meaning_btn = Button::new(Text::new("Delete"))
-                            .style(button::danger)
-                            .padding([2, 6])
-                            .on_press(WordsMessage::DeleteMeaning(meaning.id));
-
-                        let add_tag_btn = Button::new(Text::new("+ Tag"))
-                            .style(button::secondary)
-                            .padding([2, 6])
-                            .on_press(WordsMessage::MeaningToggleTagDropdown(meaning.id));
-
-                        // Tag dropdown
-                        let tag_dropdown: Option<Element<_>> =
-                            if *active_tag_dropdown == Some(meaning.id) {
-                                let search_input = TextInput::new("Search or create tag...", "")
-                                    .on_input(move |v| {
-                                        WordsMessage::AddTagToMeaningSearch(meaning.id, v)
-                                    })
-                                    .width(iced::Length::Fill);
-
-                                let create_info = Text::new("Enter a tag name").size(12);
-
-                                Some(
-                                    Column::new()
-                                        .push(search_input)
-                                        .push(iced::widget::rule::horizontal(1))
-                                        .push(create_info)
-                                        .spacing(5)
-                                        .padding(10)
-                                        .into(),
-                                )
-                            } else {
-                                None
-                            };
-
-                        word_column = word_column
-                            .push(
-                                Row::new()
-                                    .push(Text::new(" ").width(iced::Length::Fixed(20.0)))
-                                    .push(
-                                        Column::new()
-                                            .push(meaning_header)
-                                            .push(
-                                                Row::new()
-                                                    .push(Text::new("Tags:").size(12))
-                                                    .push(tag_chips)
-                                                    .push(add_tag_btn)
-                                                    .spacing(5),
-                                            )
-                                            .push(
-                                                Text::new(format!("Clozes ({})", cloze_vec.len()))
-                                                    .size(12),
-                                            )
-                                            .push(cloze_list)
-                                            .push(delete_meaning_btn)
-                                            .spacing(5),
-                                    ),
-                            )
-                            .push(iced::widget::rule::horizontal(1));
-
-                        if let Some(dropdown) = tag_dropdown {
-                            word_column = word_column.push(dropdown);
+                // Check meanings
+                for mid in &word.meaning_ids {
+                    if let Some(meaning) = model.meaning_registry.get(*mid) {
+                        if meaning.definition.to_lowercase().contains(&query) {
+                            return true;
                         }
                     }
                 }
-            }
+                false
+            };
 
-            word_column.into()
+            // Cloze status filter
+            let matches_cloze_filter = match words_ui.filter.cloze_status {
+                ClozeFilter::All => true,
+                ClozeFilter::HasClozes => word
+                    .meaning_ids
+                    .iter()
+                    .any(|mid| model.cloze_registry.iter_by_meaning_id(*mid).count() > 0),
+                ClozeFilter::Pending => word
+                    .meaning_ids
+                    .iter()
+                    .all(|mid| model.cloze_registry.iter_by_meaning_id(*mid).count() == 0),
+                ClozeFilter::Failed => false, // TODO: Track failed status
+            };
+
+            // Tag filter
+            let matches_tag_filter = match words_ui.filter.tag_id {
+                None => true,
+                Some(tag_id) => word.meaning_ids.iter().any(|mid| {
+                    model
+                        .meaning_registry
+                        .get(*mid)
+                        .map(|m| m.tag_ids.contains(&tag_id))
+                        .unwrap_or(false)
+                }),
+            };
+
+            matches_search && matches_cloze_filter && matches_tag_filter
+        })
+        .map(|(id, _)| *id)
+        .collect();
+
+    // Build word nodes
+    let word_nodes: Vec<Element<'a, WordsMessage>> = filtered_word_ids
+        .iter()
+        .filter_map(|word_id| model.word_registry.get(*word_id))
+        .map(|word| build_word_node(state, model, word))
+        .collect();
+
+    if word_nodes.is_empty() {
+        Column::new()
+            .push(
+                Container::new(Text::new("No words found. Add a word to get started."))
+                    .center_x(iced::Length::Fill)
+                    .padding(20),
+            )
+            .into()
+    } else {
+        Column::with_children(word_nodes).spacing(5).into()
+    }
+}
+
+/// Build a single word node with its meanings.
+fn build_word_node<'a>(
+    state: &'a MainWindowState,
+    model: &'a Model,
+    word: &'a crate::models::Word,
+) -> Element<'a, WordsMessage> {
+    let words_ui = &state.words_ui;
+    let is_expanded = words_ui.expanded_word_ids.contains(&word.id);
+    let is_selected = words_ui.is_word_selected(word);
+    let is_partial = words_ui.is_word_partial(word);
+
+    // Expand/collapse icon
+    let expand_icon = if is_expanded { "▼" } else { "▶" };
+
+    // Checkbox state
+    let checkbox: Element<'a, WordsMessage> = if word.meaning_ids.is_empty() {
+        Text::new("○").into()
+    } else if is_partial {
+        // Partial selection - click to deselect all
+        Button::new(Text::new("◫"))
+            .style(button::secondary)
+            .padding([2, 4])
+            .on_press(WordsMessage::ToggleWordSelection(word.id))
+            .into()
+    } else {
+        svg_checkbox(is_selected, WordsMessage::ToggleWordSelection(word.id))
+    };
+
+    // Word content (editable or display)
+    let word_content: Element<'a, WordsMessage> = if words_ui.editing_word_id == Some(word.id) {
+        TextInput::new("", &words_ui.editing_word_text)
+            .on_input(WordsMessage::EditWordInput)
+            .on_submit(WordsMessage::EditWordSave(word.id))
+            .width(iced::Length::Fill)
+            .padding([2, 4])
+            .into()
+    } else {
+        Button::new(Text::new(&word.content).size(16))
+            .style(button::secondary)
+            .padding([2, 6])
+            .on_press(WordsMessage::ToggleWordExpand(word.id))
+            .into()
+    };
+
+    // Meaning count
+    let meaning_count = Text::new(format!("{} meanings", word.meaning_ids.len())).size(12);
+
+    // Word header row
+    let word_header = Row::new()
+        .push(Text::new(expand_icon).size(12))
+        .push(checkbox)
+        .push(word_content)
+        .push(Text::new(" ").width(iced::Length::Fill))
+        .push(meaning_count)
+        .push(build_word_actions(word.id))
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
+    // Build expanded content if needed
+    if is_expanded {
+        let mut content = Column::new()
+            .push(word_header)
+            .push(iced::widget::rule::horizontal(1))
+            .spacing(5);
+
+        // Add meaning form if active
+        if words_ui.adding_meaning_to_word == Some(word.id) {
+            content = content.push(build_add_meaning_form(words_ui));
+        } else {
+            // Add meaning button
+            content = content.push(
+                Button::new(Text::new("+ Add Meaning"))
+                    .style(button::secondary)
+                    .padding([4, 8])
+                    .on_press(WordsMessage::AddMeaningStart(word.id)),
+            );
+        }
+
+        // Meaning nodes
+        for meaning_id in &word.meaning_ids {
+            if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
+                content = content.push(build_meaning_node(state, model, meaning));
+            }
+        }
+
+        Container::new(content)
+            .padding(10)
+            .style(move |_| container::Style {
+                background: Some(colors.surface_elevated.into()),
+                border: iced::Border {
+                    color: colors.border,
+                    width: 1.0,
+                    radius: 4.0.into(),
+                },
+                ..Default::default()
+            })
+            .into()
+    } else {
+        Container::new(word_header)
+            .padding(10)
+            .style(move |_| container::Style {
+                background: Some(colors.surface.into()),
+                border: iced::Border {
+                    color: colors.border,
+                    width: 1.0,
+                    radius: 4.0.into(),
+                },
+                ..Default::default()
+            })
+            .into()
+    }
+}
+
+/// Build word action buttons.
+fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
+    Row::new()
+        .push(
+            Button::new(Text::new("✏"))
+                .style(button::secondary)
+                .padding([2, 6])
+                .on_press(WordsMessage::EditWordStart(word_id)),
+        )
+        .push(
+            Button::new(Text::new("🗑"))
+                .style(button::danger)
+                .padding([2, 6])
+                .on_press(WordsMessage::DeleteWord(word_id)),
+        )
+        .spacing(2)
+        .into()
+}
+
+/// Build the add meaning inline form.
+fn build_add_meaning_form<'a>(
+    words_ui: &'a super::state::WordsUiState,
+) -> Element<'a, WordsMessage> {
+    let pos_options = PartOfSpeech::VARIANTS;
+    let pos_pick_list = PickList::new(
+        pos_options.to_vec(),
+        Some(words_ui.meaning_input.pos),
+        WordsMessage::AddMeaningPosSelected,
+    )
+    .width(iced::Length::Fixed(100.0));
+
+    let def_input = TextInput::new("Definition...", &words_ui.meaning_input.definition)
+        .on_input(WordsMessage::AddMeaningInput)
+        .width(iced::Length::Fill)
+        .padding(4);
+
+    let save_btn = Button::new(Text::new("Save"))
+        .style(button::primary)
+        .padding([4, 8])
+        .on_press(WordsMessage::AddMeaningSave);
+
+    let cancel_btn = Button::new(Text::new("Cancel"))
+        .style(button::secondary)
+        .padding([4, 8])
+        .on_press(WordsMessage::AddMeaningCancel);
+
+    Row::new()
+        .push(pos_pick_list)
+        .push(def_input)
+        .push(save_btn)
+        .push(cancel_btn)
+        .spacing(5)
+        .padding([5, 0])
+        .into()
+}
+
+/// Build a meaning node with its clozes.
+fn build_meaning_node<'a>(
+    state: &'a MainWindowState,
+    model: &'a Model,
+    meaning: &'a crate::models::Meaning,
+) -> Element<'a, WordsMessage> {
+    let words_ui = &state.words_ui;
+    let is_selected = words_ui.selected_meaning_ids.contains(&meaning.id);
+    let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
+
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
+    // Checkbox
+    let checkbox = svg_checkbox(
+        is_selected,
+        WordsMessage::ToggleMeaningSelection(meaning.id),
+    );
+
+    // POS badge
+    let pos_badge = Container::new(Text::new(format!("[{}]", meaning.pos)).size(12))
+        .padding([2, 6])
+        .style(move |_| container::Style {
+            background: Some(colors.pos_badge_bg.into()),
+            text_color: Some(colors.pos_badge_text),
+            border: iced::Border {
+                radius: 4.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+    // Definition (editable or display)
+    let definition: Element<'a, WordsMessage> = if words_ui.editing_meaning_id == Some(meaning.id) {
+        TextInput::new("", &words_ui.editing_meaning_text)
+            .on_input(WordsMessage::EditMeaningInput)
+            .on_submit(WordsMessage::EditMeaningSave(meaning.id))
+            .width(iced::Length::Fill)
+            .padding([2, 4])
+            .into()
+    } else {
+        Text::new(&meaning.definition).into()
+    };
+
+    // Cloze status indicator
+    let cloze_status = if cloze_count > 0 {
+        Text::new(format!("{} clozes ✓", cloze_count)).size(12)
+    } else {
+        Text::new("0 clozes ○".to_string()).size(12)
+    };
+
+    // Meaning header
+    let meaning_header = Row::new()
+        .push(checkbox)
+        .push(pos_badge)
+        .push(definition)
+        .push(Text::new(" ").width(iced::Length::Fill))
+        .push(cloze_status)
+        .push(build_meaning_actions(meaning.id))
+        .spacing(8)
+        .align_y(iced::Alignment::Center);
+
+    // Tags row
+    let tags_row = build_tags_row(state, model, meaning);
+
+    // Collect cloze preview elements (owned)
+    let cloze_preview_items: Vec<Element<'a, WordsMessage>> = model
+        .cloze_registry
+        .iter_by_meaning_id(meaning.id)
+        .take(2)
+        .map(|(_, cloze)| {
+            let text = cloze.render_blanks();
+            Row::new()
+                .push(Text::new("• ").size(11))
+                .push(Text::new(text).size(11))
+                .spacing(2)
+                .into()
         })
         .collect();
 
-    // Input section
-    let input_section = Row::new()
+    // Build column
+    let mut column = Column::new()
+        .push(meaning_header)
+        .push(tags_row)
+        .spacing(5)
+        .padding([5, 10]);
+
+    // Add cloze previews if any
+    if !cloze_preview_items.is_empty() {
+        column = column.push(
+            Column::with_children(cloze_preview_items)
+                .spacing(2)
+                .padding([2, 10]),
+        );
+    }
+
+    column.into()
+}
+
+/// Build meaning action buttons.
+fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
+    Row::new()
         .push(
-            TextInput::new("Enter word...", &state.words_ui.word_input)
-                .on_input(WordsMessage::InputChanged)
-                .on_submit(WordsMessage::CreateWord(
-                    state.words_ui.word_input.to_string(),
-                ))
-                .width(iced::Length::Fill),
+            Button::new(Text::new("✏"))
+                .style(button::secondary)
+                .padding([2, 6])
+                .on_press(WordsMessage::EditMeaningStart(meaning_id)),
         )
         .push(
-            Button::new(Text::new("Add Word"))
-                .style(button::primary)
-                .padding([8, 16])
-                .on_press(WordsMessage::CreateWord(
-                    state.words_ui.word_input.to_string(),
-                )),
+            Button::new(Text::new("🗑"))
+                .style(button::danger)
+                .padding([2, 6])
+                .on_press(WordsMessage::DeleteMeaning(meaning_id)),
+        )
+        .spacing(2)
+        .into()
+}
+
+/// Build the tags row for a meaning.
+fn build_tags_row<'a>(
+    state: &'a MainWindowState,
+    model: &'a Model,
+    meaning: &'a crate::models::Meaning,
+) -> Element<'a, WordsMessage> {
+    let words_ui = &state.words_ui;
+
+    // Tag chips
+    let mut tag_chips: Vec<Element<'a, WordsMessage>> = meaning
+        .tag_ids
+        .iter()
+        .filter_map(|tag_id| model.tag_registry.get(*tag_id))
+        .map(|tag| {
+            Button::new(Text::new(&tag.name).size(11))
+                .style(button::secondary)
+                .padding([2, 6])
+                .on_press(WordsMessage::RemoveTagFromMeaning(meaning.id, tag.id))
+                .into()
+        })
+        .collect();
+
+    // Add tag button
+    tag_chips.push(
+        Button::new(Text::new("+").size(11))
+            .style(button::secondary)
+            .padding([2, 6])
+            .on_press(WordsMessage::ShowTagDropdown(meaning.id))
+            .into(),
+    );
+
+    // Tag dropdown if active
+    let tag_dropdown: Option<Element<'a, WordsMessage>> =
+        if let Some(ref dropdown) = words_ui.tag_dropdown {
+            match dropdown.target {
+                TagDropdownTarget::SingleMeaning(mid) if mid == meaning.id => {
+                    Some(build_tag_dropdown(dropdown, model))
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+    let mut row = Row::new()
+        .push(Text::new("Tags:").size(11))
+        .extend(tag_chips)
+        .spacing(4);
+
+    if let Some(dropdown) = tag_dropdown {
+        row = row.push(dropdown);
+    }
+
+    row.into()
+}
+
+/// Build tag dropdown.
+fn build_tag_dropdown<'a>(
+    dropdown: &'a TagDropdownState,
+    model: &'a Model,
+) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
+    let search = TextInput::new("Search or create...", &dropdown.search)
+        .on_input(WordsMessage::TagSearchChanged)
+        .width(iced::Length::Fixed(150.0))
+        .padding(4);
+
+    // Filter tags by search
+    let filtered_tags: Vec<_> = model
+        .tag_registry
+        .iter()
+        .filter(|(_, tag)| {
+            dropdown.search.is_empty()
+                || tag
+                    .name
+                    .to_lowercase()
+                    .contains(&dropdown.search.to_lowercase())
+        })
+        .map(|(_, tag)| tag)
+        .take(5)
+        .collect();
+
+    let mut tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
+        .iter()
+        .map(|tag| {
+            Button::new(Text::new(&tag.name).size(12))
+                .width(iced::Length::Fill)
+                .on_press(WordsMessage::AddTagToMeaning(
+                    if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
+                        mid
+                    } else {
+                        Uuid::nil()
+                    },
+                    tag.id,
+                ))
+                .into()
+        })
+        .collect();
+
+    // Quick create option if search doesn't match any tag
+    if !dropdown.search.is_empty()
+        && !model
+            .tag_registry
+            .iter()
+            .any(|(_, t)| t.name.to_lowercase() == dropdown.search.to_lowercase())
+    {
+        let search = dropdown.search.clone();
+        tag_items.push(
+            Button::new(Text::new(format!("Create \"{}\"", search)).size(12))
+                .width(iced::Length::Fill)
+                .on_press(WordsMessage::QuickCreateTag(
+                    if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
+                        mid
+                    } else {
+                        Uuid::nil()
+                    },
+                    search,
+                ))
+                .into(),
         );
+    }
 
-    let main_column = Column::new()
-        .push(Text::new("Words").size(24))
-        .push(selection_bar)
-        .push(filter_section)
-        .push(input_section)
-        .push(iced::widget::rule::horizontal(1));
+    Container::new(
+        Column::new()
+            .push(search)
+            .extend(tag_items)
+            .spacing(4)
+            .padding(5),
+    )
+    .width(iced::Length::Fixed(170.0))
+    .style(move |_| container::Style {
+        background: Some(colors.surface.into()),
+        border: iced::Border {
+            color: colors.border,
+            width: 1.0,
+            radius: 4.0.into(),
+        },
+        ..Default::default()
+    })
+    .into()
+}
 
-    let main_column = if let Some(dropdown) = batch_tag_dropdown {
-        main_column.push(dropdown)
+/// Build the contextual action bar (shows when items selected).
+fn build_action_bar<'a>(
+    words_ui: &'a super::state::WordsUiState,
+    model: &'a Model,
+) -> Element<'a, WordsMessage> {
+    let selected_count = words_ui.selected_count();
+
+    if selected_count == 0 {
+        // Show word input when nothing selected
+        let word_input = TextInput::new("Add new word...", &words_ui.search_query)
+            .on_input(WordsMessage::SearchChanged)
+            .on_submit(WordsMessage::CreateWord(words_ui.search_query.clone()))
+            .width(iced::Length::Fill)
+            .padding(8);
+
+        let add_btn = Button::new(Text::new("Add Word"))
+            .style(button::primary)
+            .padding([8, 16])
+            .on_press(WordsMessage::CreateWord(words_ui.search_query.clone()));
+
+        return Row::new().push(word_input).push(add_btn).spacing(10).into();
+    }
+
+    // Selection info
+    let selection_info = Text::new(format!("☑ {} meanings selected", selected_count));
+
+    // Batch tag dropdown if active
+    let tag_btn: Element<'a, WordsMessage> = if let Some(ref dropdown) = words_ui.tag_dropdown {
+        match dropdown.target {
+            TagDropdownTarget::SelectedMeanings => Row::new()
+                .push(
+                    Button::new(Text::new("Add Tag ▾"))
+                        .style(button::primary)
+                        .padding([8, 16]),
+                )
+                .push(build_batch_tag_dropdown(dropdown, model))
+                .spacing(2)
+                .into(),
+            _ => Button::new(Text::new("Add Tag"))
+                .style(button::secondary)
+                .padding([8, 16])
+                .on_press(WordsMessage::ShowBatchTagDropdown)
+                .into(),
+        }
     } else {
-        main_column
+        Button::new(Text::new("Add Tag"))
+            .style(button::secondary)
+            .padding([8, 16])
+            .on_press(WordsMessage::ShowBatchTagDropdown)
+            .into()
     };
 
-    let main_column = main_column
-        .push(
-            iced::widget::scrollable(Column::with_children(word_items).spacing(10))
-                .height(iced::Length::Fill),
-        )
-        .spacing(10);
+    let queue_btn = Button::new(Text::new("Queue"))
+        .style(button::primary)
+        .padding([8, 16])
+        .on_press(WordsMessage::QueueSelected);
 
-    main_column.into()
+    let delete_btn = Button::new(Text::new("Delete"))
+        .style(button::danger)
+        .padding([8, 16])
+        .on_press(WordsMessage::DeleteSelected);
+
+    Row::new()
+        .push(selection_info)
+        .push(Text::new(" ").width(iced::Length::Fill))
+        .push(tag_btn)
+        .push(queue_btn)
+        .push(delete_btn)
+        .spacing(10)
+        .align_y(iced::Alignment::Center)
+        .into()
+}
+
+/// Build batch tag dropdown for selected meanings.
+fn build_batch_tag_dropdown<'a>(
+    dropdown: &'a TagDropdownState,
+    model: &'a Model,
+) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
+    let search = TextInput::new("Search...", &dropdown.search)
+        .on_input(WordsMessage::TagSearchChanged)
+        .width(iced::Length::Fixed(150.0))
+        .padding(4);
+
+    // Filter tags by search
+    let filtered_tags: Vec<_> = model
+        .tag_registry
+        .iter()
+        .filter(|(_, tag)| {
+            dropdown.search.is_empty()
+                || tag
+                    .name
+                    .to_lowercase()
+                    .contains(&dropdown.search.to_lowercase())
+        })
+        .map(|(_, tag)| tag)
+        .take(5)
+        .collect();
+
+    let tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
+        .iter()
+        .map(|tag| {
+            Button::new(Text::new(&tag.name).size(12))
+                .width(iced::Length::Fill)
+                .on_press(WordsMessage::AddTagToSelected(tag.id))
+                .into()
+        })
+        .collect();
+
+    Container::new(
+        Column::new()
+            .push(search)
+            .extend(tag_items)
+            .spacing(4)
+            .padding(5),
+    )
+    .width(iced::Length::Fixed(170.0))
+    .style(move |_| container::Style {
+        background: Some(colors.surface.into()),
+        border: iced::Border {
+            color: colors.border,
+            width: 1.0,
+            radius: 4.0.into(),
+        },
+        ..Default::default()
+    })
+    .into()
 }

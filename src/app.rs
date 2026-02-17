@@ -11,6 +11,7 @@ use crate::config::AppConfig;
 use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
+use crate::ui::AppTheme;
 use crate::ui::main_window;
 use crate::window::{Window, WindowType};
 
@@ -141,8 +142,8 @@ impl App {
     }
 
     /// Returns the theme for the specified window.
-    pub fn theme(&self, _id: iced::window::Id) -> Theme {
-        Theme::Dark
+    pub fn theme(&self, _id: iced::window::Id) -> AppTheme {
+        AppTheme::default()
     }
 
     /// Returns the application subscription.
