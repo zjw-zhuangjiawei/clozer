@@ -84,8 +84,11 @@ pub struct WordsUiState {
     pub adding_meaning_to_word: Option<Uuid>,
     pub meaning_input: MeaningInputState,
 
-    // Selection (simplified - only meanings, words derived)
+    // Selection
+    // Meanings (words are derived from meanings)
     pub selected_meaning_ids: HashSet<Uuid>,
+    // Clozes (independent selection)
+    pub selected_cloze_ids: HashSet<Uuid>,
 
     // Tag dropdown
     pub tag_dropdown: Option<TagDropdownState>,
@@ -155,6 +158,7 @@ impl WordsUiState {
     /// Clear all selections.
     pub fn clear_selection(&mut self) {
         self.selected_meaning_ids.clear();
+        self.selected_cloze_ids.clear();
     }
 
     /// Select all meanings in the registry.
@@ -162,6 +166,40 @@ impl WordsUiState {
         for (id, _) in meaning_registry.iter() {
             self.selected_meaning_ids.insert(*id);
         }
+    }
+
+    /// Check if a cloze is selected.
+    pub fn is_cloze_selected(&self, cloze_id: Uuid) -> bool {
+        self.selected_cloze_ids.contains(&cloze_id)
+    }
+
+    /// Toggle a cloze's selection.
+    pub fn toggle_cloze_selection(&mut self, cloze_id: Uuid) {
+        if self.selected_cloze_ids.contains(&cloze_id) {
+            self.selected_cloze_ids.remove(&cloze_id);
+        } else {
+            self.selected_cloze_ids.insert(cloze_id);
+        }
+    }
+
+    /// Get the count of selected clozes.
+    pub fn selected_cloze_count(&self) -> usize {
+        self.selected_cloze_ids.len()
+    }
+
+    /// Check if there are any selected clozes.
+    pub fn has_cloze_selection(&self) -> bool {
+        !self.selected_cloze_ids.is_empty()
+    }
+
+    /// Clear cloze selections.
+    pub fn clear_cloze_selection(&mut self) {
+        self.selected_cloze_ids.clear();
+    }
+
+    /// Get total selection count (meanings + clozes).
+    pub fn total_selection_count(&self) -> usize {
+        self.selected_meaning_ids.len() + self.selected_cloze_ids.len()
     }
 }
 

@@ -435,10 +435,14 @@ fn build_meaning_node<'a>(
         .cloze_registry
         .iter_by_meaning_id(meaning.id)
         .take(2)
-        .map(|(_, cloze)| {
+        .map(|(cloze_id, cloze)| {
+            let is_selected = words_ui.is_cloze_selected(*cloze_id);
             let text = cloze.render_blanks();
             Row::new()
-                .push(Text::new("• ").size(11))
+                .push(svg_checkbox(
+                    is_selected,
+                    WordsMessage::ToggleClozeSelection(*cloze_id),
+                ))
                 .push(Text::new(text).size(11))
                 .spacing(2)
                 .into()
@@ -648,9 +652,29 @@ fn build_action_bar<'a>(
     words_ui: &'a super::state::WordsUiState,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
-    let selected_count = words_ui.selected_count();
+    let meaning_selected_count = words_ui.selected_count();
+    let cloze_selected_count = words_ui.selected_cloze_count();
 
-    if selected_count == 0 {
+    // Check for cloze selection first
+    if cloze_selected_count > 0 {
+        let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
+
+        let delete_btn = Button::new(Text::new("Delete Clozes"))
+            .style(button::danger)
+            .padding([8, 16])
+            .on_press(WordsMessage::DeleteSelectedClozes);
+
+        return Row::new()
+            .push(selection_info)
+            .push(Text::new(" ").width(iced::Length::Fill))
+            .push(delete_btn)
+            .spacing(10)
+            .align_y(iced::Alignment::Center)
+            .into();
+    }
+
+    // No cloze selection - check for meaning selection
+    if meaning_selected_count == 0 {
         // Show word input when nothing selected
         let word_input = TextInput::new("Add new word...", &words_ui.search_query)
             .on_input(WordsMessage::SearchChanged)
@@ -666,8 +690,8 @@ fn build_action_bar<'a>(
         return Row::new().push(word_input).push(add_btn).spacing(10).into();
     }
 
-    // Selection info
-    let selection_info = Text::new(format!("☑ {} meanings selected", selected_count));
+    // Selection info for meanings
+    let selection_info = Text::new(format!("☑ {} meanings selected", meaning_selected_count));
 
     // Batch tag dropdown if active
     let tag_btn: Element<'a, WordsMessage> = if let Some(ref dropdown) = words_ui.tag_dropdown {

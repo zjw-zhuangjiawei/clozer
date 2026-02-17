@@ -58,8 +58,10 @@ pub enum WordsMessage {
     // Cloze operations
     RegenerateCloze(Uuid),
     DeleteCloze(Uuid),
+    ToggleClozeSelection(Uuid),
 
     // Batch operations
     QueueSelected,
     DeleteSelected,
+    DeleteSelectedClozes,
 }

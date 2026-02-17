@@ -275,6 +275,9 @@ pub fn update(
             model.cloze_registry.delete(cloze_id);
             tracing::debug!("Deleted cloze: {}", cloze_id);
         }
+        WordsMessage::ToggleClozeSelection(cloze_id) => {
+            state.words_ui.toggle_cloze_selection(cloze_id);
+        }
 
         // Batch operations
         WordsMessage::QueueSelected => {
@@ -306,6 +309,17 @@ pub fn update(
 
             tracing::info!("Deleted {} meanings", count);
             state.words_ui.clear_selection();
+        }
+        WordsMessage::DeleteSelectedClozes => {
+            let count = state.words_ui.selected_cloze_count();
+            let cloze_ids: Vec<Uuid> = state.words_ui.selected_cloze_ids.iter().copied().collect();
+
+            for cloze_id in &cloze_ids {
+                model.cloze_registry.delete(*cloze_id);
+            }
+
+            tracing::info!("Deleted {} clozes", count);
+            state.words_ui.clear_cloze_selection();
         }
     }
 
