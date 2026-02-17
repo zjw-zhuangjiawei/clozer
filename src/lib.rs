@@ -8,6 +8,7 @@ pub use self::app::App;
 pub use self::message::Message;
 pub use self::window::{Window, WindowType};
 
+pub mod assets;
 pub mod config;
 pub mod models;
 pub mod persistence;
