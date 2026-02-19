@@ -659,6 +659,16 @@ fn build_action_bar<'a>(
     if cloze_selected_count > 0 {
         let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
 
+        let export_btn = Button::new(Text::new("Export PDF"))
+            .style(button::primary)
+            .padding([8, 16])
+            .on_press(WordsMessage::ExportToPdf);
+
+        let export_clozes_btn = Button::new(Text::new("Export Clozes"))
+            .style(button::secondary)
+            .padding([8, 16])
+            .on_press(WordsMessage::ExportClozes);
+
         let delete_btn = Button::new(Text::new("Delete Clozes"))
             .style(button::danger)
             .padding([8, 16])
@@ -667,6 +677,8 @@ fn build_action_bar<'a>(
         return Row::new()
             .push(selection_info)
             .push(Text::new(" ").width(iced::Length::Fill))
+            .push(export_btn)
+            .push(export_clozes_btn)
             .push(delete_btn)
             .spacing(10)
             .align_y(iced::Alignment::Center)

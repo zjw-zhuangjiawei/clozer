@@ -321,6 +321,22 @@ pub fn update(
             tracing::info!("Deleted {} clozes", count);
             state.words_ui.clear_cloze_selection();
         }
+
+        // Export operations
+        WordsMessage::ExportToPdf => {
+            // TODO: Implement PDF export with Typst
+            tracing::warn!("PDF export not yet implemented");
+        }
+        WordsMessage::ExportClozes => {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("JSON", &["json"])
+                .set_file_name("clozes.json")
+                .save_file()
+            {
+                // TODO: serialize cloze_registry to JSON and save to path
+                tracing::info!("Export clozes to {:?}", path);
+            }
+        }
     }
 
     Task::none()

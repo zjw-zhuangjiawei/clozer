@@ -64,4 +64,8 @@ pub enum WordsMessage {
     QueueSelected,
     DeleteSelected,
     DeleteSelectedClozes,
+
+    // Export operations
+    ExportToPdf,
+    ExportClozes,
 }
