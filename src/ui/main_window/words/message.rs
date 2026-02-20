@@ -2,7 +2,15 @@
 
 use crate::models::PartOfSpeech;
 use crate::ui::main_window::words::state::ClozeFilter;
+use strum::{Display, VariantArray};
 use uuid::Uuid;
+
+/// Export kind for the export dropdown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
+pub enum ExportKind {
+    Plaintext,
+    TypstPdf,
+}
 
 /// Messages for the words panel.
 #[derive(Debug, Clone)]
@@ -66,6 +74,5 @@ pub enum WordsMessage {
     DeleteSelectedClozes,
 
     // Export operations
-    ExportToPdf,
-    ExportClozes,
+    ExportSelected(ExportKind),
 }

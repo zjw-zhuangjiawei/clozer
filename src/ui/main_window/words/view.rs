@@ -1,6 +1,6 @@
 //! Words panel view function.
 
-use super::message::WordsMessage;
+use super::message::{ExportKind, WordsMessage};
 use super::state::{ClozeFilter, TagDropdownState, TagDropdownTarget};
 use crate::assets;
 use crate::models::PartOfSpeech;
@@ -659,15 +659,15 @@ fn build_action_bar<'a>(
     if cloze_selected_count > 0 {
         let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
 
-        let export_btn = Button::new(Text::new("Export PDF"))
-            .style(button::primary)
-            .padding([8, 16])
-            .on_press(WordsMessage::ExportToPdf);
-
-        let export_clozes_btn = Button::new(Text::new("Export Clozes"))
-            .style(button::secondary)
-            .padding([8, 16])
-            .on_press(WordsMessage::ExportClozes);
+        // Export dropdown
+        let export_options = ExportKind::VARIANTS;
+        let export_dropdown = PickList::new(
+            export_options.to_vec(),
+            None::<&ExportKind>,
+            |kind| WordsMessage::ExportSelected(kind),
+        )
+        .width(iced::Length::Fixed(140.0))
+        .placeholder("Export");
 
         let delete_btn = Button::new(Text::new("Delete Clozes"))
             .style(button::danger)
@@ -677,8 +677,7 @@ fn build_action_bar<'a>(
         return Row::new()
             .push(selection_info)
             .push(Text::new(" ").width(iced::Length::Fill))
-            .push(export_btn)
-            .push(export_clozes_btn)
+            .push(export_dropdown)
             .push(delete_btn)
             .spacing(10)
             .align_y(iced::Alignment::Center)

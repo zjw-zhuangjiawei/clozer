@@ -1,6 +1,6 @@
 //! Words panel update handler.
 
-use super::message::WordsMessage;
+use super::message::{ExportKind, WordsMessage};
 use super::state::{TagDropdownState, TagDropdownTarget};
 use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
@@ -323,18 +323,36 @@ pub fn update(
         }
 
         // Export operations
-        WordsMessage::ExportToPdf => {
-            // TODO: Implement PDF export with Typst
-            tracing::warn!("PDF export not yet implemented");
-        }
-        WordsMessage::ExportClozes => {
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter("JSON", &["json"])
-                .set_file_name("clozes.json")
-                .save_file()
-            {
-                // TODO: serialize cloze_registry to JSON and save to path
-                tracing::info!("Export clozes to {:?}", path);
+        WordsMessage::ExportSelected(kind) => {
+            match kind {
+                ExportKind::Plaintext => {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter("Text", &["txt"])
+                        .set_file_name("clozes.txt")
+                        .save_file()
+                    {
+                        // Collect cloze sentences from selected clozes
+                        let sentences: Vec<String> = state
+                            .words_ui
+                            .selected_cloze_ids
+                            .iter()
+                            .filter_map(|cloze_id| {
+                                model.cloze_registry.get(*cloze_id).map(|c| c.render_answers())
+                            })
+                            .collect();
+
+                        // Write to file (one sentence per line)
+                        if let Err(e) = std::fs::write(&path, sentences.join("\n")) {
+                            tracing::error!(error = %e, "Failed to write plaintext export");
+                        } else {
+                            tracing::info!(count = sentences.len(), path = ?path, "Exported clozes to plaintext");
+                        }
+                    }
+                }
+                ExportKind::TypstPdf => {
+                    // TODO: Implement PDF export with Typst
+                    tracing::warn!("Typst PDF export not yet implemented");
+                }
             }
         }
     }
