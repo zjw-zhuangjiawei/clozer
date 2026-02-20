@@ -661,11 +661,9 @@ fn build_action_bar<'a>(
 
         // Export dropdown
         let export_options = ExportKind::VARIANTS;
-        let export_dropdown = PickList::new(
-            export_options.to_vec(),
-            None::<&ExportKind>,
-            |kind| WordsMessage::ExportSelected(kind),
-        )
+        let export_dropdown = PickList::new(export_options.to_vec(), None::<&ExportKind>, |kind| {
+            WordsMessage::ExportSelected(kind)
+        })
         .width(iced::Length::Fixed(140.0))
         .placeholder("Export");
 

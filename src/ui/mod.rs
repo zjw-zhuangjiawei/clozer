@@ -2,6 +2,7 @@
 
 pub mod components;
 pub mod main_window;
+pub mod settings_window;
 pub mod theme;
 
 pub use theme::{AppTheme, ThemeColors};

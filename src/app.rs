@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use iced::{Element, Subscription, Task, Theme};
+use iced::{Element, Subscription, Task};
 
 use crate::config::AppConfig;
 use crate::message::Message;
@@ -13,6 +13,7 @@ use crate::persistence::Db;
 use crate::state::AppState;
 use crate::ui::AppTheme;
 use crate::ui::main_window;
+use crate::ui::settings_window;
 use crate::window::{Window, WindowType};
 
 /// Main application struct with multi-window support.
@@ -68,6 +69,7 @@ impl App {
             .get(&id)
             .map(|window| match window {
                 Window::Main(_) => "Clozer".to_string(),
+                Window::Settings(_) => "Settings".to_string(),
             })
             .unwrap_or_else(|| "Clozer".to_string())
     }
@@ -84,6 +86,7 @@ impl App {
             Message::WindowOpened(id, window_type) => {
                 let window = Window::new(window_type);
                 self.windows.insert(id, window);
+
                 iced::Task::none()
             }
 
@@ -103,6 +106,11 @@ impl App {
                         tracing::info!("Clozer shutting down");
                         iced::exit()
                     }
+                    Window::Settings(_) => {
+                        // Settings window closed, just remove from windows
+                        tracing::debug!("Settings window closed");
+                        Task::none()
+                    }
                 }
             }
 
@@ -110,6 +118,21 @@ impl App {
             Message::Main(window_id, msg) => {
                 if let Some(Window::Main(window_state)) = self.windows.get_mut(&window_id) {
                     main_window::update(window_state, msg, &mut self.app_state.model, window_id)
+                } else {
+                    Task::none()
+                }
+            }
+
+            // Route to settings window by ID
+            Message::Settings(window_id, msg) => {
+                if let Some(Window::Settings(_window_state)) = self.windows.get_mut(&window_id) {
+                    // For now, SettingsMessage::Close is handled directly
+                    // In the future, we could have more complex state updates
+                    match msg {
+                        crate::ui::settings_window::SettingsMessage::Close => {
+                            iced::window::close(window_id)
+                        }
+                    }
                 } else {
                     Task::none()
                 }
@@ -135,6 +158,8 @@ impl App {
                     main_window::view(window_state, &self.app_state.model)
                         .map(move |msg| Message::Main(id, msg))
                 }
+                Window::Settings(window_state) => settings_window::view::view(window_state)
+                    .map(move |msg| Message::Settings(id, msg)),
             }
         } else {
             iced::widget::space().into()

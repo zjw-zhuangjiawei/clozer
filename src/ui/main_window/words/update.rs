@@ -337,7 +337,10 @@ pub fn update(
                             .selected_cloze_ids
                             .iter()
                             .filter_map(|cloze_id| {
-                                model.cloze_registry.get(*cloze_id).map(|c| c.render_answers())
+                                model
+                                    .cloze_registry
+                                    .get(*cloze_id)
+                                    .map(|c| c.render_answers())
                             })
                             .collect();
 

@@ -8,4 +8,5 @@ use super::words::WordsMessage;
 pub enum MainWindowMessage {
     Words(WordsMessage),
     Queue(QueueMessage),
+    OpenSettings,
 }

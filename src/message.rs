@@ -5,6 +5,7 @@
 
 use crate::state::QueueGenerationResult;
 use crate::ui::main_window::MainWindowMessage;
+use crate::ui::settings_window::SettingsMessage;
 use crate::window::WindowType;
 
 /// Top-level application messages.
@@ -21,7 +22,8 @@ pub enum Message {
     // Routed to main window by window ID
     Main(iced::window::Id, MainWindowMessage),
 
-    // Future: Settings(iced::window::Id, SettingsMessage),
+    // Routed to settings window by window ID
+    Settings(iced::window::Id, SettingsMessage),
 
     // Global (not window-specific)
     QueueGenerationResult(QueueGenerationResult),

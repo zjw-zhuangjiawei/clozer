@@ -13,6 +13,7 @@ pub use self::state::MainWindowState;
 
 use crate::message::Message;
 use crate::state::Model;
+use crate::window::WindowType;
 use iced::{Element, Task};
 
 /// Renders the main window by composing words and queue panels.
@@ -20,14 +21,25 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mai
     let left_panel = words::view(state, model).map(MainWindowMessage::Words);
     let right_panel = queue::view(model).map(MainWindowMessage::Queue);
 
-    iced::widget::row![
-        iced::widget::column![left_panel]
-            .spacing(20)
-            .padding(20)
-            .width(iced::Length::FillPortion(2)),
-        iced::widget::column![right_panel]
-            .width(iced::Length::FillPortion(1))
-            .padding(10),
+    // Header with settings button
+    let header = iced::widget::row![
+        iced::widget::text("Clozer").size(24),
+        iced::widget::Space::new().width(iced::Length::Fill),
+        iced::widget::button("Settings").on_press(MainWindowMessage::OpenSettings),
+    ]
+    .spacing(10);
+
+    iced::widget::column![
+        header,
+        iced::widget::row![
+            iced::widget::column![left_panel]
+                .spacing(20)
+                .padding(20)
+                .width(iced::Length::FillPortion(2)),
+            iced::widget::column![right_panel]
+                .width(iced::Length::FillPortion(1))
+                .padding(10),
+        ]
     ]
     .into()
 }
@@ -48,6 +60,10 @@ pub fn update(
         MainWindowMessage::Queue(msg) => {
             // Queue update returns Task<Message> directly (for QueueGenerationResult)
             queue::update(msg, model)
+        }
+        MainWindowMessage::OpenSettings => {
+            let (_, open_task) = iced::window::open(WindowType::Settings.window_settings());
+            open_task.map(move |id| Message::WindowOpened(id, WindowType::Settings))
         }
     }
 }
