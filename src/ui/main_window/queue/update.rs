@@ -2,7 +2,7 @@
 
 use super::message::QueueMessage;
 use crate::message::Message;
-use crate::state::{Model, QueueState};
+use crate::state::{Model, process};
 use iced::Task;
 
 /// Handles all queue-related messages.
@@ -28,7 +28,7 @@ pub fn update(message: QueueMessage, model: &mut Model) -> Task<Message> {
         }
         QueueMessage::Process => {
             let generator = model.generator.generator();
-            return QueueState::process(
+            return process(
                 &mut model.queue_registry,
                 &generator,
                 &model.word_registry,

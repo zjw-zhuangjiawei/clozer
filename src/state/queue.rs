@@ -12,56 +12,38 @@ pub struct QueueGenerationResult {
     pub cloze: Cloze,
 }
 
-#[derive(Debug, Clone)]
-pub struct QueueState {
-    pub queue_registry: QueueRegistry,
-}
+/// Process pending queue items using the LLM generator.
+pub fn process(
+    queue_registry: &mut QueueRegistry,
+    generator: &Arc<Generator>,
+    word_registry: &WordRegistry,
+    meaning_registry: &crate::registry::MeaningRegistry,
+) -> Task<Message> {
+    let items: Vec<_> = queue_registry
+        .get_items()
+        .filter(|item| item.status == QueueItemStatus::Pending)
+        .cloned()
+        .collect();
 
-impl Default for QueueState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+    let count = items.len();
+    tracing::info!("Processing queue: {} pending items", count);
 
-impl QueueState {
-    pub fn new() -> Self {
-        Self {
-            queue_registry: QueueRegistry::new(),
-        }
-    }
+    let tasks = items.into_iter().map(|item| {
+        let meaning = meaning_registry.get(item.meaning_id).unwrap().clone();
+        let word = word_registry.get(meaning.word_id).unwrap().clone();
+        let generator = Arc::clone(generator);
+        let item_id = item.id;
 
-    pub fn process(
-        queue_registry: &mut QueueRegistry,
-        generator: &Arc<Generator>,
-        word_registry: &WordRegistry,
-        meaning_registry: &crate::registry::MeaningRegistry,
-    ) -> Task<Message> {
-        let items: Vec<_> = queue_registry
-            .get_items()
-            .filter(|item| item.status == QueueItemStatus::Pending)
-            .cloned()
-            .collect();
+        queue_registry.set_processing(item_id);
 
-        let count = items.len();
-        tracing::info!("Processing queue: {} pending items", count);
+        Task::perform(
+            async move {
+                let cloze = generator.generate(&word, &meaning).await;
+                QueueGenerationResult { item_id, cloze }
+            },
+            Message::QueueGenerationResult,
+        )
+    });
 
-        let tasks = items.into_iter().map(|item| {
-            let meaning = meaning_registry.get(item.meaning_id).unwrap().clone();
-            let word = word_registry.get(meaning.word_id).unwrap().clone();
-            let generator = Arc::clone(generator);
-            let item_id = item.id;
-
-            queue_registry.set_processing(item_id);
-
-            Task::perform(
-                async move {
-                    let cloze = generator.generate(&word, &meaning).await;
-                    QueueGenerationResult { item_id, cloze }
-                },
-                Message::QueueGenerationResult,
-            )
-        });
-
-        Task::batch(tasks)
-    }
+    Task::batch(tasks)
 }

@@ -8,7 +8,7 @@ pub mod queue;
 
 pub use self::generator::{Generator, GeneratorState};
 pub use self::model::Model;
-pub use self::queue::{QueueGenerationResult, QueueState};
+pub use self::queue::{QueueGenerationResult, process};
 
 /// AppState holding Model (data + business logic only).
 ///
