@@ -1,18 +1,11 @@
-//! Main window module.
+//! Application UI view and update functions.
 //!
-//! Contains the main window's view, update, state, and message types,
-//! composed from words, queue, and settings sub-panels.
+//! Contains the view() and update() functions that compose words, queue,
+//! and settings panels into the single main window.
 
-pub mod message;
-pub mod nav;
-pub mod queue;
-pub mod settings;
-pub mod state;
-pub mod words;
-
-pub use self::message::MainWindowMessage;
-pub use self::nav::NavItem;
-pub use self::state::MainWindowState;
+pub use crate::ui::message::MainWindowMessage;
+pub use crate::ui::nav::NavItem;
+pub use crate::ui::state::MainWindowState;
 
 use crate::message::Message;
 use crate::state::Model;
@@ -43,7 +36,7 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mai
     // Content based on current navigation view
     let content: Element<'a, MainWindowMessage> = match state.current_view {
         NavItem::Words => {
-            let left_panel = words::view(state, model).map(MainWindowMessage::Words);
+            let left_panel = crate::ui::words::view(state, model).map(MainWindowMessage::Words);
             // Hide queue panel when in Words view, show full width
             iced::widget::column![left_panel]
                 .spacing(20)
@@ -51,14 +44,14 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mai
                 .into()
         }
         NavItem::Queue => {
-            let queue_panel = queue::view(model).map(MainWindowMessage::Queue);
+            let queue_panel = crate::ui::queue::view(model).map(MainWindowMessage::Queue);
             iced::widget::column![queue_panel]
                 .spacing(20)
                 .padding(20)
                 .into()
         }
         NavItem::Settings => {
-            let settings_panel = settings::view::view(model).map(MainWindowMessage::Settings);
+            let settings_panel = crate::ui::settings::view::view(model).map(MainWindowMessage::Settings);
             iced::widget::column![settings_panel]
                 .spacing(20)
                 .padding(20)
@@ -80,13 +73,13 @@ pub fn update(
     _window_id: iced::window::Id,
 ) -> Task<Message> {
     match message {
-        MainWindowMessage::Words(msg) => words::update(state, msg, model)
+        MainWindowMessage::Words(msg) => crate::ui::words::update(state, msg, model)
             .map(move |m| Message::Main(MainWindowMessage::Words(m))),
         MainWindowMessage::Queue(msg) => {
             // Queue update returns Task<Message> directly (for QueueGenerationResult)
-            queue::update(msg, model)
+            crate::ui::queue::update(msg, model)
         }
-        MainWindowMessage::Settings(msg) => settings::update::update(msg, model)
+        MainWindowMessage::Settings(msg) => crate::ui::settings::update::update(msg, model)
             .map(move |m| Message::Main(MainWindowMessage::Settings(m))),
         MainWindowMessage::Navigate(nav_item) => {
             state.current_view = nav_item;

@@ -1,8 +1,8 @@
 //! Main window state.
 
-use super::nav::NavItem;
-use super::queue::QueueUiState;
-use super::words::{TagsUiState, WordsUiState};
+use crate::ui::nav::NavItem;
+use crate::ui::queue::QueueUiState;
+use crate::ui::words::{TagsUiState, WordsUiState};
 
 /// State for the main application window.
 ///

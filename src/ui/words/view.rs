@@ -1,13 +1,13 @@
 //! Words panel view function.
 
-use super::message::{ExportKind, WordsMessage};
-use super::state::{ClozeFilter, TagDropdownState, TagDropdownTarget};
 use crate::assets;
 use crate::models::PartOfSpeech;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
-use crate::ui::main_window::state::MainWindowState;
+use crate::ui::state::MainWindowState;
+use crate::ui::words::message::{ExportKind, WordsMessage};
+use crate::ui::words::state::{ClozeFilter, TagDropdownState, TagDropdownTarget};
 use iced::Element;
 use iced::widget::{
     Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,

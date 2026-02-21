@@ -1,7 +1,7 @@
 //! Words panel message types.
 
 use crate::models::PartOfSpeech;
-use crate::ui::main_window::words::state::ClozeFilter;
+use crate::ui::words::state::ClozeFilter;
 use strum::{Display, VariantArray};
 use uuid::Uuid;
 

@@ -1,10 +1,10 @@
 //! Words panel update handler.
 
-use super::message::{ExportKind, WordsMessage};
-use super::state::{TagDropdownState, TagDropdownTarget};
 use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
-use crate::ui::main_window::state::MainWindowState;
+use crate::ui::state::MainWindowState;
+use crate::ui::words::message::{ExportKind, WordsMessage};
+use crate::ui::words::state::{TagDropdownState, TagDropdownTarget};
 use iced::Task;
 use uuid::Uuid;
 

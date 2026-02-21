@@ -10,14 +10,14 @@ use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
 use crate::ui::AppTheme;
-use crate::ui::main_window;
+use crate::ui::{self, state::MainWindowState};
 
 /// Main application struct with single-window support.
 #[derive(Debug)]
 pub struct App {
     pub config: AppConfig,
     pub app_state: AppState,
-    pub window_state: main_window::MainWindowState,
+    pub window_state: MainWindowState,
 }
 
 impl App {
@@ -46,7 +46,7 @@ impl App {
         let app = Self {
             config,
             app_state,
-            window_state: main_window::MainWindowState::new(),
+            window_state: MainWindowState::new(),
         };
 
         (app, Task::none())
@@ -61,7 +61,7 @@ impl App {
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
             // Route to main window
-            Message::Main(msg) => main_window::update(
+            Message::Main(msg) => ui::app::update(
                 &mut self.window_state,
                 msg,
                 &mut self.app_state.model,
@@ -88,7 +88,7 @@ impl App {
 
     /// Renders the application UI.
     pub fn view(&self) -> Element<'_, Message> {
-        main_window::view(&self.window_state, &self.app_state.model).map(Message::Main)
+        ui::app::view(&self.window_state, &self.app_state.model).map(Message::Main)
     }
 
     /// Returns the theme.

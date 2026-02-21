@@ -4,7 +4,7 @@
 //! to per-window message types.
 
 use crate::state::QueueGenerationResult;
-use crate::ui::main_window::MainWindowMessage;
+use crate::ui::message::MainWindowMessage;
 
 /// Top-level application messages.
 #[derive(Debug, Clone)]
