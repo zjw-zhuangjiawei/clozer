@@ -3,14 +3,8 @@
 //! Contains WindowType enum and Window enum.
 //! UI state types are co-located in their respective ui/ modules.
 
-use std::ffi::c_void;
-#[cfg(target_os = "windows")]
-use std::num::NonZeroIsize;
-
 use crate::ui::main_window::MainWindowState;
 use crate::ui::settings_window::SettingsUiState;
-
-use iced::window::raw_window_handle::RawWindowHandle;
 
 /// Window type enum for future extensibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -52,25 +46,3 @@ impl Window {
         }
     }
 }
-
-#[cfg(target_os = "windows")]
-pub fn set_parent_window(child: RawWindowHandle, parent: RawWindowHandle) {
-    let RawWindowHandle::Win32(child) = child else {
-        unreachable!()
-    };
-
-    let RawWindowHandle::Win32(parent) = parent else {
-        unreachable!()
-    };
-
-    let hwndchild = windows::Win32::Foundation::HWND(child.hwnd.get() as *mut c_void);
-    let hwndparent = windows::Win32::Foundation::HWND(parent.hwnd.get() as *mut c_void);
-
-    unsafe {
-        windows::Win32::UI::WindowsAndMessaging::SetParent(hwndchild, Some(hwndparent)).unwrap()
-    };
-}
-
-/// Stub for non-Windows platforms.
-#[cfg(not(target_os = "windows"))]
-pub fn set_parent_window(_child: RawWindowHandle, _parent: RawWindowHandle) {}

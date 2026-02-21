@@ -87,7 +87,7 @@ impl App {
                 let window = Window::new(window_type);
                 self.windows.insert(id, window);
 
-                iced::Task::none()
+                Task::none()
             }
 
             Message::WindowCloseRequested(id) => iced::window::close(id),

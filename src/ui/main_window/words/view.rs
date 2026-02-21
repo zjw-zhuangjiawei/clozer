@@ -59,7 +59,7 @@ fn build_search_bar<'a>(
             ClozeFilter::Failed,
         ],
         Some(words_ui.filter.cloze_status),
-        |filter| WordsMessage::FilterByClozeStatus(filter),
+        WordsMessage::FilterByClozeStatus,
     )
     .width(iced::Length::Fixed(120.0))
     .placeholder("Filter");
