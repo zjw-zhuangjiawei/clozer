@@ -44,9 +44,5 @@ fn main() {
         "Clozer starting up"
     );
 
-    let _ = iced::daemon(move || App::new(app_config.clone()), App::update, App::view)
-        .title(App::title)
-        .subscription(App::subscription)
-        .theme(App::theme)
-        .run();
+    let _ = clozer::App::run(app_config);
 }

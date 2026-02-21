@@ -2,9 +2,11 @@
 //!
 //! Contains all data registries and business logic, separated from UI state.
 
+use crate::config::AppConfig;
 use crate::persistence::Db;
 use crate::registry::{ClozeRegistry, MeaningRegistry, QueueRegistry, TagRegistry, WordRegistry};
 use crate::state::generator::GeneratorState;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Model {
@@ -15,10 +17,11 @@ pub struct Model {
     pub queue_registry: QueueRegistry,
     pub generator: GeneratorState,
     pub db: Db,
+    pub app_config: Arc<AppConfig>,
 }
 
 impl Model {
-    pub fn new(db: Db) -> Self {
+    pub fn new(db: Db, app_config: AppConfig) -> Self {
         Self {
             word_registry: WordRegistry::new(),
             meaning_registry: MeaningRegistry::new(),
@@ -27,6 +30,7 @@ impl Model {
             queue_registry: QueueRegistry::new(),
             generator: GeneratorState::new(),
             db,
+            app_config: Arc::new(app_config),
         }
     }
 

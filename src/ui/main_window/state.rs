@@ -1,5 +1,6 @@
 //! Main window state.
 
+use super::nav::NavItem;
 use super::queue::QueueUiState;
 use super::words::{TagsUiState, WordsUiState};
 
@@ -12,6 +13,9 @@ pub struct MainWindowState {
     pub words_ui: WordsUiState,
     pub tags_ui: TagsUiState,
     pub queue_ui: QueueUiState,
+
+    // Navigation state
+    pub current_view: NavItem,
 }
 
 impl MainWindowState {
@@ -21,6 +25,7 @@ impl MainWindowState {
             words_ui: WordsUiState::new(),
             tags_ui: TagsUiState::new(),
             queue_ui: QueueUiState::new(),
+            current_view: NavItem::default(),
         }
     }
 }

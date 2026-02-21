@@ -1,6 +1,8 @@
 //! Main window message types.
 
+use super::nav::NavItem;
 use super::queue::QueueMessage;
+use super::settings::SettingsMessage;
 use super::words::WordsMessage;
 
 /// Messages for the main window, dispatched to sub-panels.
@@ -8,5 +10,6 @@ use super::words::WordsMessage;
 pub enum MainWindowMessage {
     Words(WordsMessage),
     Queue(QueueMessage),
-    OpenSettings,
+    Settings(SettingsMessage),
+    Navigate(NavItem),
 }

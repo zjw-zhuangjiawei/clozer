@@ -1,9 +1,7 @@
 //! Main application struct and entry point.
 //!
 //! Contains the App struct that coordinates state and UI rendering
-//! with multi-window support and hierarchical message routing.
-
-use std::collections::BTreeMap;
+//! with single-window support and hierarchical message routing.
 
 use iced::{Element, Subscription, Task};
 
@@ -13,27 +11,25 @@ use crate::persistence::Db;
 use crate::state::AppState;
 use crate::ui::AppTheme;
 use crate::ui::main_window;
-use crate::ui::settings_window;
-use crate::window::{Window, WindowType};
 
-/// Main application struct with multi-window support.
+/// Main application struct with single-window support.
 #[derive(Debug)]
 pub struct App {
     pub config: AppConfig,
     pub app_state: AppState,
-    windows: BTreeMap<iced::window::Id, Window>,
+    pub window_state: main_window::MainWindowState,
 }
 
 impl App {
-    /// Creates a new App instance and opens the initial window.
+    /// Creates a new App instance.
     pub fn new(config: AppConfig) -> (Self, iced::Task<Message>) {
         // Initialize database
         let db_path = config.data_dir.join("data.redb");
         tracing::debug!("Initializing database at {:?}", db_path);
         let db = Db::new(&db_path).expect("Failed to create database");
 
-        // Load AI config into generator
-        let mut app_state = AppState::new(db);
+        // Create app state with config
+        let mut app_state = AppState::new(db, config.clone());
         app_state.model.generator.load_from_config(&config.ai);
 
         // Load existing data from database
@@ -50,93 +46,27 @@ impl App {
         let app = Self {
             config,
             app_state,
-            windows: BTreeMap::new(),
+            window_state: main_window::MainWindowState::new(),
         };
 
-        // Open initial main window
-        let window_type = WindowType::Main;
-        tracing::debug!("Opening main window");
-        let (_, open_task) = iced::window::open(window_type.window_settings());
-
-        let task = open_task.map(move |id| Message::WindowOpened(id, window_type));
-
-        (app, task)
+        (app, Task::none())
     }
 
     /// Returns the window title.
-    pub fn title(&self, id: iced::window::Id) -> String {
-        self.windows
-            .get(&id)
-            .map(|window| match window {
-                Window::Main(_) => "Clozer".to_string(),
-                Window::Settings(_) => "Settings".to_string(),
-            })
-            .unwrap_or_else(|| "Clozer".to_string())
+    pub fn title(&self) -> String {
+        "Clozer".to_string()
     }
 
     /// Updates the application state with a message.
-    ///
-    /// Routes messages by type:
-    /// - Window lifecycle messages are handled directly
-    /// - `Message::Main(id, msg)` is routed to the correct window's update handler
-    /// - Global messages (like `QueueGenerationResult`) are handled at the app level
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
-            // Window lifecycle
-            Message::WindowOpened(id, window_type) => {
-                let window = Window::new(window_type);
-                self.windows.insert(id, window);
-
-                Task::none()
-            }
-
-            Message::WindowCloseRequested(id) => iced::window::close(id),
-
-            Message::WindowClosed(id) => {
-                let Some(window) = self.windows.remove(&id) else {
-                    unreachable!()
-                };
-                match window {
-                    Window::Main(_) => {
-                        tracing::debug!("Flushing dirty data on shutdown");
-                        if let Err(e) = self.app_state.model.flush_all() {
-                            tracing::error!("Failed to flush data on shutdown: {}", e);
-                        }
-                        self.config.save_to_file();
-                        tracing::info!("Clozer shutting down");
-                        iced::exit()
-                    }
-                    Window::Settings(_) => {
-                        // Settings window closed, just remove from windows
-                        tracing::debug!("Settings window closed");
-                        Task::none()
-                    }
-                }
-            }
-
-            // Route to specific main window by ID
-            Message::Main(window_id, msg) => {
-                if let Some(Window::Main(window_state)) = self.windows.get_mut(&window_id) {
-                    main_window::update(window_state, msg, &mut self.app_state.model, window_id)
-                } else {
-                    Task::none()
-                }
-            }
-
-            // Route to settings window by ID
-            Message::Settings(window_id, msg) => {
-                if let Some(Window::Settings(_window_state)) = self.windows.get_mut(&window_id) {
-                    // For now, SettingsMessage::Close is handled directly
-                    // In the future, we could have more complex state updates
-                    match msg {
-                        crate::ui::settings_window::SettingsMessage::Close => {
-                            iced::window::close(window_id)
-                        }
-                    }
-                } else {
-                    Task::none()
-                }
-            }
+            // Route to main window
+            Message::Main(msg) => main_window::update(
+                &mut self.window_state,
+                msg,
+                &mut self.app_state.model,
+                iced::window::Id::unique(),
+            ),
 
             // Global messages
             Message::QueueGenerationResult(result) => {
@@ -147,38 +77,52 @@ impl App {
                 self.app_state.model.cloze_registry.add(result.cloze);
                 Task::none()
             }
-        }
-    }
 
-    /// Renders the application UI for the specified window.
-    pub fn view(&self, id: iced::window::Id) -> Element<'_, Message> {
-        if let Some(window) = self.windows.get(&id) {
-            match window {
-                Window::Main(window_state) => {
-                    main_window::view(window_state, &self.app_state.model)
-                        .map(move |msg| Message::Main(id, msg))
-                }
-                Window::Settings(window_state) => settings_window::view::view(window_state)
-                    .map(move |msg| Message::Settings(id, msg)),
+            // Close requested - exit the application
+            Message::CloseRequested => {
+                self.on_exit();
+                iced::exit()
             }
-        } else {
-            iced::widget::space().into()
         }
     }
 
-    /// Returns the theme for the specified window.
-    pub fn theme(&self, _id: iced::window::Id) -> AppTheme {
+    /// Renders the application UI.
+    pub fn view(&self) -> Element<'_, Message> {
+        main_window::view(&self.window_state, &self.app_state.model).map(Message::Main)
+    }
+
+    /// Returns the theme.
+    pub fn theme(&self) -> AppTheme {
         AppTheme::default()
     }
 
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::event::listen_with(|event, _status, id| match event {
+        // Listen for window close request to save data
+        iced::event::listen_with(|event, _status, _id| match event {
             iced::Event::Window(iced::window::Event::CloseRequested) => {
-                Some(Message::WindowCloseRequested(id))
+                Some(Message::CloseRequested)
             }
-            iced::Event::Window(iced::window::Event::Closed) => Some(Message::WindowClosed(id)),
             _ => None,
         })
+    }
+
+    /// Called when the application is closing.
+    pub fn on_exit(&mut self) {
+        tracing::debug!("Flushing dirty data on shutdown");
+        if let Err(e) = self.app_state.model.flush_all() {
+            tracing::error!("Failed to flush data on shutdown: {}", e);
+        }
+        self.config.save_to_file();
+        tracing::info!("Clozer shutting down");
+    }
+
+    /// Runs the application with the given configuration.
+    pub fn run(config: AppConfig) {
+        let _ = iced::application(move || App::new(config.clone()), App::update, App::view)
+            .title(App::title)
+            .subscription(App::subscription)
+            .theme(App::theme)
+            .run();
     }
 }
