@@ -93,36 +93,6 @@ impl ModelRegistry {
     pub fn is_empty(&self) -> bool {
         self.models.is_empty()
     }
-
-    // Persistence (commented out - no DB)
-    // pub fn load_all(&mut self, db: &crate::persistence::Db) {
-    //     if let Ok(items) = db.iter_models() {
-    //         for (id, dto) in items {
-    //             let model = crate::models::Model::from(dto);
-    //             self.models.insert(id, model.clone());
-    //             self.by_name.insert(model.name.clone(), id);
-    //             self.by_provider
-    //                 .entry(model.provider_id)
-    //                 .or_default()
-    //                 .insert(id);
-    //         }
-    //     }
-    // }
-
-    // pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-    //     for id in &self.dirty_ids {
-    //         if let Some(model) = self.models.get(id) {
-    //             let dto = crate::persistence::ModelDto::from(model);
-    //             db.save_model(*id, &dto)?;
-    //         }
-    //     }
-    //     self.dirty_ids.clear();
-    //     Ok(())
-    // }
-
-    // pub fn has_dirty(&self) -> bool {
-    //     !self.dirty_ids.is_empty()
-    // }
 }
 
 impl Default for ModelRegistry {

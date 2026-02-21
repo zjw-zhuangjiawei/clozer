@@ -6,10 +6,10 @@ use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct MeaningRegistry {
-    meanings: BTreeMap<Uuid, Meaning>,
-    dirty_ids: BTreeSet<Uuid>,
-    by_word: BTreeMap<Uuid, BTreeSet<Uuid>>,
-    by_tag: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    pub(crate) meanings: BTreeMap<Uuid, Meaning>,
+    pub(crate) dirty_ids: BTreeSet<Uuid>,
+    pub(crate) by_word: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    pub(crate) by_tag: BTreeMap<Uuid, BTreeSet<Uuid>>,
 }
 
 impl MeaningRegistry {
@@ -193,6 +193,13 @@ impl MeaningRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let dirty_count = self.dirty_ids.len();
+        if dirty_count == 0 {
+            return Ok(());
+        }
+
+        tracing::info!("Flushing {} dirty meanings", dirty_count);
+
         let mut errors = 0;
         let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
         for id in dirty_ids {
@@ -200,6 +207,7 @@ impl MeaningRegistry {
                 let dto = crate::persistence::MeaningDto::from(meaning);
                 match db.save_meaning(id, &dto) {
                     Ok(_) => {
+                        tracing::debug!(meaning_id = %id, "Saved meaning");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -210,6 +218,7 @@ impl MeaningRegistry {
             } else {
                 match db.delete_meaning(id) {
                     Ok(_) => {
+                        tracing::debug!(meaning_id = %id, "Deleted meaning");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -221,6 +230,8 @@ impl MeaningRegistry {
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some meanings failed to persist");
+        } else {
+            tracing::info!("Flushed {} meanings successfully", dirty_count);
         }
         Ok(())
     }

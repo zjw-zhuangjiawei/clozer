@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::models::{PartOfSpeech, Word};
+use crate::models::{CefrLevel, PartOfSpeech, Word};
 use crate::registry::MeaningRegistry;
 use strum::Display;
 use uuid::Uuid;
@@ -54,6 +54,7 @@ impl TagDropdownState {
 pub struct MeaningInputState {
     pub definition: String,
     pub pos: PartOfSpeech,
+    pub cefr_level: Option<CefrLevel>,
 }
 
 impl Default for MeaningInputState {
@@ -61,6 +62,7 @@ impl Default for MeaningInputState {
         Self {
             definition: String::new(),
             pos: PartOfSpeech::Noun,
+            cefr_level: None,
         }
     }
 }

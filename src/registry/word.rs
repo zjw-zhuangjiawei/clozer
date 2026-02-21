@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct WordRegistry {
-    words: BTreeMap<Uuid, Word>,
-    dirty_ids: BTreeSet<Uuid>,
+    pub(crate) words: BTreeMap<Uuid, Word>,
+    pub(crate) dirty_ids: BTreeSet<Uuid>,
 }
 
 impl WordRegistry {
@@ -98,6 +98,13 @@ impl WordRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let dirty_count = self.dirty_ids.len();
+        if dirty_count == 0 {
+            return Ok(());
+        }
+
+        tracing::info!("Flushing {} dirty words", dirty_count);
+
         let mut errors = 0;
         let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
         for id in dirty_ids {
@@ -105,6 +112,7 @@ impl WordRegistry {
                 let dto = crate::persistence::WordDto::from(word);
                 match db.save_word(id, &dto) {
                     Ok(_) => {
+                        tracing::debug!(word_id = %id, "Saved word");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -115,6 +123,7 @@ impl WordRegistry {
             } else {
                 match db.delete_word(id) {
                     Ok(_) => {
+                        tracing::debug!(word_id = %id, "Deleted word");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -126,6 +135,8 @@ impl WordRegistry {
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some words failed to persist");
+        } else {
+            tracing::info!("Flushed {} words successfully", dirty_count);
         }
         Ok(())
     }

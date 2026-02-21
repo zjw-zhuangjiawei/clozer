@@ -5,9 +5,9 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
 pub struct ClozeRegistry {
-    clozes: BTreeMap<Uuid, Cloze>,
-    dirty_ids: BTreeSet<Uuid>,
-    by_meaning: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    pub(crate) clozes: BTreeMap<Uuid, Cloze>,
+    pub(crate) dirty_ids: BTreeSet<Uuid>,
+    pub(crate) by_meaning: BTreeMap<Uuid, BTreeSet<Uuid>>,
 }
 
 impl ClozeRegistry {
@@ -115,6 +115,13 @@ impl ClozeRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let dirty_count = self.dirty_ids.len();
+        if dirty_count == 0 {
+            return Ok(());
+        }
+
+        tracing::info!("Flushing {} dirty clozes", dirty_count);
+
         let mut errors = 0;
         let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
         for id in dirty_ids {
@@ -122,6 +129,7 @@ impl ClozeRegistry {
                 let dto = crate::persistence::ClozeDto::from(cloze);
                 match db.save_cloze(id, &dto) {
                     Ok(_) => {
+                        tracing::debug!(cloze_id = %id, "Saved cloze");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -132,6 +140,7 @@ impl ClozeRegistry {
             } else {
                 match db.delete_cloze(id) {
                     Ok(_) => {
+                        tracing::debug!(cloze_id = %id, "Deleted cloze");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -143,6 +152,8 @@ impl ClozeRegistry {
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some clozes failed to persist");
+        } else {
+            tracing::info!("Flushed {} clozes successfully", dirty_count);
         }
         Ok(())
     }

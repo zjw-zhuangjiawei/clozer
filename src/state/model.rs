@@ -44,10 +44,24 @@ impl Model {
 
     /// Flush all dirty entities across registries to the database
     pub fn flush_all(&mut self) -> Result<(), crate::persistence::DbError> {
+        let total_dirty = self.word_registry.dirty_ids.len()
+            + self.meaning_registry.dirty_ids.len()
+            + self.tag_registry.dirty_ids.len()
+            + self.cloze_registry.dirty_ids.len();
+
+        if total_dirty == 0 {
+            tracing::debug!("No dirty entities to flush");
+            return Ok(());
+        }
+
+        tracing::info!("Starting flush: {} total dirty entities", total_dirty);
+
         self.word_registry.flush_dirty(&self.db)?;
         self.meaning_registry.flush_dirty(&self.db)?;
         self.tag_registry.flush_dirty(&self.db)?;
         self.cloze_registry.flush_dirty(&self.db)?;
+
+        tracing::info!("Completed flush: {} total dirty entities", total_dirty);
         Ok(())
     }
 

@@ -1,7 +1,8 @@
-//! Words panel view function.
+use std::fmt;
 
+/// Words panel view function.
 use crate::assets;
-use crate::models::PartOfSpeech;
+use crate::models::{CefrLevel, PartOfSpeech};
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
@@ -14,6 +15,38 @@ use iced::widget::{
 };
 use strum::VariantArray;
 use uuid::Uuid;
+
+/// Wrapper for CEFR level picker that handles None option.
+#[derive(Debug, Clone, PartialEq)]
+enum CefrLevelOption {
+    None,
+    Some(CefrLevel),
+}
+
+impl CefrLevelOption {
+    fn to_option(&self) -> Option<CefrLevel> {
+        match self {
+            CefrLevelOption::None => None,
+            CefrLevelOption::Some(level) => Some(*level),
+        }
+    }
+
+    fn from_option(opt: Option<CefrLevel>) -> Self {
+        match opt {
+            None => CefrLevelOption::None,
+            Some(level) => CefrLevelOption::Some(level),
+        }
+    }
+}
+
+impl fmt::Display for CefrLevelOption {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CefrLevelOption::None => write!(f, "None"),
+            CefrLevelOption::Some(level) => write!(f, "{}", level),
+        }
+    }
+}
 
 /// Renders the words panel.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
@@ -340,6 +373,25 @@ fn build_add_meaning_form<'a>(
     )
     .width(iced::Length::Fixed(100.0));
 
+    // CEFR level picker with "None" option using wrapper enum
+    let cefr_options: Vec<CefrLevelOption> = vec![
+        CefrLevelOption::None,
+        CefrLevelOption::Some(CefrLevel::A1),
+        CefrLevelOption::Some(CefrLevel::A2),
+        CefrLevelOption::Some(CefrLevel::B1),
+        CefrLevelOption::Some(CefrLevel::B2),
+        CefrLevelOption::Some(CefrLevel::C1),
+        CefrLevelOption::Some(CefrLevel::C2),
+    ];
+    let cefr_selected = CefrLevelOption::from_option(words_ui.meaning_input.cefr_level);
+    let cefr_pick_list = PickList::new(
+        cefr_options,
+        Some(cefr_selected),
+        |option: CefrLevelOption| WordsMessage::AddMeaningCefrSelected(option.to_option()),
+    )
+    .width(iced::Length::Fixed(80.0))
+    .placeholder("CEFR");
+
     let def_input = TextInput::new("Definition...", &words_ui.meaning_input.definition)
         .on_input(WordsMessage::AddMeaningInput)
         .width(iced::Length::Fill)
@@ -357,6 +409,7 @@ fn build_add_meaning_form<'a>(
 
     Row::new()
         .push(pos_pick_list)
+        .push(cefr_pick_list)
         .push(def_input)
         .push(save_btn)
         .push(cancel_btn)
@@ -397,6 +450,23 @@ fn build_meaning_node<'a>(
             ..Default::default()
         });
 
+    // CEFR level badge (if set)
+    let cefr_badge = if let Some(cefr) = meaning.cefr_level {
+        Container::new(Text::new(cefr.to_string()).size(12))
+            .padding([2, 6])
+            .style(move |_| container::Style {
+                background: Some(colors.surface_elevated.into()),
+                text_color: Some(colors.text_secondary),
+                border: iced::Border {
+                    radius: 4.0.into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+    } else {
+        Container::new(Text::new(""))
+    };
+
     // Definition (editable or display)
     let definition: Element<'a, WordsMessage> = if words_ui.editing_meaning_id == Some(meaning.id) {
         TextInput::new("", &words_ui.editing_meaning_text)
@@ -420,6 +490,7 @@ fn build_meaning_node<'a>(
     let meaning_header = Row::new()
         .push(checkbox)
         .push(pos_badge)
+        .push(cefr_badge)
         .push(definition)
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(cloze_status)

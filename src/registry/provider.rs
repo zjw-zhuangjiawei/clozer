@@ -65,32 +65,6 @@ impl ProviderRegistry {
     pub fn is_empty(&self) -> bool {
         self.providers.is_empty()
     }
-
-    // Persistence (commented out - no DB)
-    // pub fn load_all(&mut self, db: &crate::persistence::Db) {
-    //     if let Ok(items) = db.iter_providers() {
-    //         for (id, dto) in items {
-    //             let provider = crate::models::Provider::from(dto);
-    //             self.providers.insert(id, provider.clone());
-    //             self.by_name.insert(provider.name.clone(), id);
-    //         }
-    //     }
-    // }
-
-    // pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-    //     for id in &self.dirty_ids {
-    //         if let Some(provider) = self.providers.get(id) {
-    //             let dto = crate::persistence::ProviderDto::from(provider);
-    //             db.save_provider(*id, &dto)?;
-    //         }
-    //     }
-    //     self.dirty_ids.clear();
-    //     Ok(())
-    // }
-
-    // pub fn has_dirty(&self) -> bool {
-    //     !self.dirty_ids.is_empty()
-    // }
 }
 
 impl Default for ProviderRegistry {

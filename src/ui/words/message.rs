@@ -1,6 +1,6 @@
 //! Words panel message types.
 
-use crate::models::PartOfSpeech;
+use crate::models::{CefrLevel, PartOfSpeech};
 use crate::ui::words::state::ClozeFilter;
 use strum::{Display, VariantArray};
 use uuid::Uuid;
@@ -45,6 +45,7 @@ pub enum WordsMessage {
     AddMeaningStart(Uuid),
     AddMeaningInput(String),
     AddMeaningPosSelected(PartOfSpeech),
+    AddMeaningCefrSelected(Option<CefrLevel>),
     AddMeaningSave,
     AddMeaningCancel,
     EditMeaningStart(Uuid),

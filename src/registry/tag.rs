@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct TagRegistry {
-    tags: BTreeMap<Uuid, Tag>,
-    dirty_ids: BTreeSet<Uuid>,
+    pub(crate) tags: BTreeMap<Uuid, Tag>,
+    pub(crate) dirty_ids: BTreeSet<Uuid>,
 }
 
 impl TagRegistry {
@@ -72,6 +72,13 @@ impl TagRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
+        let dirty_count = self.dirty_ids.len();
+        if dirty_count == 0 {
+            return Ok(());
+        }
+
+        tracing::info!("Flushing {} dirty tags", dirty_count);
+
         let mut errors = 0;
         let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
         for id in dirty_ids {
@@ -79,6 +86,7 @@ impl TagRegistry {
                 let dto = crate::persistence::TagDto::from(tag);
                 match db.save_tag(id, &dto) {
                     Ok(_) => {
+                        tracing::debug!(tag_id = %id, "Saved tag");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -89,6 +97,7 @@ impl TagRegistry {
             } else {
                 match db.delete_tag(id) {
                     Ok(_) => {
+                        tracing::debug!(tag_id = %id, "Deleted tag");
                         self.dirty_ids.remove(&id);
                     }
                     Err(e) => {
@@ -100,6 +109,8 @@ impl TagRegistry {
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some tags failed to persist");
+        } else {
+            tracing::info!("Flushed {} tags successfully", dirty_count);
         }
         Ok(())
     }

@@ -187,18 +187,26 @@ impl Generator {
             word.id = %word.id,
             word.content = %word.content,
             meaning.id = %meaning.id,
-            pos = %meaning.pos
+            pos = %meaning.pos,
+            cefr_level = ?meaning.cefr_level
         )
     )]
     pub async fn generate(&self, word: &Word, meaning: &Meaning) -> Cloze {
+        // Build CEFR level info if available
+        let cefr_info = match meaning.cefr_level {
+            Some(level) => format!(" (CEFR level: {})", level),
+            None => String::new(),
+        };
+
         let prompt = format!(
-            r#"Generate a cloze deletion sentence for "{content}" with definition "{definition}" ({pos}).
+            r#"Generate a cloze deletion sentence for "{content}" with definition "{definition}" ({pos}){cefr_info}.
 Use brackets to mark the blank: [answer]
 Example: "The [cat] sat on the mat"
 Return ONLY the sentence."#,
             content = word.content,
             definition = meaning.definition,
-            pos = meaning.pos
+            pos = meaning.pos,
+            cefr_info = cefr_info
         );
 
         let start = std::time::Instant::now();

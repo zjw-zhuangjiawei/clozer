@@ -143,15 +143,19 @@ pub fn update(
         WordsMessage::AddMeaningPosSelected(pos) => {
             state.words_ui.meaning_input.pos = pos;
         }
+        WordsMessage::AddMeaningCefrSelected(level) => {
+            state.words_ui.meaning_input.cefr_level = level;
+        }
         WordsMessage::AddMeaningSave => {
             if let Some(word_id) = state.words_ui.adding_meaning_to_word {
                 let trimmed = state.words_ui.meaning_input.definition.trim();
                 if !trimmed.is_empty() {
-                    let meaning = Meaning::builder()
+                    let mut meaning = Meaning::builder()
                         .word_id(word_id)
                         .definition(trimmed.to_string())
                         .pos(state.words_ui.meaning_input.pos)
                         .build();
+                    meaning.cefr_level = state.words_ui.meaning_input.cefr_level;
 
                     tracing::debug!(
                         "Creating meaning: {} (id={}, word_id={})",

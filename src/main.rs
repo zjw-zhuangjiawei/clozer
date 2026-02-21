@@ -1,6 +1,5 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use clozer::App;
 use clozer::config::{AppConfig, CliConfig, EnvConfig};
 
 fn main() {
@@ -44,5 +43,5 @@ fn main() {
         "Clozer starting up"
     );
 
-    let _ = clozer::App::run(app_config);
+    clozer::App::run(app_config);
 }

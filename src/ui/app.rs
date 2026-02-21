@@ -51,7 +51,8 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mai
                 .into()
         }
         NavItem::Settings => {
-            let settings_panel = crate::ui::settings::view::view(model).map(MainWindowMessage::Settings);
+            let settings_panel =
+                crate::ui::settings::view::view(model).map(MainWindowMessage::Settings);
             iced::widget::column![settings_panel]
                 .spacing(20)
                 .padding(20)

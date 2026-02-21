@@ -120,6 +120,10 @@ impl App {
     /// Runs the application with the given configuration.
     pub fn run(config: AppConfig) {
         let _ = iced::application(move || App::new(config.clone()), App::update, App::view)
+            .window(iced::window::Settings {
+                exit_on_close_request: false,
+                ..Default::default()
+            })
             .title(App::title)
             .subscription(App::subscription)
             .theme(App::theme)
