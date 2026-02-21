@@ -1,6 +1,7 @@
 //! Word DTO for serialization.
 
 use crate::models::Word;
+use langtag::LangTagBuf;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -10,6 +11,7 @@ pub struct WordDto {
     pub id: Uuid,
     pub content: String,
     pub meaning_ids: Vec<Uuid>,
+    pub language: Option<LangTagBuf>,
 }
 
 impl From<&Word> for WordDto {
@@ -18,6 +20,7 @@ impl From<&Word> for WordDto {
             id: word.id,
             content: word.content.clone(),
             meaning_ids: word.meaning_ids.iter().cloned().collect(),
+            language: word.language.clone(),
         }
     }
 }
@@ -28,6 +31,7 @@ impl From<WordDto> for Word {
             id: dto.id,
             content: dto.content,
             meaning_ids: dto.meaning_ids.into_iter().collect(),
+            language: dto.language,
         }
     }
 }

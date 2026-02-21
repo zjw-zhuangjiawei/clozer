@@ -212,7 +212,7 @@ fn build_word_node<'a>(
     let is_selected = words_ui.is_word_selected(word);
     let is_partial = words_ui.is_word_partial(word);
 
-    // Expand/collapse icon
+    // Expand/collapse icon (as button)
     let expand_icon_name = if is_expanded {
         "keyboard_arrow_down_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
     } else {
@@ -221,10 +221,15 @@ fn build_word_node<'a>(
     let expand_icon_handle = assets::get_svg(expand_icon_name)
         .map(svg::Handle::from_memory)
         .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
-    let expand_icon: Element<'a, WordsMessage> = svg(expand_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0))
-        .into();
+    let expand_icon: Element<'a, WordsMessage> = Button::new(
+        svg(expand_icon_handle)
+            .width(iced::Length::Fixed(16.0))
+            .height(iced::Length::Fixed(16.0)),
+    )
+    .style(button::secondary)
+    .padding([2, 2])
+    .on_press(WordsMessage::ToggleWordExpand(word.id))
+    .into();
 
     // Checkbox state
     let checkbox: Element<'a, WordsMessage> = if word.meaning_ids.is_empty() {
@@ -250,7 +255,6 @@ fn build_word_node<'a>(
         Button::new(Text::new(&word.content).size(16))
             .style(button::secondary)
             .padding([2, 6])
-            .on_press(WordsMessage::ToggleWordExpand(word.id))
             .into()
     };
 

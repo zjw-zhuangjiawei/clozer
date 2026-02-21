@@ -1,3 +1,4 @@
+use langtag::LangTagBuf;
 use std::collections::BTreeSet;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
@@ -14,4 +15,6 @@ pub struct Word {
     pub content: String,
     #[builder(default, via_mutators)]
     pub meaning_ids: BTreeSet<Uuid>,
+    #[builder(default, setter(strip_option))]
+    pub language: Option<LangTagBuf>,
 }
