@@ -1,7 +1,5 @@
 /target
 /Cargo.lock
 
-.clinerules
-
 /.clozer-data
 /.clozer.toml
