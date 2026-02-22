@@ -7,6 +7,14 @@ use crate::registry::MeaningRegistry;
 use strum::Display;
 use uuid::Uuid;
 
+/// Selection for the details panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DetailSelection {
+    Word(Uuid),
+    Meaning(Uuid),
+    Cloze(Uuid),
+}
+
 /// Filter state for cloze generation status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display)]
 pub enum ClozeFilter {
@@ -94,6 +102,9 @@ pub struct WordsUiState {
 
     // Tag dropdown
     pub tag_dropdown: Option<TagDropdownState>,
+
+    // Detail panel selection
+    pub selected_detail: Option<DetailSelection>,
 }
 
 impl WordsUiState {

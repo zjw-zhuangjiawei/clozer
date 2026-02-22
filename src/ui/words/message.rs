@@ -21,11 +21,17 @@ pub enum WordsMessage {
     FilterByTag(Option<Uuid>),
     ClearFilter,
 
-    // Selection
+    // Selection (for batch operations)
     ToggleWordSelection(Uuid),
     ToggleMeaningSelection(Uuid),
     SelectAll,
     DeselectAll,
+
+    // Detail panel (toggle by clicking)
+    ToggleWordDetail(Uuid),
+    ToggleMeaningDetail(Uuid),
+    ToggleClozeDetail(Uuid),
+    ClearDetailSelection,
 
     // Expand/Collapse
     ToggleWordExpand(Uuid),

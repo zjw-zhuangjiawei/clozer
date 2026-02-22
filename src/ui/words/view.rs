@@ -48,26 +48,41 @@ impl fmt::Display for CefrLevelOption {
     }
 }
 
-/// Renders the words panel.
+// Renders the words panel.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
     let words_ui = &state.words_ui;
 
     // Search and filter bar
     let search_bar = build_search_bar(words_ui, model);
 
-    // Word tree
+    // Word tree (left panel)
     let word_tree = build_word_tree(state, model);
-
-    // Action bar (contextual, shows when items selected)
-    let action_bar = build_action_bar(words_ui, model);
-
-    Column::new()
+    let left_panel = Column::new()
         .push(search_bar)
         .push(iced::widget::rule::horizontal(1))
         .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-        .push(action_bar)
+        .push(build_action_bar(words_ui, model))
         .spacing(10)
         .padding(10)
+        .width(iced::Length::FillPortion(4));
+
+    // Detail panel (right panel)
+    let right_panel = Container::new(crate::ui::words::detail_view(
+        words_ui.selected_detail,
+        model,
+    ))
+    .width(iced::Length::FillPortion(6))
+    .height(iced::Length::Fill)
+    .style(|_| container::Style {
+        background: Some(iced::Color::from_rgb8(248, 248, 248).into()),
+        ..Default::default()
+    });
+
+    // Two-column layout
+    Row::new()
+        .push(left_panel)
+        .push(right_panel)
+        .spacing(5)
         .height(iced::Length::Fill)
         .into()
 }
@@ -243,20 +258,12 @@ fn build_word_node<'a>(
         svg_checkbox(is_selected, WordsMessage::ToggleWordSelection(word.id))
     };
 
-    // Word content (editable or display)
-    let word_content: Element<'a, WordsMessage> = if words_ui.editing_word_id == Some(word.id) {
-        TextInput::new("", &words_ui.editing_word_text)
-            .on_input(WordsMessage::EditWordInput)
-            .on_submit(WordsMessage::EditWordSave(word.id))
-            .width(iced::Length::Fill)
-            .padding([2, 4])
-            .into()
-    } else {
-        Button::new(Text::new(&word.content).size(16))
-            .style(button::secondary)
-            .padding([2, 6])
-            .into()
-    };
+    // Word content (display only - not editable)
+    let word_content: Element<'a, WordsMessage> = Button::new(Text::new(&word.content).size(16))
+        .style(button::secondary)
+        .padding([2, 6])
+        .on_press(WordsMessage::ToggleWordDetail(word.id))
+        .into();
 
     // Meaning count
     let meaning_count = Text::new(format!("{} meanings", word.meaning_ids.len())).size(12);
@@ -332,14 +339,6 @@ fn build_word_node<'a>(
 
 /// Build word action buttons.
 fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
-    // Edit icon
-    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(svg::Handle::from_memory)
-        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
-    let edit_icon = svg(edit_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
-
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -348,20 +347,10 @@ fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
         .width(iced::Length::Fixed(16.0))
         .height(iced::Length::Fixed(16.0));
 
-    Row::new()
-        .push(
-            Button::new(edit_icon)
-                .style(button::secondary)
-                .padding([2, 6])
-                .on_press(WordsMessage::EditWordStart(word_id)),
-        )
-        .push(
-            Button::new(delete_icon)
-                .style(button::danger)
-                .padding([2, 6])
-                .on_press(WordsMessage::DeleteWord(word_id)),
-        )
-        .spacing(2)
+    Button::new(delete_icon)
+        .style(button::danger)
+        .padding([2, 6])
+        .on_press(WordsMessage::DeleteWord(word_id))
         .into()
 }
 
@@ -471,7 +460,7 @@ fn build_meaning_node<'a>(
         Container::new(Text::new(""))
     };
 
-    // Definition (editable or display)
+    // Definition (editable or display) - clickable to toggle detail panel
     let definition: Element<'a, WordsMessage> = if words_ui.editing_meaning_id == Some(meaning.id) {
         TextInput::new("", &words_ui.editing_meaning_text)
             .on_input(WordsMessage::EditMeaningInput)
@@ -480,7 +469,11 @@ fn build_meaning_node<'a>(
             .padding([2, 4])
             .into()
     } else {
-        Text::new(&meaning.definition).into()
+        Button::new(Text::new(&meaning.definition).size(14))
+            .style(button::secondary)
+            .padding([2, 4])
+            .on_press(WordsMessage::ToggleMeaningDetail(meaning.id))
+            .into()
     };
 
     // Cloze status indicator
@@ -505,21 +498,17 @@ fn build_meaning_node<'a>(
     // Tags row
     let tags_row = build_tags_row(state, model, meaning);
 
-    // Collect cloze preview elements (owned)
+    // Collect cloze preview elements (owned) - clickable to toggle detail panel
     let cloze_preview_items: Vec<Element<'a, WordsMessage>> = model
         .cloze_registry
         .iter_by_meaning_id(meaning.id)
         .take(2)
         .map(|(cloze_id, cloze)| {
-            let is_selected = words_ui.is_cloze_selected(*cloze_id);
             let text = cloze.render_blanks();
-            Row::new()
-                .push(svg_checkbox(
-                    is_selected,
-                    WordsMessage::ToggleClozeSelection(*cloze_id),
-                ))
-                .push(Text::new(text).size(11))
-                .spacing(2)
+            Button::new(Text::new(text).size(11))
+                .style(button::secondary)
+                .padding([2, 4])
+                .on_press(WordsMessage::ToggleClozeDetail(*cloze_id))
                 .into()
         })
         .collect();

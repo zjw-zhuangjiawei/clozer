@@ -4,7 +4,7 @@ use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
 use crate::ui::state::MainWindowState;
 use crate::ui::words::message::{ExportKind, WordsMessage};
-use crate::ui::words::state::{TagDropdownState, TagDropdownTarget};
+use crate::ui::words::state::{DetailSelection, TagDropdownState, TagDropdownTarget};
 use iced::Task;
 use uuid::Uuid;
 
@@ -30,7 +30,7 @@ pub fn update(
             state.words_ui.filter = Default::default();
         }
 
-        // Selection
+        // Selection (for batch operations)
         WordsMessage::ToggleWordSelection(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
                 let word = word.clone();
@@ -45,6 +45,35 @@ pub fn update(
         }
         WordsMessage::DeselectAll => {
             state.words_ui.clear_selection();
+        }
+
+        // Detail panel (toggle by clicking)
+        WordsMessage::ToggleWordDetail(word_id) => {
+            let new_selection = DetailSelection::Word(word_id);
+            if state.words_ui.selected_detail == Some(new_selection) {
+                state.words_ui.selected_detail = None;
+            } else {
+                state.words_ui.selected_detail = Some(new_selection);
+            }
+        }
+        WordsMessage::ToggleMeaningDetail(meaning_id) => {
+            let new_selection = DetailSelection::Meaning(meaning_id);
+            if state.words_ui.selected_detail == Some(new_selection) {
+                state.words_ui.selected_detail = None;
+            } else {
+                state.words_ui.selected_detail = Some(new_selection);
+            }
+        }
+        WordsMessage::ToggleClozeDetail(cloze_id) => {
+            let new_selection = DetailSelection::Cloze(cloze_id);
+            if state.words_ui.selected_detail == Some(new_selection) {
+                state.words_ui.selected_detail = None;
+            } else {
+                state.words_ui.selected_detail = Some(new_selection);
+            }
+        }
+        WordsMessage::ClearDetailSelection => {
+            state.words_ui.selected_detail = None;
         }
 
         // Expand/Collapse
