@@ -26,17 +26,11 @@ pub enum AgentWrapper {
     XAI(Agent<xai::CompletionModel>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GeneratorState {
     pub provider_registry: ProviderRegistry,
     pub model_registry: ModelRegistry,
     pub selected_model_id: Option<Uuid>,
-}
-
-impl Default for GeneratorState {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl GeneratorState {

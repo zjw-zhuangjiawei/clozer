@@ -5,24 +5,7 @@ use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
 use iced::Element;
-use iced::widget::{Button, Column, Row, Text, button, text_input};
-
-fn generator_settings_panel<'a>() -> Element<'a, QueueMessage> {
-    let title = Text::new("Generator Settings").size(16);
-    let include_word_checkbox = Text::new("☐ Include word in sentence").size(14);
-    let template_dropdown =
-        text_input::TextInput::new("Template mode...", "Template mode (placeholder)")
-            .padding(8)
-            .size(14);
-
-    Column::new()
-        .push(title)
-        .push(include_word_checkbox)
-        .push(template_dropdown)
-        .spacing(8)
-        .padding(10)
-        .into()
-}
+use iced::widget::{Button, Column, Row, Text, button};
 
 fn status_label(status: &QueueItemStatus) -> String {
     match status {
@@ -151,7 +134,6 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
         .push(select_buttons)
         .push(clear_button)
         .push(iced::widget::scrollable(queue_column).height(iced::Length::Fill))
-        .push(generator_settings_panel())
         .push(process_button)
         .spacing(10)
         .padding(10)

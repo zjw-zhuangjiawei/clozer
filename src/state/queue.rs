@@ -28,13 +28,16 @@ pub fn process(
     let count = items.len();
     tracing::info!("Processing queue: {} pending items", count);
 
+    // Mark items as processing before spawning tasks
+    for item in &items {
+        queue_registry.set_processing(item.id);
+    }
+
     let tasks = items.into_iter().map(|item| {
         let meaning = meaning_registry.get(item.meaning_id).unwrap().clone();
         let word = word_registry.get(meaning.word_id).unwrap().clone();
         let generator = Arc::clone(generator);
         let item_id = item.id;
-
-        queue_registry.set_processing(item_id);
 
         Task::perform(
             async move {

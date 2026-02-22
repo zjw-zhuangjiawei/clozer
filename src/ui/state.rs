@@ -2,7 +2,7 @@
 
 use crate::ui::nav::NavItem;
 use crate::ui::queue::QueueUiState;
-use crate::ui::words::{TagsUiState, WordsUiState};
+use crate::ui::words::WordsUiState;
 
 /// State for the main application window.
 ///
@@ -11,7 +11,6 @@ use crate::ui::words::{TagsUiState, WordsUiState};
 pub struct MainWindowState {
     // Per-panel UI state
     pub words_ui: WordsUiState,
-    pub tags_ui: TagsUiState,
     pub queue_ui: QueueUiState,
 
     // Navigation state
@@ -23,7 +22,6 @@ impl MainWindowState {
     pub fn new() -> Self {
         Self {
             words_ui: WordsUiState::new(),
-            tags_ui: TagsUiState::new(),
             queue_ui: QueueUiState::new(),
             current_view: NavItem::default(),
         }

@@ -215,19 +215,3 @@ impl WordsUiState {
         self.selected_meaning_ids.len() + self.selected_cloze_ids.len()
     }
 }
-
-/// UI state for the tags view.
-#[derive(Debug, Default)]
-pub struct TagsUiState {
-    pub input: String,
-    pub collapsed_ids: HashSet<Uuid>,
-}
-
-impl TagsUiState {
-    pub fn new() -> Self {
-        Self {
-            input: String::new(),
-            collapsed_ids: HashSet::new(),
-        }
-    }
-}

@@ -10,7 +10,7 @@ pub use self::detail_view::view as detail_view;
 pub use self::message::WordsMessage;
 pub use self::state::{
     ClozeFilter, DetailSelection, FilterState, MeaningInputState, TagDropdownState,
-    TagDropdownTarget, TagsUiState, WordsUiState,
+    TagDropdownTarget, WordsUiState,
 };
 pub use self::update::update;
 pub use self::view::view;

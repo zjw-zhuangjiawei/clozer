@@ -53,10 +53,6 @@ impl QueueRegistry {
         self.items.get(&id)
     }
 
-    pub fn get_item_mut(&mut self, id: Uuid) -> Option<&mut QueueItem> {
-        self.items.get_mut(&id)
-    }
-
     pub fn contains(&self, meaning_id: Uuid) -> bool {
         self.items
             .values()
