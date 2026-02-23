@@ -33,18 +33,23 @@ pub enum WordsMessage {
     ToggleClozeDetail(Uuid),
     ClearDetailSelection,
 
+    // Detail panel editing
+    StartEditWord(Uuid),
+    StartEditMeaning(Uuid),
+    EditWordInput(String),
+    EditMeaningDefinition(String),
+    EditMeaningPos(PartOfSpeech),
+    EditMeaningCefr(Option<CefrLevel>),
+    SaveEdit,
+    CancelEdit,
+
     // Expand/Collapse
     ToggleWordExpand(Uuid),
-    ToggleClozeExpand(Uuid),
     ExpandAll,
     CollapseAll,
 
     // Word operations
     CreateWord(String),
-    EditWordStart(Uuid),
-    EditWordInput(String),
-    EditWordSave(Uuid),
-    EditWordCancel,
     DeleteWord(Uuid),
 
     // Meaning operations
@@ -54,10 +59,6 @@ pub enum WordsMessage {
     AddMeaningCefrSelected(Option<CefrLevel>),
     AddMeaningSave,
     AddMeaningCancel,
-    EditMeaningStart(Uuid),
-    EditMeaningInput(String),
-    EditMeaningSave(Uuid),
-    EditMeaningCancel,
     DeleteMeaning(Uuid),
 
     // Tag operations
@@ -71,7 +72,6 @@ pub enum WordsMessage {
     CloseTagDropdown,
 
     // Cloze operations
-    RegenerateCloze(Uuid),
     DeleteCloze(Uuid),
     ToggleClozeSelection(Uuid),
 

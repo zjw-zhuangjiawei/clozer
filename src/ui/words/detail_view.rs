@@ -4,16 +4,25 @@ use crate::assets;
 use crate::models::Cloze;
 use crate::state::Model;
 use crate::ui::words::message::WordsMessage;
-use crate::ui::words::state::DetailSelection;
+use crate::ui::words::state::{DetailEditMode, DetailSelection, EditBuffer};
 use iced::Element;
-use iced::widget::{Button, Column, Container, Row, Text, button};
+use iced::widget::{Button, Column, Container, Row, Text, button, text_input};
 
-/// Renders the detail panel based on current selection.
-pub fn view(selected_detail: Option<DetailSelection>, model: &Model) -> Element<'_, WordsMessage> {
+/// Renders the detail panel based on current selection and edit mode.
+pub fn view<'a>(
+    selected_detail: Option<DetailSelection>,
+    edit_mode: DetailEditMode,
+    edit_buffer: &'a EditBuffer,
+    model: &'a Model,
+) -> Element<'a, WordsMessage> {
     match selected_detail {
         Some(DetailSelection::Word(word_id)) => {
             if let Some(word) = model.word_registry.get(word_id) {
-                word_detail_view(word.id, word.content.clone(), model)
+                if edit_mode == DetailEditMode::Word(word_id) {
+                    word_edit_view(word.id, edit_buffer)
+                } else {
+                    word_detail_view(word.id, word.content.clone(), model)
+                }
             } else {
                 placeholder_view()
             }
@@ -25,15 +34,19 @@ pub fn view(selected_detail: Option<DetailSelection>, model: &Model) -> Element<
                     .get(meaning.word_id)
                     .map(|w| w.content.clone())
                     .unwrap_or_default();
-                meaning_detail_view(
-                    meaning.id,
-                    word_content,
-                    meaning.definition.clone(),
-                    meaning.pos,
-                    meaning.cefr_level,
-                    &meaning.tag_ids,
-                    model,
-                )
+                if edit_mode == DetailEditMode::Meaning(meaning_id) {
+                    meaning_edit_view(meaning.id, word_content, edit_buffer)
+                } else {
+                    meaning_detail_view(
+                        meaning.id,
+                        word_content,
+                        meaning.definition.clone(),
+                        meaning.pos,
+                        meaning.cefr_level,
+                        &meaning.tag_ids,
+                        model,
+                    )
+                }
             } else {
                 placeholder_view()
             }
@@ -98,18 +111,76 @@ fn word_detail_view<'a>(
         .padding([4, 8])
         .on_press(WordsMessage::ClearDetailSelection);
 
+    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(iced::widget::svg::Handle::from_memory)
+        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
+    let edit_icon = iced::widget::svg(edit_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+    let edit_btn = Button::new(edit_icon)
+        .style(button::secondary)
+        .padding([4, 8])
+        .on_press(WordsMessage::StartEditWord(word_id));
+
     let word_content = word_content.clone();
     Column::new()
         .push(
             Row::new()
                 .push(Text::new(word_content).size(20))
                 .push(Text::new(" ").width(iced::Length::Fill))
+                .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
         .push(iced::widget::rule::horizontal(1))
         .push(Text::new("Meanings").size(14))
         .extend(meaning_items)
+        .spacing(10)
+        .padding(15)
+        .into()
+}
+
+/// Renders word edit form in the detail panel.
+fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
+    let close_btn = Button::new(Text::new("×"))
+        .style(button::secondary)
+        .padding([4, 8])
+        .on_press(WordsMessage::ClearDetailSelection);
+
+    let save_btn = Button::new(Text::new("Save"))
+        .style(button::primary)
+        .padding([4, 12])
+        .on_press(WordsMessage::SaveEdit);
+
+    let cancel_btn = Button::new(Text::new("Cancel"))
+        .style(button::secondary)
+        .padding([4, 12])
+        .on_press(WordsMessage::CancelEdit);
+
+    Column::new()
+        .push(
+            Row::new()
+                .push(Text::new("Edit Word").size(20))
+                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(close_btn)
+                .align_y(iced::Alignment::Center),
+        )
+        .push(iced::widget::rule::horizontal(1))
+        .push(
+            Column::new()
+                .push(Text::new("Content").size(14))
+                .push(
+                    text_input("Word", &buffer.word_content).on_input(WordsMessage::EditWordInput),
+                )
+                .spacing(8),
+        )
+        .push(
+            Row::new()
+                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(save_btn)
+                .push(cancel_btn)
+                .align_y(iced::Alignment::Center),
+        )
         .spacing(10)
         .padding(15)
         .into()
@@ -151,11 +222,23 @@ fn meaning_detail_view<'a>(
         .padding([4, 8])
         .on_press(WordsMessage::ClearDetailSelection);
 
+    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(iced::widget::svg::Handle::from_memory)
+        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
+    let edit_icon = iced::widget::svg(edit_icon_handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0));
+    let edit_btn = Button::new(edit_icon)
+        .style(button::secondary)
+        .padding([4, 8])
+        .on_press(WordsMessage::StartEditMeaning(meaning_id));
+
     let mut column = Column::new()
         .push(
             Row::new()
                 .push(Text::new(word_content).size(20))
                 .push(Text::new(" ").width(iced::Length::Fill))
+                .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
@@ -193,6 +276,101 @@ fn meaning_detail_view<'a>(
     column.into()
 }
 
+/// Renders meaning edit form in the detail panel.
+fn meaning_edit_view<'a>(
+    _meaning_id: uuid::Uuid,
+    word_content: String,
+    buffer: &'a EditBuffer,
+) -> Element<'a, WordsMessage> {
+    let close_btn = Button::new(Text::new("×"))
+        .style(button::secondary)
+        .padding([4, 8])
+        .on_press(WordsMessage::ClearDetailSelection);
+
+    let save_btn = Button::new(Text::new("Save"))
+        .style(button::primary)
+        .padding([4, 12])
+        .on_press(WordsMessage::SaveEdit);
+
+    let cancel_btn = Button::new(Text::new("Cancel"))
+        .style(button::secondary)
+        .padding([4, 12])
+        .on_press(WordsMessage::CancelEdit);
+
+    let pos_selected = buffer.meaning_pos;
+    let cefr_selected = buffer.meaning_cefr;
+
+    Column::new()
+        .push(
+            Row::new()
+                .push(Text::new("Edit Meaning").size(20))
+                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(close_btn)
+                .align_y(iced::Alignment::Center),
+        )
+        .push(iced::widget::rule::horizontal(1))
+        .push(
+            Column::new()
+                .push(Text::new("Word").size(14))
+                .push(Text::new(word_content).size(16))
+                .spacing(4),
+        )
+        .push(
+            Column::new()
+                .push(Text::new("Definition").size(14))
+                .push(
+                    text_input("Definition", &buffer.meaning_definition)
+                        .on_input(WordsMessage::EditMeaningDefinition),
+                )
+                .spacing(8),
+        )
+        .push(
+            Column::new()
+                .push(Text::new("Part of Speech").size(14))
+                .push(
+                    Row::new()
+                        .push(
+                            Button::new(Text::new(pos_selected.to_string()).size(14))
+                                .style(button::secondary)
+                                .padding([4, 8]),
+                        )
+                        .spacing(4),
+                )
+                .spacing(4),
+        )
+        .push(
+            Column::new()
+                .push(Text::new("CEFR Level").size(14))
+                .push(
+                    Row::new()
+                        .push(
+                            Button::new(
+                                Text::new(
+                                    cefr_selected
+                                        .map(|c| c.to_string())
+                                        .unwrap_or_else(|| "None".to_string()),
+                                )
+                                .size(14),
+                            )
+                            .style(button::secondary)
+                            .padding([4, 8]),
+                        )
+                        .spacing(4),
+                )
+                .spacing(4),
+        )
+        .push(
+            Row::new()
+                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(save_btn)
+                .push(cancel_btn)
+                .align_y(iced::Alignment::Center),
+        )
+        .spacing(10)
+        .padding(15)
+        .into()
+}
+
 /// Renders cloze details in the detail panel.
 fn cloze_detail_view<'a>(
     cloze_id: uuid::Uuid,
@@ -216,13 +394,6 @@ fn cloze_detail_view<'a>(
         .style(button::secondary)
         .padding([4, 8])
         .on_press(WordsMessage::ClearDetailSelection);
-
-    let regenerate_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(iced::widget::svg::Handle::from_memory)
-        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
-    let regenerate_icon = iced::widget::svg(regenerate_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
 
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -249,20 +420,10 @@ fn cloze_detail_view<'a>(
         .push(Text::new(cloze.render_answers()).size(16))
         .push(iced::widget::rule::horizontal(1))
         .push(
-            Row::new()
-                .push(
-                    Button::new(regenerate_icon)
-                        .style(button::secondary)
-                        .padding([4, 8])
-                        .on_press(WordsMessage::RegenerateCloze(cloze_id)),
-                )
-                .push(
-                    Button::new(delete_icon)
-                        .style(button::danger)
-                        .padding([4, 8])
-                        .on_press(WordsMessage::DeleteCloze(cloze_id)),
-                )
-                .spacing(10),
+            Button::new(delete_icon)
+                .style(button::danger)
+                .padding([4, 8])
+                .on_press(WordsMessage::DeleteCloze(cloze_id)),
         )
         .spacing(10)
         .padding(15)

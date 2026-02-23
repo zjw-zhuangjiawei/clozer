@@ -57,7 +57,7 @@ impl TagDropdownState {
     }
 }
 
-/// Input state for creating/editing meanings.
+/// Input state for creating meanings.
 #[derive(Debug, Clone)]
 pub struct MeaningInputState {
     pub definition: String,
@@ -75,6 +75,42 @@ impl Default for MeaningInputState {
     }
 }
 
+/// What is currently being edited in the detail panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DetailEditMode {
+    /// Not editing anything
+    #[default]
+    None,
+    /// Editing a word
+    Word(Uuid),
+    /// Editing a meaning
+    Meaning(Uuid),
+}
+
+/// Buffer for storing edits in progress.
+#[derive(Debug, Clone)]
+pub struct EditBuffer {
+    /// Word content being edited
+    pub word_content: String,
+    /// Meaning definition being edited
+    pub meaning_definition: String,
+    /// Meaning part of speech being edited
+    pub meaning_pos: PartOfSpeech,
+    /// Meaning CEFR level being edited
+    pub meaning_cefr: Option<CefrLevel>,
+}
+
+impl Default for EditBuffer {
+    fn default() -> Self {
+        Self {
+            word_content: String::new(),
+            meaning_definition: String::new(),
+            meaning_pos: PartOfSpeech::Noun,
+            meaning_cefr: None,
+        }
+    }
+}
+
 /// UI state for the words view.
 #[derive(Debug, Default)]
 pub struct WordsUiState {
@@ -84,13 +120,8 @@ pub struct WordsUiState {
 
     // Expansion
     pub expanded_word_ids: HashSet<Uuid>,
-    pub expanded_cloze_ids: HashSet<Uuid>,
 
-    // Editing
-    pub editing_word_id: Option<Uuid>,
-    pub editing_word_text: String,
-    pub editing_meaning_id: Option<Uuid>,
-    pub editing_meaning_text: String,
+    // Add meaning
     pub adding_meaning_to_word: Option<Uuid>,
     pub meaning_input: MeaningInputState,
 
@@ -105,6 +136,10 @@ pub struct WordsUiState {
 
     // Detail panel selection
     pub selected_detail: Option<DetailSelection>,
+
+    // Detail panel editing
+    pub detail_edit_mode: DetailEditMode,
+    pub edit_buffer: EditBuffer,
 }
 
 impl WordsUiState {

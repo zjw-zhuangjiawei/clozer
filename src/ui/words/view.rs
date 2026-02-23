@@ -69,6 +69,8 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Wor
     // Detail panel (right panel)
     let right_panel = Container::new(crate::ui::words::detail_view(
         words_ui.selected_detail,
+        words_ui.detail_edit_mode,
+        &words_ui.edit_buffer,
         model,
     ))
     .width(iced::Length::FillPortion(6))
@@ -460,21 +462,13 @@ fn build_meaning_node<'a>(
         Container::new(Text::new(""))
     };
 
-    // Definition (editable or display) - clickable to toggle detail panel
-    let definition: Element<'a, WordsMessage> = if words_ui.editing_meaning_id == Some(meaning.id) {
-        TextInput::new("", &words_ui.editing_meaning_text)
-            .on_input(WordsMessage::EditMeaningInput)
-            .on_submit(WordsMessage::EditMeaningSave(meaning.id))
-            .width(iced::Length::Fill)
-            .padding([2, 4])
-            .into()
-    } else {
+    // Definition - clickable to toggle detail panel
+    let definition: Element<'a, WordsMessage> =
         Button::new(Text::new(&meaning.definition).size(14))
             .style(button::secondary)
             .padding([2, 4])
             .on_press(WordsMessage::ToggleMeaningDetail(meaning.id))
-            .into()
-    };
+            .into();
 
     // Cloze status indicator
     let cloze_status = if cloze_count > 0 {
@@ -534,14 +528,6 @@ fn build_meaning_node<'a>(
 
 /// Build meaning action buttons.
 fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
-    // Edit icon
-    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(svg::Handle::from_memory)
-        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
-    let edit_icon = svg(edit_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
-
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -550,20 +536,10 @@ fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
         .width(iced::Length::Fixed(16.0))
         .height(iced::Length::Fixed(16.0));
 
-    Row::new()
-        .push(
-            Button::new(edit_icon)
-                .style(button::secondary)
-                .padding([2, 6])
-                .on_press(WordsMessage::EditMeaningStart(meaning_id)),
-        )
-        .push(
-            Button::new(delete_icon)
-                .style(button::danger)
-                .padding([2, 6])
-                .on_press(WordsMessage::DeleteMeaning(meaning_id)),
-        )
-        .spacing(2)
+    Button::new(delete_icon)
+        .style(button::danger)
+        .padding([2, 6])
+        .on_press(WordsMessage::DeleteMeaning(meaning_id))
         .into()
 }
 
