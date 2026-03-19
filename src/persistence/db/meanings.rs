@@ -1,6 +1,7 @@
 //! Meaning database operations.
 
 use super::core::{MEANINGS_TABLE, deserialize, key_to_uuid, serialize, uuid_to_key};
+use crate::models::MeaningId;
 use crate::persistence::{MeaningDto, db::Db};
 use redb::{ReadableTable, ReadableTableMetadata};
 
@@ -9,28 +10,30 @@ impl Db {
     /// Saves a meaning to the database.
     pub fn save_meaning(
         &self,
-        id: uuid::Uuid,
+        id: MeaningId,
         data: &MeaningDto,
     ) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(MEANINGS_TABLE)?;
             let bytes = serialize(data)?;
-            table.insert(&uuid_to_key(id), &bytes)?;
+            table.insert(&uuid_to_key(uuid), &bytes)?;
         }
         t.commit()?;
-        tracing::debug!("Saved meaning {}", id);
+        tracing::debug!("Saved meaning {}", uuid);
         Ok(())
     }
 
     /// Loads a meaning from the database.
     pub fn load_meaning(
         &self,
-        id: uuid::Uuid,
+        id: MeaningId,
     ) -> Result<Option<MeaningDto>, crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.read()?;
         let table = t.open_table(MEANINGS_TABLE)?;
-        if let Some(bytes) = table.get(&uuid_to_key(id))?.map(|v| v.value()) {
+        if let Some(bytes) = table.get(&uuid_to_key(uuid))?.map(|v| v.value()) {
             Ok(Some(deserialize(&bytes)?))
         } else {
             Ok(None)
@@ -38,14 +41,15 @@ impl Db {
     }
 
     /// Deletes a meaning from the database.
-    pub fn delete_meaning(&self, id: uuid::Uuid) -> Result<(), crate::persistence::DbError> {
+    pub fn delete_meaning(&self, id: MeaningId) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(MEANINGS_TABLE)?;
-            table.remove(&uuid_to_key(id))?;
+            table.remove(&uuid_to_key(uuid))?;
         }
         t.commit()?;
-        tracing::debug!("Deleted meaning {}", id);
+        tracing::debug!("Deleted meaning {}", uuid);
         Ok(())
     }
 

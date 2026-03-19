@@ -12,10 +12,10 @@
 
 use std::collections::HashSet;
 
+use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::models::{CefrLevel, PartOfSpeech, Word};
 use crate::registry::MeaningRegistry;
 use strum::Display;
-use uuid::Uuid;
 
 // ============================================================================
 // Sub-states
@@ -37,16 +37,16 @@ pub struct FilterState {
     /// Current cloze status filter
     pub cloze_status: ClozeFilter,
     /// Current tag filter (None = no tag filter)
-    pub tag_id: Option<Uuid>,
+    pub tag_id: Option<TagId>,
 }
 
 /// Selection state for meanings and clozes.
 #[derive(Debug, Clone, Default)]
 pub struct SelectionState {
     /// Selected meaning IDs
-    pub meanings: HashSet<Uuid>,
+    pub meanings: HashSet<MeaningId>,
     /// Selected cloze IDs (independent of meaning selection)
-    pub clozes: HashSet<Uuid>,
+    pub clozes: HashSet<ClozeId>,
 }
 
 impl SelectionState {
@@ -85,7 +85,7 @@ impl SelectionState {
     }
 
     /// Toggle a single meaning's selection.
-    pub fn toggle_meaning(&mut self, meaning_id: Uuid) {
+    pub fn toggle_meaning(&mut self, meaning_id: MeaningId) {
         if self.meanings.contains(&meaning_id) {
             self.meanings.remove(&meaning_id);
         } else {
@@ -117,12 +117,12 @@ impl SelectionState {
     }
 
     /// Check if a cloze is selected.
-    pub fn is_cloze_selected(&self, cloze_id: Uuid) -> bool {
+    pub fn is_cloze_selected(&self, cloze_id: ClozeId) -> bool {
         self.clozes.contains(&cloze_id)
     }
 
     /// Toggle a cloze's selection.
-    pub fn toggle_cloze(&mut self, cloze_id: Uuid) {
+    pub fn toggle_cloze(&mut self, cloze_id: ClozeId) {
         if self.clozes.contains(&cloze_id) {
             self.clozes.remove(&cloze_id);
         } else {
@@ -155,12 +155,12 @@ impl SelectionState {
 #[derive(Debug, Clone, Default)]
 pub struct ExpansionState {
     /// Expanded word IDs (words whose meanings are visible)
-    pub words: HashSet<Uuid>,
+    pub words: HashSet<WordId>,
 }
 
 impl ExpansionState {
     /// Toggle word expansion.
-    pub fn toggle(&mut self, word_id: Uuid) {
+    pub fn toggle(&mut self, word_id: WordId) {
         if self.words.contains(&word_id) {
             self.words.remove(&word_id);
         } else {
@@ -169,12 +169,12 @@ impl ExpansionState {
     }
 
     /// Check if a word is expanded.
-    pub fn is_expanded(&self, word_id: Uuid) -> bool {
+    pub fn is_expanded(&self, word_id: WordId) -> bool {
         self.words.contains(&word_id)
     }
 
     /// Expand all words.
-    pub fn expand_all(&mut self, word_ids: impl IntoIterator<Item = Uuid>) {
+    pub fn expand_all(&mut self, word_ids: impl IntoIterator<Item = WordId>) {
         self.words.extend(word_ids);
     }
 
@@ -191,16 +191,16 @@ pub enum DetailSelection {
     #[default]
     None,
     /// Word detail selected
-    Word(Uuid),
+    Word(WordId),
     /// Meaning detail selected
-    Meaning(Uuid),
+    Meaning(MeaningId),
     /// Cloze detail selected
-    Cloze(Uuid),
+    Cloze(ClozeId),
 }
 
 impl DetailSelection {
     /// Toggle selection for a word.
-    pub fn toggle_word(&mut self, word_id: Uuid) {
+    pub fn toggle_word(&mut self, word_id: WordId) {
         if *self == DetailSelection::Word(word_id) {
             *self = DetailSelection::None;
         } else {
@@ -209,7 +209,7 @@ impl DetailSelection {
     }
 
     /// Toggle selection for a meaning.
-    pub fn toggle_meaning(&mut self, meaning_id: Uuid) {
+    pub fn toggle_meaning(&mut self, meaning_id: MeaningId) {
         if *self == DetailSelection::Meaning(meaning_id) {
             *self = DetailSelection::None;
         } else {
@@ -218,7 +218,7 @@ impl DetailSelection {
     }
 
     /// Toggle selection for a cloze.
-    pub fn toggle_cloze(&mut self, cloze_id: Uuid) {
+    pub fn toggle_cloze(&mut self, cloze_id: ClozeId) {
         if *self == DetailSelection::Cloze(cloze_id) {
             *self = DetailSelection::None;
         } else {
@@ -239,9 +239,9 @@ pub enum EditContext {
     #[default]
     None,
     /// Editing a word
-    Word(Uuid),
+    Word(WordId),
     /// Editing a meaning
-    Meaning(Uuid),
+    Meaning(MeaningId),
 }
 
 impl EditContext {
@@ -268,7 +268,7 @@ pub struct EditBuffer {
 #[derive(Debug, Clone, Default)]
 pub struct NewMeaningForm {
     /// Word ID to add meaning to (None if not adding)
-    pub word_id: Option<Uuid>,
+    pub word_id: Option<WordId>,
     /// Meaning definition input
     pub definition: String,
     /// Meaning part of speech
@@ -290,7 +290,7 @@ impl NewMeaningForm {
     }
 
     /// Start adding meaning to a word.
-    pub fn start(&mut self, word_id: Uuid) {
+    pub fn start(&mut self, word_id: WordId) {
         self.word_id = Some(word_id);
         self.definition.clear();
         self.pos = PartOfSpeech::default();
@@ -312,7 +312,7 @@ pub enum TagDropdownTarget {
     /// Batch operation on selected meanings
     SelectedMeanings,
     /// Single meaning operation
-    SingleMeaning(Uuid),
+    SingleMeaning(MeaningId),
 }
 
 /// State for the tag dropdown.
@@ -326,7 +326,7 @@ pub struct TagDropdownState {
 
 impl TagDropdownState {
     /// Create a new dropdown for single meaning.
-    pub fn for_meaning(meaning_id: Uuid) -> Self {
+    pub fn for_meaning(meaning_id: MeaningId) -> Self {
         Self {
             target: TagDropdownTarget::SingleMeaning(meaning_id),
             search: String::new(),

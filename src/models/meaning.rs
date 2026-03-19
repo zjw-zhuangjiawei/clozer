@@ -1,7 +1,8 @@
 use std::collections::BTreeSet;
 use strum::{Display, VariantArray};
 use typed_builder::TypedBuilder;
-use uuid::Uuid;
+
+use super::{MeaningId, TagId, WordId};
 
 /// Part of speech categories for classifying words.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
@@ -43,18 +44,18 @@ pub enum CefrLevel {
 
 #[derive(Debug, Clone, TypedBuilder)]
 #[builder(mutators(
-    fn with_tag(&mut self, tag_id: Uuid) {
+    fn with_tag(&mut self, tag_id: TagId) {
         self.tag_ids.insert(tag_id);
     }
 ))]
 pub struct Meaning {
-    #[builder(default = Uuid::new_v4())]
-    pub id: Uuid,
-    pub word_id: Uuid,
+    #[builder(default = MeaningId::new())]
+    pub id: MeaningId,
+    pub word_id: WordId,
     pub definition: String,
     pub pos: PartOfSpeech,
     #[builder(default)]
     pub cefr_level: Option<CefrLevel>,
     #[builder(default, via_mutators)]
-    pub tag_ids: BTreeSet<Uuid>,
+    pub tag_ids: BTreeSet<TagId>,
 }

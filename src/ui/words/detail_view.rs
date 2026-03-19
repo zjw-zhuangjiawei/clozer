@@ -2,6 +2,7 @@
 
 use crate::assets;
 use crate::models::Cloze;
+use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
 use crate::ui::words::message::{DetailMessage, WordsMessage};
 use crate::ui::words::state::{DetailSelection, EditBuffer, EditContext};
@@ -19,9 +20,9 @@ pub fn view<'a>(
         Some(DetailSelection::Word(word_id)) => {
             if let Some(word) = model.word_registry.get(word_id) {
                 if edit_mode == EditContext::Word(word_id) {
-                    word_edit_view(word.id, edit_buffer)
+                    word_edit_view(word.id.into(), edit_buffer)
                 } else {
-                    word_detail_view(word.id, word.content.clone(), model)
+                    word_detail_view(word.id.into(), word.content.clone(), model)
                 }
             } else {
                 placeholder_view()
@@ -35,10 +36,10 @@ pub fn view<'a>(
                     .map(|w| w.content.clone())
                     .unwrap_or_default();
                 if edit_mode == EditContext::Meaning(meaning_id) {
-                    meaning_edit_view(meaning.id, word_content, edit_buffer)
+                    meaning_edit_view(meaning.id.into(), word_content, edit_buffer)
                 } else {
                     meaning_detail_view(
-                        meaning.id,
+                        meaning.id.into(),
                         word_content,
                         meaning.definition.clone(),
                         meaning.pos,
@@ -53,7 +54,7 @@ pub fn view<'a>(
         }
         Some(DetailSelection::Cloze(cloze_id)) => {
             if let Some(cloze) = model.cloze_registry.get(cloze_id) {
-                cloze_detail_view(cloze_id, cloze, model)
+                cloze_detail_view(cloze_id.into(), cloze, model)
             } else {
                 placeholder_view()
             }
@@ -73,7 +74,7 @@ fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
 
 /// Renders word details in the detail panel.
 fn word_detail_view<'a>(
-    word_id: uuid::Uuid,
+    word_id: WordId,
     word_content: String,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
@@ -122,7 +123,9 @@ fn word_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding([4, 8])
-        .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(word_id)));
+        .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(
+            word_id.into(),
+        )));
 
     let word_content = word_content.clone();
     Column::new()
@@ -191,12 +194,12 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
 
 /// Renders meaning details in the detail panel.
 fn meaning_detail_view<'a>(
-    meaning_id: uuid::Uuid,
+    meaning_id: MeaningId,
     word_content: String,
     definition: String,
     pos: crate::models::PartOfSpeech,
     cefr_level: Option<crate::models::CefrLevel>,
-    tag_ids: &std::collections::BTreeSet<uuid::Uuid>,
+    tag_ids: &std::collections::BTreeSet<TagId>,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
     // Get tag names
@@ -283,7 +286,7 @@ fn meaning_detail_view<'a>(
 
 /// Renders meaning edit form in the detail panel.
 fn meaning_edit_view<'a>(
-    _meaning_id: uuid::Uuid,
+    _meaning_id: MeaningId,
     word_content: String,
     buffer: &'a EditBuffer,
 ) -> Element<'a, WordsMessage> {
@@ -379,7 +382,7 @@ fn meaning_edit_view<'a>(
 
 /// Renders cloze details in the detail panel.
 fn cloze_detail_view<'a>(
-    cloze_id: uuid::Uuid,
+    cloze_id: ClozeId,
     cloze: &Cloze,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {

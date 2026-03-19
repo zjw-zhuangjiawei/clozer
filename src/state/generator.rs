@@ -1,5 +1,5 @@
 use crate::config::AiConfig;
-use crate::models::{Cloze, Meaning, Model, Provider, ProviderType, Word};
+use crate::models::{Cloze, Meaning, Model, ModelId, Provider, ProviderType, Word};
 use crate::registry::{ModelRegistry, ProviderRegistry};
 use rig::agent::Agent;
 use rig::client::{self, CompletionClient};
@@ -13,7 +13,6 @@ use rig::providers::perplexity;
 use rig::providers::xai;
 use std::sync::Arc;
 use tracing::instrument;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub enum AgentWrapper {
@@ -30,7 +29,7 @@ pub enum AgentWrapper {
 pub struct GeneratorState {
     pub provider_registry: ProviderRegistry,
     pub model_registry: ModelRegistry,
-    pub selected_model_id: Option<Uuid>,
+    pub selected_model_id: Option<ModelId>,
 }
 
 impl GeneratorState {
@@ -49,9 +48,10 @@ impl GeneratorState {
 
         // Use config's selected_model_id, or auto-select first model if none set
         if let Some(selected_id) = config.selected_model_id {
+            let model_id = ModelId(selected_id);
             // Validate the selected model exists
-            if self.model_registry.get(selected_id).is_some() {
-                self.selected_model_id = Some(selected_id);
+            if self.model_registry.get(model_id).is_some() {
+                self.selected_model_id = Some(model_id);
             } else {
                 tracing::warn!(
                     "Config selected_model_id {} not found in models, auto-selecting first",
@@ -73,7 +73,7 @@ impl GeneratorState {
     }
 
     /// Selects a model by ID. Returns true if successful.
-    pub fn select_model(&mut self, model_id: Uuid) -> bool {
+    pub fn select_model(&mut self, model_id: ModelId) -> bool {
         if self.model_registry.get(model_id).is_some() {
             self.selected_model_id = Some(model_id);
             true

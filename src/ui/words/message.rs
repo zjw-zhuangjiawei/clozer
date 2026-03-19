@@ -12,10 +12,10 @@
 //! - Batch: Batch operations on selections
 //! - Export: Export operations
 
+use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::models::{CefrLevel, PartOfSpeech};
 use crate::ui::words::state::ClozeFilter;
 use strum::{Display, VariantArray};
-use uuid::Uuid;
 
 // ============================================================================
 // Root Message Enum
@@ -67,7 +67,7 @@ pub enum FilterMessage {
     /// Filter by cloze generation status
     ByClozeStatus(ClozeFilter),
     /// Filter by tag
-    ByTag(Option<Uuid>),
+    ByTag(Option<TagId>),
     /// Clear all filters
     Clear,
 }
@@ -76,11 +76,11 @@ pub enum FilterMessage {
 #[derive(Debug, Clone)]
 pub enum SelectionMessage {
     /// Toggle selection for all meanings of a word
-    ToggleWord(Uuid),
+    ToggleWord(WordId),
     /// Toggle selection for a single meaning
-    ToggleMeaning(Uuid),
+    ToggleMeaning(MeaningId),
     /// Toggle selection for a single cloze
-    ToggleCloze(Uuid),
+    ToggleCloze(ClozeId),
     /// Select all meanings
     SelectAll,
     /// Deselect all
@@ -91,17 +91,17 @@ pub enum SelectionMessage {
 #[derive(Debug, Clone)]
 pub enum DetailMessage {
     /// Select word detail
-    SelectWord(Uuid),
+    SelectWord(WordId),
     /// Select meaning detail
-    SelectMeaning(Uuid),
+    SelectMeaning(MeaningId),
     /// Select cloze detail
-    SelectCloze(Uuid),
+    SelectCloze(ClozeId),
     /// Clear detail selection
     Clear,
     /// Start editing a word
-    StartEditWord(Uuid),
+    StartEditWord(WordId),
     /// Start editing a meaning
-    StartEditMeaning(Uuid),
+    StartEditMeaning(MeaningId),
     /// Edit word content input
     EditWordContent(String),
     /// Edit meaning definition input
@@ -122,11 +122,11 @@ pub enum WordMessage {
     /// Create a new word
     Create { content: String },
     /// Delete a word
-    Delete { id: Uuid },
+    Delete { id: WordId },
     /// Expand a word (show meanings)
-    Expand { id: Uuid },
+    Expand { id: WordId },
     /// Collapse a word (hide meanings)
-    Collapse { id: Uuid },
+    Collapse { id: WordId },
     /// Expand all words
     ExpandAll,
     /// Collapse all words
@@ -137,7 +137,7 @@ pub enum WordMessage {
 #[derive(Debug, Clone)]
 pub enum MeaningMessage {
     /// Start adding meaning to a word
-    AddStart { word_id: Uuid },
+    AddStart { word_id: WordId },
     /// Input meaning definition
     AddInput { definition: String },
     /// Select meaning part of speech
@@ -149,26 +149,32 @@ pub enum MeaningMessage {
     /// Cancel adding meaning
     AddCancel,
     /// Delete a meaning
-    Delete { id: Uuid },
+    Delete { id: MeaningId },
 }
 
 /// Tag operation messages.
 #[derive(Debug, Clone)]
 pub enum TagMessage {
     /// Show tag dropdown for a meaning
-    ShowDropdown { meaning_id: Uuid },
+    ShowDropdown { meaning_id: MeaningId },
     /// Show tag dropdown for batch operation on selected meanings
     ShowBatchDropdown,
     /// Tag search query changed
     Search { query: String },
     /// Add tag to a meaning
-    AddToMeaning { meaning_id: Uuid, tag_id: Uuid },
+    AddToMeaning {
+        meaning_id: MeaningId,
+        tag_id: TagId,
+    },
     /// Add tag to all selected meanings
-    AddToSelected { tag_id: Uuid },
+    AddToSelected { tag_id: TagId },
     /// Remove tag from a meaning
-    RemoveFromMeaning { meaning_id: Uuid, tag_id: Uuid },
+    RemoveFromMeaning {
+        meaning_id: MeaningId,
+        tag_id: TagId,
+    },
     /// Quick create tag and add to meaning
-    QuickCreate { meaning_id: Uuid, name: String },
+    QuickCreate { meaning_id: MeaningId, name: String },
     /// Close tag dropdown
     Close,
 }
@@ -177,9 +183,9 @@ pub enum TagMessage {
 #[derive(Debug, Clone)]
 pub enum ClozeMessage {
     /// Delete a cloze
-    Delete { id: Uuid },
+    Delete { id: ClozeId },
     /// Toggle cloze selection (independent of meaning selection)
-    ToggleSelection { id: Uuid },
+    ToggleSelection { id: ClozeId },
 }
 
 /// Batch operation messages.

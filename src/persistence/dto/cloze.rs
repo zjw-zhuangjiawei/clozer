@@ -1,6 +1,6 @@
 //! Cloze DTO for serialization.
 
-use crate::models::{Cloze, ClozeSegment};
+use crate::models::{Cloze, ClozeId, ClozeSegment, MeaningId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -47,9 +47,9 @@ impl From<&Cloze> for ClozeDto {
     fn from(cloze: &Cloze) -> Self {
         tracing::trace!(cloze_id = %cloze.id, "Cloze -> ClozeDto");
         ClozeDto {
-            id: cloze.id,
+            id: cloze.id.into(),
             segments: cloze.segments.iter().map(ClozeSegmentDto::from).collect(),
-            meaning_id: cloze.meaning_id,
+            meaning_id: cloze.meaning_id.into(),
         }
     }
 }
@@ -58,8 +58,8 @@ impl From<ClozeDto> for Cloze {
     fn from(dto: ClozeDto) -> Self {
         tracing::trace!(cloze_id = %dto.id, meaning_id = %dto.meaning_id, "ClozeDto -> Cloze");
         Cloze {
-            id: dto.id,
-            meaning_id: dto.meaning_id,
+            id: ClozeId(dto.id),
+            meaning_id: MeaningId(dto.meaning_id),
             segments: dto.segments.into_iter().map(Into::into).collect(),
         }
     }

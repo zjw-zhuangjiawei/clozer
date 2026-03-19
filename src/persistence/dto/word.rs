@@ -1,6 +1,6 @@
 //! Word DTO for serialization.
 
-use crate::models::Word;
+use crate::models::{MeaningId, Word, WordId};
 use langtag::LangTagBuf;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -17,9 +17,9 @@ pub struct WordDto {
 impl From<&Word> for WordDto {
     fn from(word: &Word) -> Self {
         WordDto {
-            id: word.id,
+            id: word.id.into(),
             content: word.content.clone(),
-            meaning_ids: word.meaning_ids.iter().cloned().collect(),
+            meaning_ids: word.meaning_ids.iter().map(|id| (*id).into()).collect(),
             language: word.language.clone(),
         }
     }
@@ -28,9 +28,9 @@ impl From<&Word> for WordDto {
 impl From<WordDto> for Word {
     fn from(dto: WordDto) -> Self {
         Word {
-            id: dto.id,
+            id: WordId(dto.id),
             content: dto.content,
-            meaning_ids: dto.meaning_ids.into_iter().collect(),
+            meaning_ids: dto.meaning_ids.into_iter().map(MeaningId).collect(),
             language: dto.language,
         }
     }

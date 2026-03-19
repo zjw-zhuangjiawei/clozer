@@ -1,12 +1,11 @@
-use crate::models::Tag;
+use crate::models::{Tag, TagId};
 use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet};
-use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct TagRegistry {
-    pub(crate) tags: BTreeMap<Uuid, Tag>,
-    pub(crate) dirty_ids: BTreeSet<Uuid>,
+    pub(crate) tags: BTreeMap<TagId, Tag>,
+    pub(crate) dirty_ids: BTreeSet<TagId>,
 }
 
 impl TagRegistry {
@@ -22,15 +21,15 @@ impl TagRegistry {
         self.dirty_ids.insert(tag.id);
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Tag> {
+    pub fn get(&self, id: TagId) -> Option<&Tag> {
         self.tags.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Tag> {
+    pub fn get_mut(&mut self, id: TagId) -> Option<&mut Tag> {
         self.tags.get_mut(&id)
     }
 
-    pub fn delete(&mut self, id: Uuid) -> bool {
+    pub fn delete(&mut self, id: TagId) -> bool {
         if self.tags.remove(&id).is_some() {
             self.dirty_ids.insert(id);
             true
@@ -39,7 +38,7 @@ impl TagRegistry {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Tag)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&TagId, &Tag)> {
         self.tags.iter()
     }
 
@@ -47,7 +46,7 @@ impl TagRegistry {
         self.tags.len()
     }
 
-    pub fn exists(&self, id: Uuid) -> bool {
+    pub fn exists(&self, id: TagId) -> bool {
         self.tags.contains_key(&id)
     }
 

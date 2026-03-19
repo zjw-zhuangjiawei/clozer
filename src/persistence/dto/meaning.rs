@@ -1,6 +1,6 @@
 //! Meaning DTO for serialization.
 
-use crate::models::{CefrLevel, Meaning};
+use crate::models::{CefrLevel, Meaning, TagId, WordId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -117,12 +117,12 @@ pub struct MeaningDto {
 impl From<&Meaning> for MeaningDto {
     fn from(meaning: &Meaning) -> Self {
         MeaningDto {
-            id: meaning.id,
+            id: meaning.id.into(),
             definition: meaning.definition.clone(),
             pos: PartOfSpeechDto::from(meaning.pos),
             cefr_level: meaning.cefr_level.map(CefrLevelDto::from),
-            word_id: meaning.word_id,
-            tag_ids: meaning.tag_ids.iter().cloned().collect(),
+            word_id: meaning.word_id.into(),
+            tag_ids: meaning.tag_ids.iter().map(|id| (*id).into()).collect(),
             cloze_ids: Vec::new(),
         }
     }
@@ -131,12 +131,12 @@ impl From<&Meaning> for MeaningDto {
 impl From<MeaningDto> for Meaning {
     fn from(dto: MeaningDto) -> Self {
         Meaning {
-            id: dto.id,
+            id: crate::models::MeaningId(dto.id),
             definition: dto.definition,
             pos: dto.pos.into(),
             cefr_level: dto.cefr_level.map(|l| l.into()),
-            word_id: dto.word_id,
-            tag_ids: dto.tag_ids.into_iter().collect(),
+            word_id: WordId(dto.word_id),
+            tag_ids: dto.tag_ids.into_iter().map(TagId).collect(),
         }
     }
 }

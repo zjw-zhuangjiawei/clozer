@@ -1,12 +1,11 @@
-use crate::models::Word;
+use crate::models::{MeaningId, Word, WordId};
 use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet};
-use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct WordRegistry {
-    pub(crate) words: BTreeMap<Uuid, Word>,
-    pub(crate) dirty_ids: BTreeSet<Uuid>,
+    pub(crate) words: BTreeMap<WordId, Word>,
+    pub(crate) dirty_ids: BTreeSet<WordId>,
 }
 
 impl WordRegistry {
@@ -23,15 +22,15 @@ impl WordRegistry {
         self.dirty_ids.insert(word.id);
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Word> {
+    pub fn get(&self, id: WordId) -> Option<&Word> {
         self.words.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Word> {
+    pub fn get_mut(&mut self, id: WordId) -> Option<&mut Word> {
         self.words.get_mut(&id)
     }
 
-    pub fn delete(&mut self, id: Uuid) -> bool {
+    pub fn delete(&mut self, id: WordId) -> bool {
         if self.words.remove(&id).is_some() {
             self.dirty_ids.insert(id);
             true
@@ -41,7 +40,7 @@ impl WordRegistry {
     }
 
     // Iterators
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Word)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&WordId, &Word)> {
         self.words.iter()
     }
 
@@ -50,12 +49,12 @@ impl WordRegistry {
         self.words.len()
     }
 
-    pub fn exists(&self, id: Uuid) -> bool {
+    pub fn exists(&self, id: WordId) -> bool {
         self.words.contains_key(&id)
     }
 
     // Meaning ID management (syncs with MeaningRegistry)
-    pub fn add_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
+    pub fn add_meaning(&mut self, word_id: WordId, meaning_id: MeaningId) -> bool {
         if let Some(word) = self.words.get_mut(&word_id) {
             word.meaning_ids.insert(meaning_id);
             self.dirty_ids.insert(word_id);
@@ -65,7 +64,7 @@ impl WordRegistry {
         }
     }
 
-    pub fn remove_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
+    pub fn remove_meaning(&mut self, word_id: WordId, meaning_id: MeaningId) -> bool {
         if let Some(word) = self.words.get_mut(&word_id) {
             let removed = word.meaning_ids.remove(&meaning_id);
             if removed {

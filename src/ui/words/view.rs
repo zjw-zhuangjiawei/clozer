@@ -1,18 +1,17 @@
 use std::fmt;
 
 use crate::assets;
+use crate::models::types::{MeaningId, WordId};
 use crate::models::{CefrLevel, PartOfSpeech};
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
 use crate::ui::words::message::{
-    BatchMessage, ClozeMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage,
-    SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
+    BatchMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage, SearchMessage,
+    SelectionMessage, TagMessage, WordMessage, WordsMessage,
 };
-use crate::ui::words::state::{
-    ClozeFilter, SelectionState, TagDropdownState, TagDropdownTarget, WordsState,
-};
+use crate::ui::words::state::{ClozeFilter, TagDropdownState, TagDropdownTarget, WordsState};
 use iced::Element;
 use iced::widget::{
     Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
@@ -147,7 +146,7 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
     let words_state = &state.words;
 
     // Filter words based on search and filter state
-    let filtered_word_ids: Vec<Uuid> = model
+    let filtered_word_ids: Vec<WordId> = model
         .word_registry
         .iter()
         .filter(|(_, word)| {
@@ -288,7 +287,7 @@ fn build_word_node<'a>(
         .push(word_content)
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(meaning_count)
-        .push(build_word_actions(word.id))
+        .push(build_word_actions(word.id.into()))
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
@@ -353,7 +352,7 @@ fn build_word_node<'a>(
 }
 
 /// Build word action buttons.
-fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
+fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -365,7 +364,9 @@ fn build_word_actions<'a>(word_id: Uuid) -> Element<'a, WordsMessage> {
     Button::new(delete_icon)
         .style(button::danger)
         .padding([2, 6])
-        .on_press(WordsMessage::Word(WordMessage::Delete { id: word_id }))
+        .on_press(WordsMessage::Word(WordMessage::Delete {
+            id: word_id.into(),
+        }))
         .into()
 }
 
@@ -502,7 +503,7 @@ fn build_meaning_node<'a>(
         .push(definition)
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(cloze_status)
-        .push(build_meaning_actions(meaning.id))
+        .push(build_meaning_actions(meaning.id.into()))
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
@@ -544,7 +545,7 @@ fn build_meaning_node<'a>(
 }
 
 /// Build meaning action buttons.
-fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
+fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage> {
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -557,7 +558,7 @@ fn build_meaning_actions<'a>(meaning_id: Uuid) -> Element<'a, WordsMessage> {
         .style(button::danger)
         .padding([2, 6])
         .on_press(WordsMessage::Meaning(MeaningMessage::Delete {
-            id: meaning_id,
+            id: meaning_id.into(),
         }))
         .into()
 }
@@ -660,9 +661,9 @@ fn build_tag_dropdown<'a>(
                     meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
                         mid
                     } else {
-                        Uuid::nil()
+                        MeaningId(Uuid::nil())
                     },
-                    tag_id: tag.id,
+                    tag_id: tag.id.into(),
                 }))
                 .into()
         })
@@ -683,7 +684,7 @@ fn build_tag_dropdown<'a>(
                     meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
                         mid
                     } else {
-                        Uuid::nil()
+                        MeaningId(Uuid::nil())
                     },
                     name: search,
                 }))

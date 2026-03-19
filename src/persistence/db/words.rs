@@ -1,36 +1,32 @@
 //! Word database operations.
 
 use super::core::{WORDS_TABLE, deserialize, key_to_uuid, serialize, uuid_to_key};
+use crate::models::WordId;
 use crate::persistence::{WordDto, db::Db};
 use redb::{ReadableTable, ReadableTableMetadata};
 
 /// Word operations
 impl Db {
     /// Saves a word to the database.
-    pub fn save_word(
-        &self,
-        id: uuid::Uuid,
-        data: &WordDto,
-    ) -> Result<(), crate::persistence::DbError> {
+    pub fn save_word(&self, id: WordId, data: &WordDto) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(WORDS_TABLE)?;
             let bytes = serialize(data)?;
-            table.insert(&uuid_to_key(id), &bytes)?;
+            table.insert(&uuid_to_key(uuid), &bytes)?;
         }
         t.commit()?;
-        tracing::debug!("Saved word {}", id);
+        tracing::debug!("Saved word {}", uuid);
         Ok(())
     }
 
     /// Loads a word from the database.
-    pub fn load_word(
-        &self,
-        id: uuid::Uuid,
-    ) -> Result<Option<WordDto>, crate::persistence::DbError> {
+    pub fn load_word(&self, id: WordId) -> Result<Option<WordDto>, crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.read()?;
         let table = t.open_table(WORDS_TABLE)?;
-        if let Some(bytes) = table.get(&uuid_to_key(id))?.map(|v| v.value()) {
+        if let Some(bytes) = table.get(&uuid_to_key(uuid))?.map(|v| v.value()) {
             Ok(Some(deserialize(&bytes)?))
         } else {
             Ok(None)
@@ -38,14 +34,15 @@ impl Db {
     }
 
     /// Deletes a word from the database.
-    pub fn delete_word(&self, id: uuid::Uuid) -> Result<(), crate::persistence::DbError> {
+    pub fn delete_word(&self, id: WordId) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(WORDS_TABLE)?;
-            table.remove(&uuid_to_key(id))?;
+            table.remove(&uuid_to_key(uuid))?;
         }
         t.commit()?;
-        tracing::debug!("Deleted word {}", id);
+        tracing::debug!("Deleted word {}", uuid);
         Ok(())
     }
 

@@ -4,7 +4,7 @@
 //! - Selection: Item selection
 //! - Action: Queue operations
 
-use uuid::Uuid;
+use crate::models::WordId;
 
 // ============================================================================
 // Root Message Enum
@@ -29,7 +29,7 @@ pub enum QueueMessage {
 #[derive(Debug, Clone)]
 pub enum QueueSelectionMessage {
     /// Toggle selection for a queue item
-    Toggle(Uuid),
+    Toggle(WordId),
     /// Select all queue items
     SelectAll,
     /// Deselect all queue items
@@ -44,5 +44,5 @@ pub enum QueueActionMessage {
     /// Clear all completed items
     ClearCompleted,
     /// Remove a specific item from queue
-    Remove(Uuid),
+    Remove(WordId),
 }

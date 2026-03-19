@@ -2,7 +2,8 @@ use fancy_regex::Regex;
 use once_cell::sync::Lazy;
 use std::fmt;
 use typed_builder::TypedBuilder;
-use uuid::Uuid;
+
+use super::{ClozeId, MeaningId};
 
 static BLANK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[([^\]]+)\]").unwrap());
 
@@ -24,9 +25,9 @@ impl fmt::Display for ClozeSegment {
 
 #[derive(Debug, Clone, TypedBuilder)]
 pub struct Cloze {
-    #[builder(default = Uuid::new_v4())]
-    pub id: Uuid,
-    pub meaning_id: Uuid,
+    #[builder(default = ClozeId::new())]
+    pub id: ClozeId,
+    pub meaning_id: MeaningId,
     pub segments: Vec<ClozeSegment>,
 }
 

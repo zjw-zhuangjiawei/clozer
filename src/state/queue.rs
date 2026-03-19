@@ -1,14 +1,13 @@
 use crate::message::Message;
-use crate::models::Cloze;
+use crate::models::{Cloze, WordId};
 use crate::registry::{QueueItemStatus, QueueRegistry, WordRegistry};
 use crate::state::generator::Generator;
 use iced::Task;
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct QueueGenerationResult {
-    pub item_id: Uuid,
+    pub item_id: WordId,
     pub cloze: Cloze,
 }
 

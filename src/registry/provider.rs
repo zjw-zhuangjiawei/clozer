@@ -1,14 +1,13 @@
 use crate::config::AiConfig;
-use crate::models::Provider;
+use crate::models::{Provider, ProviderId};
 // use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ProviderRegistry {
-    providers: BTreeMap<Uuid, Provider>,
-    dirty_ids: BTreeSet<Uuid>,
-    by_name: HashMap<String, Uuid>,
+    providers: BTreeMap<ProviderId, Provider>,
+    dirty_ids: BTreeSet<ProviderId>,
+    by_name: HashMap<String, ProviderId>,
 }
 
 impl ProviderRegistry {
@@ -35,11 +34,11 @@ impl ProviderRegistry {
         self.by_name.insert(provider.name.clone(), provider.id);
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Provider> {
+    pub fn get(&self, id: ProviderId) -> Option<&Provider> {
         self.providers.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Provider> {
+    pub fn get_mut(&mut self, id: ProviderId) -> Option<&mut Provider> {
         self.providers.get_mut(&id)
     }
 
@@ -47,11 +46,11 @@ impl ProviderRegistry {
         self.by_name.get(name).and_then(|id| self.providers.get(id))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Provider)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ProviderId, &Provider)> {
         self.providers.iter()
     }
 
-    pub fn delete(&mut self, id: Uuid) {
+    pub fn delete(&mut self, id: ProviderId) {
         if let Some(provider) = self.providers.remove(&id) {
             self.dirty_ids.insert(id);
             self.by_name.remove(&provider.name);

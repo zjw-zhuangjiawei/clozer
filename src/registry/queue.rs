@@ -1,6 +1,6 @@
 // use crate::persistence::DbError;
+use crate::models::{MeaningId, WordId};
 use std::collections::{BTreeMap, BTreeSet};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueueItemStatus {
@@ -12,16 +12,16 @@ pub enum QueueItemStatus {
 
 #[derive(Debug, Clone)]
 pub struct QueueItem {
-    pub id: Uuid,
-    pub meaning_id: Uuid,
+    pub id: WordId,
+    pub meaning_id: MeaningId,
     pub status: QueueItemStatus,
     pub selected: bool,
 }
 
 impl QueueItem {
-    pub fn new(meaning_id: Uuid) -> Self {
+    pub fn new(meaning_id: MeaningId) -> Self {
         Self {
-            id: Uuid::new_v4(),
+            id: WordId::new(),
             meaning_id,
             status: QueueItemStatus::Pending,
             selected: true,
@@ -31,8 +31,8 @@ impl QueueItem {
 
 #[derive(Debug, Default, Clone)]
 pub struct QueueRegistry {
-    items: BTreeMap<Uuid, QueueItem>,
-    dirty_ids: BTreeSet<Uuid>,
+    items: BTreeMap<WordId, QueueItem>,
+    dirty_ids: BTreeSet<WordId>,
 }
 
 impl QueueRegistry {
@@ -43,17 +43,17 @@ impl QueueRegistry {
         }
     }
 
-    pub fn enqueue(&mut self, meaning_id: Uuid) {
+    pub fn enqueue(&mut self, meaning_id: MeaningId) {
         let item = QueueItem::new(meaning_id);
         self.items.insert(item.id, item.clone());
         self.dirty_ids.insert(item.id);
     }
 
-    pub fn get_item(&self, id: Uuid) -> Option<&QueueItem> {
+    pub fn get_item(&self, id: WordId) -> Option<&QueueItem> {
         self.items.get(&id)
     }
 
-    pub fn contains(&self, meaning_id: Uuid) -> bool {
+    pub fn contains(&self, meaning_id: MeaningId) -> bool {
         self.items
             .values()
             .any(|item| item.meaning_id == meaning_id)
@@ -79,19 +79,19 @@ impl QueueRegistry {
         self.items.values()
     }
 
-    pub fn remove(&mut self, id: Uuid) {
+    pub fn remove(&mut self, id: WordId) {
         if self.items.remove(&id).is_some() {
             self.dirty_ids.insert(id);
         }
     }
 
-    pub fn select(&mut self, id: Uuid) {
+    pub fn select(&mut self, id: WordId) {
         if let Some(item) = self.items.get_mut(&id) {
             item.selected = true
         }
     }
 
-    pub fn deselect(&mut self, id: Uuid) {
+    pub fn deselect(&mut self, id: WordId) {
         if let Some(item) = self.items.get_mut(&id) {
             item.selected = false
         }
@@ -113,14 +113,14 @@ impl QueueRegistry {
         }
     }
 
-    pub fn set_processing(&mut self, id: Uuid) {
+    pub fn set_processing(&mut self, id: WordId) {
         if let Some(item) = self.items.get_mut(&id) {
             item.status = QueueItemStatus::Processing;
             self.dirty_ids.insert(id);
         }
     }
 
-    pub fn set_completed(&mut self, id: Uuid) {
+    pub fn set_completed(&mut self, id: WordId) {
         if let Some(item) = self.items.get_mut(&id) {
             item.status = QueueItemStatus::Completed;
             item.selected = false;
@@ -128,7 +128,7 @@ impl QueueRegistry {
         }
     }
 
-    pub fn set_failed(&mut self, id: Uuid, error: String) {
+    pub fn set_failed(&mut self, id: WordId, error: String) {
         if let Some(item) = self.items.get_mut(&id) {
             item.status = QueueItemStatus::Failed(error);
             item.selected = false;
@@ -137,7 +137,7 @@ impl QueueRegistry {
     }
 
     pub fn clear_completed(&mut self) {
-        let completed_ids: Vec<Uuid> = self
+        let completed_ids: Vec<WordId> = self
             .items
             .iter()
             .filter(|(_, item)| item.status == QueueItemStatus::Completed)

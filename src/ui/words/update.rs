@@ -1,15 +1,15 @@
 //! Words panel update handler.
 
+use crate::models::types::{ClozeId, MeaningId};
 use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
 use crate::ui::state::MainWindowState;
 use crate::ui::words::message::{
-    BatchMessage, ClozeMessage, DetailMessage, ExportKind, ExportMessage, FilterMessage,
-    MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
+    BatchMessage, ClozeMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage,
+    SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
 };
-use crate::ui::words::state::{DetailSelection, TagDropdownState, TagDropdownTarget};
+use crate::ui::words::state::{DetailSelection, TagDropdownState};
 use iced::Task;
-use uuid::Uuid;
 
 /// Handles all words-related messages.
 pub fn update(
@@ -335,7 +335,7 @@ pub fn update(
             }
             BatchMessage::DeleteSelected => {
                 let count = state.words.selection.meaning_count();
-                let meaning_ids: Vec<Uuid> =
+                let meaning_ids: Vec<MeaningId> =
                     state.words.selection.meanings.iter().copied().collect();
 
                 for meaning_id in &meaning_ids {
@@ -353,7 +353,8 @@ pub fn update(
             }
             BatchMessage::DeleteSelectedClozes => {
                 let count = state.words.selection.cloze_count();
-                let cloze_ids: Vec<Uuid> = state.words.selection.clozes.iter().copied().collect();
+                let cloze_ids: Vec<ClozeId> =
+                    state.words.selection.clozes.iter().copied().collect();
 
                 for cloze_id in &cloze_ids {
                     model.cloze_registry.delete(*cloze_id);

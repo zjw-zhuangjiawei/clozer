@@ -1,6 +1,7 @@
 //! Cloze database operations.
 
 use super::core::{CLOZES_TABLE, deserialize, key_to_uuid, serialize, uuid_to_key};
+use crate::models::ClozeId;
 use crate::persistence::{ClozeDto, db::Db};
 use redb::{ReadableTable, ReadableTableMetadata};
 
@@ -9,27 +10,26 @@ impl Db {
     /// Saves a cloze to the database.
     pub fn save_cloze(
         &self,
-        id: uuid::Uuid,
+        id: ClozeId,
         data: &ClozeDto,
     ) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(CLOZES_TABLE)?;
             let bytes = serialize(data)?;
-            table.insert(&uuid_to_key(id), &bytes)?;
+            table.insert(&uuid_to_key(uuid), &bytes)?;
         }
         t.commit()?;
         Ok(())
     }
 
     /// Loads a cloze from the database.
-    pub fn load_cloze(
-        &self,
-        id: uuid::Uuid,
-    ) -> Result<Option<ClozeDto>, crate::persistence::DbError> {
+    pub fn load_cloze(&self, id: ClozeId) -> Result<Option<ClozeDto>, crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.read()?;
         let table = t.open_table(CLOZES_TABLE)?;
-        if let Some(bytes) = table.get(&uuid_to_key(id))?.map(|v| v.value()) {
+        if let Some(bytes) = table.get(&uuid_to_key(uuid))?.map(|v| v.value()) {
             Ok(Some(deserialize(&bytes)?))
         } else {
             Ok(None)
@@ -37,14 +37,15 @@ impl Db {
     }
 
     /// Deletes a cloze from the database.
-    pub fn delete_cloze(&self, id: uuid::Uuid) -> Result<(), crate::persistence::DbError> {
+    pub fn delete_cloze(&self, id: ClozeId) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(CLOZES_TABLE)?;
-            table.remove(&uuid_to_key(id))?;
+            table.remove(&uuid_to_key(uuid))?;
         }
         t.commit()?;
-        tracing::debug!("Deleted cloze {}", id);
+        tracing::debug!("Deleted cloze {}", uuid);
         Ok(())
     }
 

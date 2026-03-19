@@ -1,6 +1,7 @@
 //! Queue panel view function.
 
 use super::message::{QueueActionMessage, QueueMessage, QueueSelectionMessage};
+use crate::models::types::MeaningId;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
@@ -17,7 +18,7 @@ fn status_label(status: &QueueItemStatus) -> String {
 }
 
 fn meaning_content(
-    meaning_id: uuid::Uuid,
+    meaning_id: MeaningId,
     meaning_registry: &crate::registry::MeaningRegistry,
     word_registry: &crate::registry::WordRegistry,
 ) -> String {

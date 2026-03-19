@@ -1,15 +1,14 @@
 use crate::config::AiConfig;
-use crate::models::Model;
+use crate::models::{Model, ModelId, ProviderId};
 // use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ModelRegistry {
-    models: BTreeMap<Uuid, Model>,
-    dirty_ids: BTreeSet<Uuid>,
-    by_name: HashMap<String, Uuid>,
-    by_provider: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    models: BTreeMap<ModelId, Model>,
+    dirty_ids: BTreeSet<ModelId>,
+    by_name: HashMap<String, ModelId>,
+    by_provider: BTreeMap<ProviderId, BTreeSet<ModelId>>,
 }
 
 impl ModelRegistry {
@@ -45,11 +44,11 @@ impl ModelRegistry {
             .insert(model.id);
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Model> {
+    pub fn get(&self, id: ModelId) -> Option<&Model> {
         self.models.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Model> {
+    pub fn get_mut(&mut self, id: ModelId) -> Option<&mut Model> {
         self.models.get_mut(&id)
     }
 
@@ -57,23 +56,26 @@ impl ModelRegistry {
         self.by_name.get(name).and_then(|id| self.models.get(id))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Model)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ModelId, &Model)> {
         self.models.iter()
     }
 
-    pub fn iter_by_provider(&self, provider_id: Uuid) -> impl Iterator<Item = (&Uuid, &Model)> {
+    pub fn iter_by_provider(
+        &self,
+        provider_id: ProviderId,
+    ) -> impl Iterator<Item = (&ModelId, &Model)> {
         self.by_provider
             .get(&provider_id)
             .map(|ids| {
                 Box::new(
                     ids.iter()
                         .filter_map(|id| self.models.get(id).map(|model| (id, model))),
-                ) as Box<dyn Iterator<Item = (&Uuid, &Model)>>
+                ) as Box<dyn Iterator<Item = (&ModelId, &Model)>>
             })
             .unwrap_or_else(|| Box::new(std::iter::empty()))
     }
 
-    pub fn delete(&mut self, id: Uuid) {
+    pub fn delete(&mut self, id: ModelId) {
         if let Some(model) = self.models.remove(&id) {
             self.dirty_ids.insert(id);
             self.by_name.remove(&model.name);

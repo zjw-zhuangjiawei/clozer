@@ -1,6 +1,6 @@
 //! Tag DTO for serialization.
 
-use crate::models::Tag;
+use crate::models::{Tag, TagId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -16,10 +16,10 @@ pub struct TagDto {
 impl From<&Tag> for TagDto {
     fn from(tag: &Tag) -> Self {
         TagDto {
-            id: tag.id,
+            id: tag.id.into(),
             name: tag.name.clone(),
-            parent_id: tag.parent_id,
-            children_ids: tag.children_ids.iter().cloned().collect(),
+            parent_id: tag.parent_id.map(|id| id.into()),
+            children_ids: tag.children_ids.iter().map(|id| (*id).into()).collect(),
         }
     }
 }
@@ -27,10 +27,10 @@ impl From<&Tag> for TagDto {
 impl From<TagDto> for Tag {
     fn from(dto: TagDto) -> Self {
         Tag {
-            id: dto.id,
+            id: TagId(dto.id),
             name: dto.name,
-            parent_id: dto.parent_id,
-            children_ids: dto.children_ids.into_iter().collect(),
+            parent_id: dto.parent_id.map(TagId),
+            children_ids: dto.children_ids.into_iter().map(TagId).collect(),
         }
     }
 }

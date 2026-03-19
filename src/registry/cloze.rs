@@ -1,13 +1,12 @@
-use crate::models::Cloze;
+use crate::models::{Cloze, ClozeId, MeaningId};
 use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
 pub struct ClozeRegistry {
-    pub(crate) clozes: BTreeMap<Uuid, Cloze>,
-    pub(crate) dirty_ids: BTreeSet<Uuid>,
-    pub(crate) by_meaning: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    pub(crate) clozes: BTreeMap<ClozeId, Cloze>,
+    pub(crate) dirty_ids: BTreeSet<ClozeId>,
+    pub(crate) by_meaning: BTreeMap<MeaningId, BTreeSet<ClozeId>>,
 }
 
 impl ClozeRegistry {
@@ -30,19 +29,22 @@ impl ClozeRegistry {
         self.by_meaning.entry(meaning_id).or_default().insert(id);
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Cloze> {
+    pub fn get(&self, id: ClozeId) -> Option<&Cloze> {
         self.clozes.get(&id)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Cloze)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ClozeId, &Cloze)> {
         self.clozes.iter()
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Cloze> {
+    pub fn get_mut(&mut self, id: ClozeId) -> Option<&mut Cloze> {
         self.clozes.get_mut(&id)
     }
 
-    pub fn iter_by_meaning_id(&self, meaning_id: Uuid) -> impl Iterator<Item = (&Uuid, &Cloze)> {
+    pub fn iter_by_meaning_id(
+        &self,
+        meaning_id: MeaningId,
+    ) -> impl Iterator<Item = (&ClozeId, &Cloze)> {
         self.by_meaning
             .get(&meaning_id)
             .map(|ids| ids.iter())
@@ -51,7 +53,7 @@ impl ClozeRegistry {
             .filter_map(|id| self.clozes.get(id).map(|c| (id, c)))
     }
 
-    pub fn delete(&mut self, id: Uuid) -> bool {
+    pub fn delete(&mut self, id: ClozeId) -> bool {
         if let Some(cloze) = self.clozes.remove(&id) {
             self.dirty_ids.insert(id);
             if let Some(ids) = self.by_meaning.get_mut(&cloze.meaning_id) {
@@ -66,7 +68,7 @@ impl ClozeRegistry {
         }
     }
 
-    pub fn delete_by_meaning(&mut self, meaning_id: Uuid) {
+    pub fn delete_by_meaning(&mut self, meaning_id: MeaningId) {
         if let Some(cloze_ids) = self.by_meaning.remove(&meaning_id) {
             for cloze_id in cloze_ids {
                 self.dirty_ids.insert(cloze_id);
@@ -79,14 +81,14 @@ impl ClozeRegistry {
         self.clozes.len()
     }
 
-    pub fn count_by_meaning(&self, meaning_id: Uuid) -> usize {
+    pub fn count_by_meaning(&self, meaning_id: MeaningId) -> usize {
         self.by_meaning
             .get(&meaning_id)
             .map(|s| s.len())
             .unwrap_or(0)
     }
 
-    pub fn exists(&self, id: Uuid) -> bool {
+    pub fn exists(&self, id: ClozeId) -> bool {
         self.clozes.contains_key(&id)
     }
 

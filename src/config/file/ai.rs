@@ -70,7 +70,7 @@ pub struct ProviderConfig {
 impl From<&ProviderConfig> for Provider {
     fn from(config: &ProviderConfig) -> Self {
         Provider::builder()
-            .id(config.id)
+            .id(config.id.into())
             .name(config.name.clone())
             .provider_type(config.provider_type.into())
             .base_url(config.base_url.clone().unwrap_or_default())
@@ -106,9 +106,9 @@ pub struct ModelConfig {
 impl From<&ModelConfig> for Model {
     fn from(config: &ModelConfig) -> Self {
         Model::builder()
-            .id(config.id)
+            .id(config.id.into())
             .name(config.name.clone())
-            .provider_id(config.provider_id)
+            .provider_id(config.provider_id.into())
             .model_id(config.model_id.clone())
             .build()
     }

@@ -1,11 +1,12 @@
 use typed_builder::TypedBuilder;
-use uuid::Uuid;
+
+use super::{ModelId, ProviderId};
 
 #[derive(Debug, Clone, TypedBuilder)]
 pub struct Model {
-    #[builder(default = Uuid::new_v4())]
-    pub id: Uuid,
+    #[builder(default = ModelId::new())]
+    pub id: ModelId,
     pub name: String,
-    pub provider_id: Uuid,
+    pub provider_id: ProviderId,
     pub model_id: String,
 }

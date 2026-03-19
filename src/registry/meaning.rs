@@ -1,15 +1,14 @@
-use crate::models::Meaning;
+use crate::models::{Meaning, MeaningId, TagId, WordId};
 use crate::persistence::DbError;
 use either::Either;
 use std::collections::{BTreeMap, BTreeSet};
-use uuid::Uuid;
 
 #[derive(Debug, Default, Clone)]
 pub struct MeaningRegistry {
-    pub(crate) meanings: BTreeMap<Uuid, Meaning>,
-    pub(crate) dirty_ids: BTreeSet<Uuid>,
-    pub(crate) by_word: BTreeMap<Uuid, BTreeSet<Uuid>>,
-    pub(crate) by_tag: BTreeMap<Uuid, BTreeSet<Uuid>>,
+    pub(crate) meanings: BTreeMap<MeaningId, Meaning>,
+    pub(crate) dirty_ids: BTreeSet<MeaningId>,
+    pub(crate) by_word: BTreeMap<WordId, BTreeSet<MeaningId>>,
+    pub(crate) by_tag: BTreeMap<TagId, BTreeSet<MeaningId>>,
 }
 
 impl MeaningRegistry {
@@ -41,15 +40,15 @@ impl MeaningRegistry {
         }
     }
 
-    pub fn get(&self, id: Uuid) -> Option<&Meaning> {
+    pub fn get(&self, id: MeaningId) -> Option<&Meaning> {
         self.meanings.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: Uuid) -> Option<&mut Meaning> {
+    pub fn get_mut(&mut self, id: MeaningId) -> Option<&mut Meaning> {
         self.meanings.get_mut(&id)
     }
 
-    pub fn delete(&mut self, id: Uuid) -> bool {
+    pub fn delete(&mut self, id: MeaningId) -> bool {
         if let Some(meaning) = self.meanings.remove(&id) {
             self.dirty_ids.insert(id);
 
@@ -76,7 +75,7 @@ impl MeaningRegistry {
         }
     }
 
-    pub fn delete_by_word(&mut self, word_id: Uuid) {
+    pub fn delete_by_word(&mut self, word_id: WordId) {
         if let Some(meaning_ids) = self.by_word.remove(&word_id) {
             for meaning_id in meaning_ids {
                 self.dirty_ids.insert(meaning_id);
@@ -95,11 +94,11 @@ impl MeaningRegistry {
     }
 
     // Iterators
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &Meaning)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&MeaningId, &Meaning)> {
         self.meanings.iter()
     }
 
-    pub fn iter_by_word(&self, word_id: Uuid) -> impl Iterator<Item = (&Uuid, &Meaning)> {
+    pub fn iter_by_word(&self, word_id: WordId) -> impl Iterator<Item = (&MeaningId, &Meaning)> {
         self.by_word
             .get(&word_id)
             .map(|ids| {
@@ -111,7 +110,7 @@ impl MeaningRegistry {
             .unwrap_or_else(|| Either::Right(std::iter::empty()))
     }
 
-    pub fn iter_by_tag(&self, tag_id: Uuid) -> impl Iterator<Item = (&Uuid, &Meaning)> {
+    pub fn iter_by_tag(&self, tag_id: TagId) -> impl Iterator<Item = (&MeaningId, &Meaning)> {
         self.by_tag
             .get(&tag_id)
             .map(|ids| {
@@ -128,16 +127,16 @@ impl MeaningRegistry {
         self.meanings.len()
     }
 
-    pub fn count_by_word(&self, word_id: Uuid) -> usize {
+    pub fn count_by_word(&self, word_id: WordId) -> usize {
         self.by_word.get(&word_id).map(|s| s.len()).unwrap_or(0)
     }
 
-    pub fn exists(&self, id: Uuid) -> bool {
+    pub fn exists(&self, id: MeaningId) -> bool {
         self.meanings.contains_key(&id)
     }
 
     // Tag management
-    pub fn add_tag(&mut self, meaning_id: Uuid, tag_id: Uuid) -> bool {
+    pub fn add_tag(&mut self, meaning_id: MeaningId, tag_id: TagId) -> bool {
         if let Some(meaning) = self.meanings.get_mut(&meaning_id) {
             meaning.tag_ids.insert(tag_id);
             self.by_tag.entry(tag_id).or_default().insert(meaning_id);
@@ -148,7 +147,7 @@ impl MeaningRegistry {
         }
     }
 
-    pub fn remove_tag(&mut self, meaning_id: Uuid, tag_id: Uuid) -> bool {
+    pub fn remove_tag(&mut self, meaning_id: MeaningId, tag_id: TagId) -> bool {
         let mut removed = false;
         if let Some(meaning) = self.meanings.get_mut(&meaning_id) {
             removed = meaning.tag_ids.remove(&tag_id);

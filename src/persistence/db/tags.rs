@@ -1,33 +1,32 @@
 //! Tag database operations.
 
 use super::core::{TAGS_TABLE, deserialize, key_to_uuid, serialize, uuid_to_key};
+use crate::models::TagId;
 use crate::persistence::{TagDto, db::Db};
 use redb::{ReadableTable, ReadableTableMetadata};
 
 /// Tag operations
 impl Db {
     /// Saves a tag to the database.
-    pub fn save_tag(
-        &self,
-        id: uuid::Uuid,
-        data: &TagDto,
-    ) -> Result<(), crate::persistence::DbError> {
+    pub fn save_tag(&self, id: TagId, data: &TagDto) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(TAGS_TABLE)?;
             let bytes = serialize(data)?;
-            table.insert(&uuid_to_key(id), &bytes)?;
+            table.insert(&uuid_to_key(uuid), &bytes)?;
         }
         t.commit()?;
-        tracing::debug!("Saved tag {}", id);
+        tracing::debug!("Saved tag {}", uuid);
         Ok(())
     }
 
     /// Loads a tag from the database.
-    pub fn load_tag(&self, id: uuid::Uuid) -> Result<Option<TagDto>, crate::persistence::DbError> {
+    pub fn load_tag(&self, id: TagId) -> Result<Option<TagDto>, crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.read()?;
         let table = t.open_table(TAGS_TABLE)?;
-        if let Some(bytes) = table.get(&uuid_to_key(id))?.map(|v| v.value()) {
+        if let Some(bytes) = table.get(&uuid_to_key(uuid))?.map(|v| v.value()) {
             Ok(Some(deserialize(&bytes)?))
         } else {
             Ok(None)
@@ -35,14 +34,15 @@ impl Db {
     }
 
     /// Deletes a tag from the database.
-    pub fn delete_tag(&self, id: uuid::Uuid) -> Result<(), crate::persistence::DbError> {
+    pub fn delete_tag(&self, id: TagId) -> Result<(), crate::persistence::DbError> {
+        let uuid: uuid::Uuid = id.into();
         let t = self.write()?;
         {
             let mut table = t.open_table(TAGS_TABLE)?;
-            table.remove(&uuid_to_key(id))?;
+            table.remove(&uuid_to_key(uuid))?;
         }
         t.commit()?;
-        tracing::debug!("Deleted tag {}", id);
+        tracing::debug!("Deleted tag {}", uuid);
         Ok(())
     }
 
