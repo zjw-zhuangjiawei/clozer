@@ -1,4 +1,4 @@
-# Logging
+# Development: Logging
 
 **Summary**: Structured logging with `tracing` and `tracing-subscriber` for observability.
 
@@ -15,6 +15,8 @@
 | `info` | Significant lifecycle events | Startup, shutdown, configuration loaded, queue processing |
 | `warn` | Recoverable issues | Failed to parse config (using defaults), partial persistence failures |
 | `error` | Failures requiring attention | Database errors, failed saves/deletes, flush failures |
+
+---
 
 ## Structured Fields
 
@@ -48,6 +50,8 @@ tracing::error!(word_id = %id, error = %e, "Failed to save word");
 tracing::trace!(?segment, "ClozeSegment -> ClozeSegmentDto");
 ```
 
+---
+
 ## Message Style
 
 ### Tense
@@ -74,6 +78,8 @@ tracing::debug!("Loaded {} words from database", items.len());
 tracing::debug!("Creating Word...");  // Missing context
 tracing::info!("Configuration Loaded Successfully!");  // Unnecessary capitalization/punctuation
 ```
+
+---
 
 ## Layer-Specific Patterns
 
@@ -186,6 +192,8 @@ tracing::debug!("Flushing dirty data on shutdown");
 tracing::info!("Clozer shutting down");
 ```
 
+---
+
 ## Error Handling Pattern
 
 Log errors at appropriate levels with context, then handle or propagate.
@@ -203,6 +211,8 @@ if errors > 0 {
     tracing::warn!(errors = errors, "Some words failed to persist");
 }
 ```
+
+---
 
 ## Configuration
 
@@ -238,3 +248,10 @@ impl LogLevel {
     pub const DEFAULT: Self = LogLevel::Info;
 }
 ```
+
+---
+
+## Related Rules
+
+- [Architecture Layers](./arch-layers.md) - Layer overview
+- [Quick Start](./quick-start.md) - Build and run commands

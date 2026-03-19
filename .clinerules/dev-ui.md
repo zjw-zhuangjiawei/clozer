@@ -1,4 +1,4 @@
-# UI Patterns (Iced)
+# Development: UI Patterns
 
 **Summary**: Iced GUI patterns following Elm architecture - Model/View/Update pattern with message routing.
 
@@ -60,21 +60,18 @@ src/ui/
 │   ├── checkbox.rs
 │   └── mod.rs
 ├── queue/        # Queue view sub-module
-│   ├── message.rs
-│   ├── state.rs
-│   ├── update.rs
-│   └── view.rs
 ├── settings/     # Settings view sub-module
-│   ├── message.rs
-│   ├── state.rs
-│   ├── update.rs
-│   └── view.rs
 └── words/       # Words view sub-module
-    ├── message.rs
-    ├── state.rs
-    ├── update.rs
-    ├── view.rs
-    └── detail_view.rs
+```
+
+Each UI feature follows a consistent pattern:
+
+```
+feature/
+├── message.rs    # Message enum for this feature
+├── state.rs      # State struct for this feature
+├── update.rs     # Update logic
+└── view.rs       # View function
 ```
 
 ---
@@ -109,21 +106,136 @@ pub enum MainWindowMessage {
 
 ---
 
-## Selection State Pattern
+## WordsUiState
 
-Selection is embedded in UI state. Meanings are tracked directly; word selection is derived. Cloze selection is independent.
+The main UI state struct for the words panel:
 
 ```rust
-// WordsUiState uses HashSet for O(1) operations
+// From src/ui/words/state.rs
 #[derive(Debug, Default)]
 pub struct WordsUiState {
+    // Search & Filter
+    pub search_query: String,
+    pub filter: FilterState,
+
+    // Expansion
+    pub expanded_word_ids: HashSet<Uuid>,
+
+    // Add meaning
+    pub adding_meaning_to_word: Option<Uuid>,
+    pub meaning_input: MeaningInputState,
+
     // Selection
-    // Meanings (words are derived from meanings)
     pub selected_meaning_ids: HashSet<Uuid>,
-    // Clozes (independent selection)
     pub selected_cloze_ids: HashSet<Uuid>,
+
+    // Tag dropdown
+    pub tag_dropdown: Option<TagDropdownState>,
+
+    // Detail panel selection
+    pub selected_detail: Option<DetailSelection>,
+
+    // Detail panel editing
+    pub detail_edit_mode: DetailEditMode,
+    pub edit_buffer: EditBuffer,
+}
+```
+
+---
+
+## Filter State
+
+Filter words by cloze status and tags:
+
+```rust
+/// Filter state for the words tree.
+#[derive(Debug, Clone, Default)]
+pub struct FilterState {
+    pub cloze_status: ClozeFilter,
+    pub tag_id: Option<Uuid>,
 }
 
+/// Filter state for cloze generation status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display)]
+pub enum ClozeFilter {
+    #[default]
+    All,
+    HasClozes,
+    Pending,
+    Failed,
+}
+```
+
+---
+
+## Detail Selection
+
+Track what is currently shown in the detail panel:
+
+```rust
+/// Selection for the details panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DetailSelection {
+    Word(Uuid),
+    Meaning(Uuid),
+    Cloze(Uuid),
+}
+
+/// What is currently being edited in the detail panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DetailEditMode {
+    /// Not editing anything
+    #[default]
+    None,
+    /// Editing a word
+    Word(Uuid),
+    /// Editing a meaning
+    Meaning(Uuid),
+}
+
+/// Buffer for storing edits in progress.
+#[derive(Debug, Clone)]
+pub struct EditBuffer {
+    pub word_content: String,
+    pub meaning_definition: String,
+    pub meaning_pos: PartOfSpeech,
+    pub meaning_cefr: Option<CefrLevel>,
+}
+```
+
+---
+
+## Meaning Input State
+
+Input state for creating meanings:
+
+```rust
+/// Input state for creating meanings.
+#[derive(Debug, Clone)]
+pub struct MeaningInputState {
+    pub definition: String,
+    pub pos: PartOfSpeech,
+    pub cefr_level: Option<CefrLevel>,
+}
+
+impl Default for MeaningInputState {
+    fn default() -> Self {
+        Self {
+            definition: String::new(),
+            pos: PartOfSpeech::Noun,
+            cefr_level: None,
+        }
+    }
+}
+```
+
+---
+
+## Selection State Pattern
+
+Selection is embedded in UI state. Meanings are tracked directly; word selection is derived.
+
+```rust
 impl WordsUiState {
     /// Check if a word is "fully selected" (all its meanings are selected).
     pub fn is_word_selected(&self, word: &Word) -> bool {
@@ -155,7 +267,9 @@ impl WordsUiState {
                 self.selected_meaning_ids.remove(mid);
             }
         } else {
-            self.selected_meaning_ids.extend(word.meaning_ids.iter());
+            for mid in &word.meaning_ids {
+                self.selected_meaning_ids.insert(*mid);
+            }
         }
     }
 
@@ -168,13 +282,14 @@ impl WordsUiState {
         }
     }
 
-    /// Toggle a cloze's selection.
-    pub fn toggle_cloze_selection(&mut self, cloze_id: Uuid) {
-        if self.selected_cloze_ids.contains(&cloze_id) {
-            self.selected_cloze_ids.remove(&cloze_id);
-        } else {
-            self.selected_cloze_ids.insert(cloze_id);
-        }
+    /// Get the count of selected meanings.
+    pub fn selected_count(&self) -> usize {
+        self.selected_meaning_ids.len()
+    }
+
+    /// Check if there are any selected meanings.
+    pub fn has_selection(&self) -> bool {
+        !self.selected_meaning_ids.is_empty()
     }
 
     /// Clear all selections.
@@ -182,45 +297,6 @@ impl WordsUiState {
         self.selected_meaning_ids.clear();
         self.selected_cloze_ids.clear();
     }
-
-    /// Get total selection count (meanings + clozes).
-    pub fn total_selection_count(&self) -> usize {
-        self.selected_meaning_ids.len() + self.selected_cloze_ids.len()
-    }
-}
-```
-
----
-
-## Cloze Filter Pattern
-
-Filter meanings by cloze generation status:
-
-```rust
-/// Filter state for cloze generation status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display)]
-pub enum ClozeFilter {
-    #[default]
-    All,
-    HasClozes,
-    Pending,
-    Failed,
-}
-```
-
----
-
-## Detail Panel Selection
-
-Track what is currently shown in the detail panel:
-
-```rust
-/// Selection for the details panel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DetailSelection {
-    Word(Uuid),
-    Meaning(Uuid),
-    Cloze(Uuid),
 }
 ```
 
@@ -354,6 +430,7 @@ pub fn update(&mut self, message: Message) -> Task<Message> {
 
 ## Related Rules
 
-- [Architecture](./1-architecture.md) - Module structure
-- [Models](./2-models.md) - Data structures
-- [Logging](./7-logging.md) - Tracing patterns
+- [Architecture Layers](./arch-layers.md) - Layer responsibilities
+- [Architecture Modules](./arch-modules.md) - Module structure
+- [Dev Models](./dev-models.md) - Data structures
+- [Dev Logging](./dev-logging.md) - Tracing patterns

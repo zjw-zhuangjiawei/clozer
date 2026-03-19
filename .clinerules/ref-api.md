@@ -1,4 +1,4 @@
-# API Design
+# Reference: API Design
 
 **Summary**: API patterns including builder, strum enums, From/Into traits, and trait implementations.
 
@@ -62,7 +62,7 @@ pub struct Meaning {
     }
 ))]
 pub struct Tag {
-    #[builder(default = Uuid::new_v4())]
+    #[builder(default=Uuid::new_v4())]
     pub id: Uuid,
     pub name: String,
     #[builder(default)]
@@ -178,5 +178,6 @@ pub enum Message { ... }
 
 ## Related Rules
 
-- [Models](./2-models.md) - Data structure patterns
-- [Persistence](./4-persistence.md) - DTO pattern
+- [Dev: Models](./dev-models.md) - Data structure patterns
+- [Dev: Persistence](./dev-persistence.md) - DTO pattern
+- [Dev: Registry](./dev-registry.md) - In-memory storage

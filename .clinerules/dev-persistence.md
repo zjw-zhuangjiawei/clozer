@@ -1,4 +1,4 @@
-# Persistence
+# Development: Persistence
 
 **Summary**: Persistent storage layer using redb database with MessagePack serialization.
 
@@ -159,6 +159,6 @@ pub fn iter_words(&self) -> Result<impl Iterator<Item = WordDto>, DbError> {
 
 ## Related Rules
 
-- [Models](./2-models.md) - Data structures
-- [Registry](./3-registry.md) - In-memory storage
-- [Architecture](./1-architecture.md) - Layer overview
+- [Dev: Models](./dev-models.md) - Data structures
+- [Dev: Registry](./dev-registry.md) - In-memory storage
+- [Architecture Layers](./arch-layers.md) - Layer overview

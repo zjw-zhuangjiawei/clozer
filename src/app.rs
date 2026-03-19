@@ -1,7 +1,7 @@
 //! Main application struct and entry point.
 //!
 //! Contains the App struct that coordinates state and UI rendering
-//! with single-window support and hierarchical message routing.
+//! with single-window support and flat message routing.
 
 use iced::{Element, Subscription, Task};
 
@@ -60,13 +60,24 @@ impl App {
     /// Updates the application state with a message.
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
-            // Route to main window
-            Message::Main(msg) => ui::app::update(
-                &mut self.window_state,
-                msg,
-                &mut self.app_state.model,
-                iced::window::Id::unique(),
-            ),
+            // Words panel - already wrapped in ui::app::update_words
+            Message::Words(msg) => {
+                ui::app::update_words(&mut self.window_state, msg, &mut self.app_state.model)
+            }
+
+            // Queue panel - already returns Task<Message>
+            Message::Queue(msg) => ui::queue::update(msg, &mut self.app_state.model),
+
+            // Settings panel - wrapped in ui::app::update_settings
+            Message::Settings(msg) => {
+                ui::app::update_settings(&mut self.window_state, msg, &mut self.app_state.model)
+            }
+
+            // Navigation
+            Message::Navigate(nav_item) => {
+                self.window_state.current_view = nav_item;
+                Task::none()
+            }
 
             // Global messages
             Message::QueueGenerationResult(result) => {
@@ -88,7 +99,7 @@ impl App {
 
     /// Renders the application UI.
     pub fn view(&self) -> Element<'_, Message> {
-        ui::app::view(&self.window_state, &self.app_state.model).map(Message::Main)
+        ui::app::view(&self.window_state, &self.app_state.model)
     }
 
     /// Returns the theme.

@@ -1,4 +1,14 @@
 //! Words panel UI state types.
+//!
+//! State is organized with focused sub-states:
+//! - FilterState: Filter configuration
+//! - SelectionState: Meaning and cloze selection
+//! - ExpansionState: Word expansion state
+//! - DetailSelection: Current detail panel selection
+//! - EditContext: Current editing context
+//! - EditBuffer: Edit form data
+//! - NewMeaningForm: New meaning form data
+//! - TagDropdownState: Tag dropdown state
 
 use std::collections::HashSet;
 
@@ -7,13 +17,9 @@ use crate::registry::MeaningRegistry;
 use strum::Display;
 use uuid::Uuid;
 
-/// Selection for the details panel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DetailSelection {
-    Word(Uuid),
-    Meaning(Uuid),
-    Cloze(Uuid),
-}
+// ============================================================================
+// Sub-states
+// ============================================================================
 
 /// Filter state for cloze generation status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display)]
@@ -28,8 +34,276 @@ pub enum ClozeFilter {
 /// Filter state for the words tree.
 #[derive(Debug, Clone, Default)]
 pub struct FilterState {
+    /// Current cloze status filter
     pub cloze_status: ClozeFilter,
+    /// Current tag filter (None = no tag filter)
     pub tag_id: Option<Uuid>,
+}
+
+/// Selection state for meanings and clozes.
+#[derive(Debug, Clone, Default)]
+pub struct SelectionState {
+    /// Selected meaning IDs
+    pub meanings: HashSet<Uuid>,
+    /// Selected cloze IDs (independent of meaning selection)
+    pub clozes: HashSet<Uuid>,
+}
+
+impl SelectionState {
+    /// Check if a word is "fully selected" (all its meanings are selected).
+    pub fn is_word_selected(&self, word: &Word) -> bool {
+        if word.meaning_ids.is_empty() {
+            return false;
+        }
+        word.meaning_ids
+            .iter()
+            .all(|mid| self.meanings.contains(mid))
+    }
+
+    /// Check if a word is "partially selected" (some but not all meanings selected).
+    pub fn is_word_partial(&self, word: &Word) -> bool {
+        if word.meaning_ids.is_empty() {
+            return false;
+        }
+        let selected_count = word
+            .meaning_ids
+            .iter()
+            .filter(|mid| self.meanings.contains(*mid))
+            .count();
+        selected_count > 0 && selected_count < word.meaning_ids.len()
+    }
+
+    /// Toggle word selection (select all meanings or deselect all).
+    pub fn toggle_word(&mut self, word: &Word) {
+        if self.is_word_selected(word) {
+            for mid in &word.meaning_ids {
+                self.meanings.remove(mid);
+            }
+        } else {
+            self.meanings.extend(word.meaning_ids.iter());
+        }
+    }
+
+    /// Toggle a single meaning's selection.
+    pub fn toggle_meaning(&mut self, meaning_id: Uuid) {
+        if self.meanings.contains(&meaning_id) {
+            self.meanings.remove(&meaning_id);
+        } else {
+            self.meanings.insert(meaning_id);
+        }
+    }
+
+    /// Get the count of selected meanings.
+    pub fn meaning_count(&self) -> usize {
+        self.meanings.len()
+    }
+
+    /// Check if there are any selected meanings.
+    pub fn has_meaning_selection(&self) -> bool {
+        !self.meanings.is_empty()
+    }
+
+    /// Clear all selections.
+    pub fn clear(&mut self) {
+        self.meanings.clear();
+        self.clozes.clear();
+    }
+
+    /// Select all meanings in the registry.
+    pub fn select_all(&mut self, meaning_registry: &MeaningRegistry) {
+        for (id, _) in meaning_registry.iter() {
+            self.meanings.insert(*id);
+        }
+    }
+
+    /// Check if a cloze is selected.
+    pub fn is_cloze_selected(&self, cloze_id: Uuid) -> bool {
+        self.clozes.contains(&cloze_id)
+    }
+
+    /// Toggle a cloze's selection.
+    pub fn toggle_cloze(&mut self, cloze_id: Uuid) {
+        if self.clozes.contains(&cloze_id) {
+            self.clozes.remove(&cloze_id);
+        } else {
+            self.clozes.insert(cloze_id);
+        }
+    }
+
+    /// Get the count of selected clozes.
+    pub fn cloze_count(&self) -> usize {
+        self.clozes.len()
+    }
+
+    /// Check if there are any selected clozes.
+    pub fn has_cloze_selection(&self) -> bool {
+        !self.clozes.is_empty()
+    }
+
+    /// Clear cloze selections.
+    pub fn clear_clozes(&mut self) {
+        self.clozes.clear();
+    }
+
+    /// Get total selection count (meanings + clozes).
+    pub fn total_count(&self) -> usize {
+        self.meanings.len() + self.clozes.len()
+    }
+}
+
+/// Expansion state for words tree.
+#[derive(Debug, Clone, Default)]
+pub struct ExpansionState {
+    /// Expanded word IDs (words whose meanings are visible)
+    pub words: HashSet<Uuid>,
+}
+
+impl ExpansionState {
+    /// Toggle word expansion.
+    pub fn toggle(&mut self, word_id: Uuid) {
+        if self.words.contains(&word_id) {
+            self.words.remove(&word_id);
+        } else {
+            self.words.insert(word_id);
+        }
+    }
+
+    /// Check if a word is expanded.
+    pub fn is_expanded(&self, word_id: Uuid) -> bool {
+        self.words.contains(&word_id)
+    }
+
+    /// Expand all words.
+    pub fn expand_all(&mut self, word_ids: impl IntoIterator<Item = Uuid>) {
+        self.words.extend(word_ids);
+    }
+
+    /// Collapse all words.
+    pub fn collapse_all(&mut self) {
+        self.words.clear();
+    }
+}
+
+/// Detail panel selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DetailSelection {
+    /// Nothing selected
+    #[default]
+    None,
+    /// Word detail selected
+    Word(Uuid),
+    /// Meaning detail selected
+    Meaning(Uuid),
+    /// Cloze detail selected
+    Cloze(Uuid),
+}
+
+impl DetailSelection {
+    /// Toggle selection for a word.
+    pub fn toggle_word(&mut self, word_id: Uuid) {
+        if *self == DetailSelection::Word(word_id) {
+            *self = DetailSelection::None;
+        } else {
+            *self = DetailSelection::Word(word_id);
+        }
+    }
+
+    /// Toggle selection for a meaning.
+    pub fn toggle_meaning(&mut self, meaning_id: Uuid) {
+        if *self == DetailSelection::Meaning(meaning_id) {
+            *self = DetailSelection::None;
+        } else {
+            *self = DetailSelection::Meaning(meaning_id);
+        }
+    }
+
+    /// Toggle selection for a cloze.
+    pub fn toggle_cloze(&mut self, cloze_id: Uuid) {
+        if *self == DetailSelection::Cloze(cloze_id) {
+            *self = DetailSelection::None;
+        } else {
+            *self = DetailSelection::Cloze(cloze_id);
+        }
+    }
+
+    /// Clear selection.
+    pub fn clear(&mut self) {
+        *self = DetailSelection::None;
+    }
+}
+
+/// Detail panel editing context.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EditContext {
+    /// Not editing anything
+    #[default]
+    None,
+    /// Editing a word
+    Word(Uuid),
+    /// Editing a meaning
+    Meaning(Uuid),
+}
+
+impl EditContext {
+    /// Clear editing context.
+    pub fn clear(&mut self) {
+        *self = EditContext::None;
+    }
+}
+
+/// Buffer for storing edits in progress.
+#[derive(Debug, Clone, Default)]
+pub struct EditBuffer {
+    /// Word content being edited
+    pub word_content: String,
+    /// Meaning definition being edited
+    pub meaning_definition: String,
+    /// Meaning part of speech being edited
+    pub meaning_pos: PartOfSpeech,
+    /// Meaning CEFR level being edited
+    pub meaning_cefr: Option<CefrLevel>,
+}
+
+/// Form for adding new meaning.
+#[derive(Debug, Clone, Default)]
+pub struct NewMeaningForm {
+    /// Word ID to add meaning to (None if not adding)
+    pub word_id: Option<Uuid>,
+    /// Meaning definition input
+    pub definition: String,
+    /// Meaning part of speech
+    pub pos: PartOfSpeech,
+    /// Meaning CEFR level
+    pub cefr_level: Option<CefrLevel>,
+}
+
+impl Default for PartOfSpeech {
+    fn default() -> Self {
+        PartOfSpeech::Noun
+    }
+}
+
+impl NewMeaningForm {
+    /// Check if currently adding a meaning.
+    pub fn is_active(&self) -> bool {
+        self.word_id.is_some()
+    }
+
+    /// Start adding meaning to a word.
+    pub fn start(&mut self, word_id: Uuid) {
+        self.word_id = Some(word_id);
+        self.definition.clear();
+        self.pos = PartOfSpeech::default();
+        self.cefr_level = None;
+    }
+
+    /// Cancel adding meaning.
+    pub fn cancel(&mut self) {
+        self.word_id = None;
+        self.definition.clear();
+        self.pos = PartOfSpeech::default();
+        self.cefr_level = None;
+    }
 }
 
 /// Target for tag dropdown operations.
@@ -44,209 +318,65 @@ pub enum TagDropdownTarget {
 /// State for the tag dropdown.
 #[derive(Debug, Clone)]
 pub struct TagDropdownState {
+    /// Target for the dropdown operation
     pub target: TagDropdownTarget,
+    /// Search query for filtering tags
     pub search: String,
 }
 
 impl TagDropdownState {
-    pub fn new(target: TagDropdownTarget) -> Self {
+    /// Create a new dropdown for single meaning.
+    pub fn for_meaning(meaning_id: Uuid) -> Self {
         Self {
-            target,
+            target: TagDropdownTarget::SingleMeaning(meaning_id),
+            search: String::new(),
+        }
+    }
+
+    /// Create a new dropdown for batch operation.
+    pub fn for_batch() -> Self {
+        Self {
+            target: TagDropdownTarget::SelectedMeanings,
             search: String::new(),
         }
     }
 }
 
-/// Input state for creating meanings.
-#[derive(Debug, Clone)]
-pub struct MeaningInputState {
-    pub definition: String,
-    pub pos: PartOfSpeech,
-    pub cefr_level: Option<CefrLevel>,
-}
+// ============================================================================
+// Main Panel State
+// ============================================================================
 
-impl Default for MeaningInputState {
-    fn default() -> Self {
-        Self {
-            definition: String::new(),
-            pos: PartOfSpeech::Noun,
-            cefr_level: None,
-        }
-    }
-}
-
-/// What is currently being edited in the detail panel.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum DetailEditMode {
-    /// Not editing anything
-    #[default]
-    None,
-    /// Editing a word
-    Word(Uuid),
-    /// Editing a meaning
-    Meaning(Uuid),
-}
-
-/// Buffer for storing edits in progress.
-#[derive(Debug, Clone)]
-pub struct EditBuffer {
-    /// Word content being edited
-    pub word_content: String,
-    /// Meaning definition being edited
-    pub meaning_definition: String,
-    /// Meaning part of speech being edited
-    pub meaning_pos: PartOfSpeech,
-    /// Meaning CEFR level being edited
-    pub meaning_cefr: Option<CefrLevel>,
-}
-
-impl Default for EditBuffer {
-    fn default() -> Self {
-        Self {
-            word_content: String::new(),
-            meaning_definition: String::new(),
-            meaning_pos: PartOfSpeech::Noun,
-            meaning_cefr: None,
-        }
-    }
-}
-
-/// UI state for the words view.
+/// Complete state for Words panel.
 #[derive(Debug, Default)]
-pub struct WordsUiState {
-    // Search & Filter
-    pub search_query: String,
+pub struct WordsState {
+    /// Search query
+    pub query: String,
+    /// Filter configuration
     pub filter: FilterState,
-
-    // Expansion
-    pub expanded_word_ids: HashSet<Uuid>,
-
-    // Add meaning
-    pub adding_meaning_to_word: Option<Uuid>,
-    pub meaning_input: MeaningInputState,
-
-    // Selection
-    // Meanings (words are derived from meanings)
-    pub selected_meaning_ids: HashSet<Uuid>,
-    // Clozes (independent selection)
-    pub selected_cloze_ids: HashSet<Uuid>,
-
-    // Tag dropdown
-    pub tag_dropdown: Option<TagDropdownState>,
-
-    // Detail panel selection
-    pub selected_detail: Option<DetailSelection>,
-
-    // Detail panel editing
-    pub detail_edit_mode: DetailEditMode,
+    /// Selection state
+    pub selection: SelectionState,
+    /// Expansion state
+    pub expansion: ExpansionState,
+    /// Detail panel selection
+    pub detail_selection: DetailSelection,
+    /// Current editing context
+    pub edit_context: EditContext,
+    /// Edit buffer
     pub edit_buffer: EditBuffer,
+    /// New meaning form
+    pub new_meaning: NewMeaningForm,
+    /// Tag dropdown state (None = dropdown closed)
+    pub tag_dropdown: Option<TagDropdownState>,
 }
 
-impl WordsUiState {
-    /// Creates a new WordsUiState.
+impl WordsState {
+    /// Creates a new WordsState.
     pub fn new() -> Self {
         Self::default()
     }
-
-    /// Check if a word is "fully selected" (all its meanings are selected).
-    pub fn is_word_selected(&self, word: &Word) -> bool {
-        if word.meaning_ids.is_empty() {
-            return false;
-        }
-        word.meaning_ids
-            .iter()
-            .all(|mid| self.selected_meaning_ids.contains(mid))
-    }
-
-    /// Check if a word is "partially selected" (some but not all meanings selected).
-    pub fn is_word_partial(&self, word: &Word) -> bool {
-        if word.meaning_ids.is_empty() {
-            return false;
-        }
-        let selected_count = word
-            .meaning_ids
-            .iter()
-            .filter(|mid| self.selected_meaning_ids.contains(*mid))
-            .count();
-        selected_count > 0 && selected_count < word.meaning_ids.len()
-    }
-
-    /// Toggle word selection (select all meanings or deselect all).
-    pub fn toggle_word_selection(&mut self, word: &Word) {
-        if self.is_word_selected(word) {
-            // Deselect all meanings of this word
-            for mid in &word.meaning_ids {
-                self.selected_meaning_ids.remove(mid);
-            }
-        } else {
-            // Select all meanings of this word
-            self.selected_meaning_ids.extend(word.meaning_ids.iter());
-        }
-    }
-
-    /// Toggle a single meaning's selection.
-    pub fn toggle_meaning_selection(&mut self, meaning_id: Uuid) {
-        if self.selected_meaning_ids.contains(&meaning_id) {
-            self.selected_meaning_ids.remove(&meaning_id);
-        } else {
-            self.selected_meaning_ids.insert(meaning_id);
-        }
-    }
-
-    /// Get the count of selected meanings.
-    pub fn selected_count(&self) -> usize {
-        self.selected_meaning_ids.len()
-    }
-
-    /// Check if there are any selected meanings.
-    pub fn has_selection(&self) -> bool {
-        !self.selected_meaning_ids.is_empty()
-    }
-
-    /// Clear all selections.
-    pub fn clear_selection(&mut self) {
-        self.selected_meaning_ids.clear();
-        self.selected_cloze_ids.clear();
-    }
-
-    /// Select all meanings in the registry.
-    pub fn select_all(&mut self, meaning_registry: &MeaningRegistry) {
-        for (id, _) in meaning_registry.iter() {
-            self.selected_meaning_ids.insert(*id);
-        }
-    }
-
-    /// Check if a cloze is selected.
-    pub fn is_cloze_selected(&self, cloze_id: Uuid) -> bool {
-        self.selected_cloze_ids.contains(&cloze_id)
-    }
-
-    /// Toggle a cloze's selection.
-    pub fn toggle_cloze_selection(&mut self, cloze_id: Uuid) {
-        if self.selected_cloze_ids.contains(&cloze_id) {
-            self.selected_cloze_ids.remove(&cloze_id);
-        } else {
-            self.selected_cloze_ids.insert(cloze_id);
-        }
-    }
-
-    /// Get the count of selected clozes.
-    pub fn selected_cloze_count(&self) -> usize {
-        self.selected_cloze_ids.len()
-    }
-
-    /// Check if there are any selected clozes.
-    pub fn has_cloze_selection(&self) -> bool {
-        !self.selected_cloze_ids.is_empty()
-    }
-
-    /// Clear cloze selections.
-    pub fn clear_cloze_selection(&mut self) {
-        self.selected_cloze_ids.clear();
-    }
-
-    /// Get total selection count (meanings + clozes).
-    pub fn total_selection_count(&self) -> usize {
-        self.selected_meaning_ids.len() + self.selected_cloze_ids.len()
-    }
 }
+
+// Aliases for backward compatibility
+pub type WordsUiState = WordsState;
+pub type DetailEditMode = EditContext;
+pub type MeaningInputState = NewMeaningForm;

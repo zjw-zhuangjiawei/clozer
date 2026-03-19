@@ -1,4 +1,4 @@
-# Models
+# Development: Models
 
 **Summary**: Pure data structures with typed_builder for complex construction.
 
@@ -269,6 +269,7 @@ pub enum Message { ... }
 
 ## Related Rules
 
-- [API Design](./6-api-design.md) - Builder pattern details
-- [Registry](./3-registry.md) - In-memory storage
-- [Persistence](./4-persistence.md) - DTO serialization
+- [Reference: API Design](./ref-api.md) - Builder pattern details
+- [Dev: Registry](./dev-registry.md) - In-memory storage
+- [Dev: Persistence](./dev-persistence.md) - DTO serialization
+- [Architecture Layers](./arch-layers.md) - Layer overview

@@ -1,4 +1,4 @@
-# Registry
+# Development: Registry
 
 **Summary**: In-memory data access layer with BTreeMap storage, secondary indexes, and dirty tracking.
 
@@ -87,6 +87,29 @@ impl WordRegistry {
     pub fn exists(&self, id: Uuid) -> bool {
         self.words.contains_key(&id)
     }
+
+    // Meaning ID management (syncs with MeaningRegistry)
+    pub fn add_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
+        if let Some(word) = self.words.get_mut(&word_id) {
+            word.meaning_ids.insert(meaning_id);
+            self.dirty_ids.insert(word_id);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn remove_meaning(&mut self, word_id: Uuid, meaning_id: Uuid) -> bool {
+        if let Some(word) = self.words.get_mut(&word_id) {
+            let removed = word.meaning_ids.remove(&meaning_id);
+            if removed {
+                self.dirty_ids.insert(word_id);
+            }
+            removed
+        } else {
+            false
+        }
+    }
 }
 ```
 
@@ -127,10 +150,23 @@ impl WordRegistry {
                         tracing::error!(word_id = %id, error = %e, "Failed to save word");
                     }
                 }
+            } else {
+                match db.delete_word(id) {
+                    Ok(_) => {
+                        tracing::debug!(word_id = %id, "Deleted word");
+                        self.dirty_ids.remove(&id);
+                    }
+                    Err(e) => {
+                        errors += 1;
+                        tracing::error!(word_id = %id, error = %e, "Failed to delete word");
+                    }
+                }
             }
         }
         if errors > 0 {
             tracing::warn!(errors = errors, "Some words failed to persist");
+        } else {
+            tracing::info!("Flushed {} words successfully", dirty_count);
         }
         Ok(())
     }
@@ -179,6 +215,6 @@ impl MeaningRegistry {
 
 ## Related Rules
 
-- [Models](./2-models.md) - Data structures
-- [Persistence](./4-persistence.md) - Database operations
-- [Architecture](./1-architecture.md) - Layer overview
+- [Dev: Models](./dev-models.md) - Data structures
+- [Dev: Persistence](./dev-persistence.md) - Database operations
+- [Architecture Layers](./arch-layers.md) - Layer overview

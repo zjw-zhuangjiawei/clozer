@@ -1,6 +1,6 @@
 //! Queue panel view function.
 
-use super::message::QueueMessage;
+use super::message::{QueueActionMessage, QueueMessage, QueueSelectionMessage};
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
@@ -49,7 +49,10 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
 
             let select_indicator: Element<'a, QueueMessage> =
                 if matches!(status, QueueItemStatus::Pending) {
-                    svg_checkbox(selected, QueueMessage::SelectToggle(item_id))
+                    svg_checkbox(
+                        selected,
+                        QueueMessage::Selection(QueueSelectionMessage::Toggle(item_id)),
+                    )
                 } else {
                     Text::new(status_text).into()
                 };
@@ -57,7 +60,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
             let remove_btn = Button::new(Text::new("remove"))
                 .style(button::secondary)
                 .padding([2, 6])
-                .on_press(QueueMessage::Remove(item_id));
+                .on_press(QueueMessage::Action(QueueActionMessage::Remove(item_id)));
 
             Row::new()
                 .push(select_indicator)
@@ -87,13 +90,13 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
             Button::new(Text::new("Select All"))
                 .style(button::secondary)
                 .padding([8, 16])
-                .on_press(QueueMessage::SelectAll),
+                .on_press(QueueMessage::Selection(QueueSelectionMessage::SelectAll)),
         )
         .push(
             Button::new(Text::new("Select None"))
                 .style(button::secondary)
                 .padding([8, 16])
-                .on_press(QueueMessage::DeselectAll),
+                .on_press(QueueMessage::Selection(QueueSelectionMessage::DeselectAll)),
         )
         .spacing(5);
 
@@ -105,14 +108,16 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
         Button::new(Text::new("Clear Done"))
             .style(button::secondary)
             .padding([8, 16])
-            .on_press(QueueMessage::ClearCompleted)
+            .on_press(QueueMessage::Action(QueueActionMessage::ClearCompleted))
             .into()
     } else {
         Text::new("").into()
     };
 
     let process_button = Button::new(Text::new(format!("Process ({})", selected_count)))
-        .on_press_maybe((selected_count > 0).then_some(QueueMessage::Process))
+        .on_press_maybe(
+            (selected_count > 0).then_some(QueueMessage::Action(QueueActionMessage::Process)),
+        )
         .width(iced::Length::Fill)
         .style(if selected_count > 0 {
             button::primary

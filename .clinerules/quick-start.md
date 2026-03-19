@@ -1,4 +1,4 @@
-# Common Operations
+# Quick Start
 
 **Summary**: Build, run, and development commands for the Clozer project.
 
@@ -107,11 +107,9 @@ The application supports these environment variables:
 
 ## Git Operations
 
-**Summary**: Use `git commit` CLI command for commits; use MCP server tools for other git operations.
+Use `git commit` CLI command for commits; use MCP server tools for other git operations.
 
-**Why**: CLI provides reliable commit message handling, while MCP server tools offer better output formatting for status, log, and staging operations.
-
-### Git Operations - CLI vs MCP Server
+### CLI vs MCP Server
 
 | Operation | Method | Example |
 |-----------|--------|---------|
@@ -124,40 +122,15 @@ The application supports these environment variables:
 | Switch branch | MCP server | `git_checkout` tool |
 | View staged changes | MCP server | `git_diff_staged` tool |
 
-### ✅ Do This
+### Why This Approach
 
-```powershell
-# Commit using CLI (write commit message directly)
-git commit -m "Your commit message"
-
-# Other operations use MCP server tools:
-# - git_add: stage files
-# - git_status: check repository status
-# - git_log: view commit history
-# - git_diff: view changes
-# - git_create_branch: create new branch
-# - git_checkout: switch branches
-```
-
-### ❌ Don't Do This
-
-```powershell
-# Don't use MCP server for commit
-git_commit - message: "message"  # Use CLI instead
-
-# Don't use CLI for add/status/log operations
-git add .
-git status
-git log
-```
-
-**Why**: 
 - CLI commit allows direct, reliable commit message input
 - MCP server tools provide formatted output better suited for status, logs, and staging operations
-- This hybrid approach maximizes reliability and usability
+
+---
 
 ## Related Rules
 
-- [Architecture](./1-architecture.md) - Project structure
-- [Logging](./7-logging.md) - Log configuration
-- [Git Conventions](./8-git-conventions.md) - Commit message format
+- [Overview](./overview.md) - Project overview
+- [Dev Logging](./dev-logging.md) - Log configuration
+- [Dev Git](./dev-git.md) - Commit conventions

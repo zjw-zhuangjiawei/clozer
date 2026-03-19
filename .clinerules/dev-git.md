@@ -1,4 +1,4 @@
-# Git Commit Conventions
+# Development: Git Conventions
 
 **Summary**: Follow Conventional Commits specification for commit messages.
 
@@ -118,3 +118,26 @@ Use /api/v2/words instead.
 4. Footers follow the body, one blank line after
 5. Breaking changes are case-insensitive except for `BREAKING CHANGE` token
 6. Use imperative mood: "add feature" not "added feature"
+
+---
+
+## CLI vs MCP Server
+
+Use `git commit` CLI command for commits; use MCP server tools for other git operations.
+
+| Operation | Method | Example |
+|-----------|--------|---------|
+| **Commit** | CLI command | `git commit -m "Your message"` |
+| Add files | MCP server | `git_add` tool |
+| Check status | MCP server | `git_status` tool |
+| View history | MCP server | `git_log` tool |
+| View diff | MCP server | `git_diff` tool |
+| Create branch | MCP server | `git_create_branch` tool |
+| Switch branch | MCP server | `git_checkout` tool |
+| View staged changes | MCP server | `git_diff_staged` tool |
+
+---
+
+## Related Rules
+
+- [Quick Start](./quick-start.md) - Build and run commands
