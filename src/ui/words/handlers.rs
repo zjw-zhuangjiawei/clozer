@@ -7,7 +7,7 @@ use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
 use crate::ui::words::message::{
     BatchMessage, ClozeMessage, DetailMessage, ExportKind, ExportMessage, FilterMessage,
-    ImportMessage, MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage,
+    MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage,
     WordsMessage,
 };
 use crate::ui::words::state::{DetailSelection, EditContext, TagDropdownState};
@@ -478,51 +478,6 @@ pub fn export(
 }
 
 // ============================================================================
-// Import Handler
-// ============================================================================
-
-/// Handle import operation messages.
-///
-/// Returns `Task<WordsMessage>` for async file operations.
-pub fn import(
-    state: &mut crate::ui::words::WordsState,
-    message: ImportMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        ImportMessage::MdxStart => {
-            // TODO: Open file dialog and trigger import
-            // For now, placeholder - implement when parser is ready
-            tracing::info!("MDX import requested");
-        }
-        ImportMessage::MdxFileSelected(path) => {
-            // TODO: Start async import
-            tracing::info!(path = %path, "MDX file selected for import");
-            state.import.start(path);
-        }
-        ImportMessage::MdxProgress { current, total } => {
-            state.import.update_progress(current, total);
-        }
-        ImportMessage::MdxCompleted { words, meanings } => {
-            state.import.complete(words, meanings, 0);
-            tracing::info!(words = words, meanings = meanings, "MDX import completed");
-        }
-        ImportMessage::MdxFailed { error } => {
-            state.import.fail(error.clone());
-            tracing::error!(error = %error, "MDX import failed");
-        }
-        ImportMessage::MdxCancel => {
-            // TODO: Cancel ongoing import
-            state.import.dismiss();
-        }
-        ImportMessage::Dismiss => {
-            state.import.dismiss();
-        }
-    }
-    Task::none()
-}
-
-// ============================================================================
 // Main Update Function (delegates to domain handlers)
 // ============================================================================
 
@@ -546,7 +501,6 @@ pub fn update(
         Cloze(msg) => cloze(state, msg, model),
         Batch(msg) => batch(state, msg, model),
         Export(msg) => export(state, msg, model),
-        Import(msg) => return import(state, msg, model),
     }
     Task::none()
 }

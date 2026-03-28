@@ -5,8 +5,8 @@ use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
 use crate::ui::state::MainWindowState;
 use crate::ui::words::message::{
-    BatchMessage, ClozeMessage, DetailMessage, ExportMessage, FilterMessage, ImportMessage,
-    MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
+    BatchMessage, ClozeMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage,
+    SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
 };
 use crate::ui::words::state::{DetailSelection, EditContext, TagDropdownState};
 use iced::Task;
@@ -522,37 +522,6 @@ pub fn update(
             ExportMessage::ToTypstPdf => {
                 // TODO: Implement PDF export with Typst
                 tracing::warn!("Typst PDF export not yet implemented");
-            }
-        },
-
-        // Import operations
-        WordsMessage::Import(msg) => match msg {
-            ImportMessage::MdxStart => {
-                // TODO: Open file dialog and trigger import
-                tracing::info!("MDX import requested");
-            }
-            ImportMessage::MdxFileSelected(path) => {
-                // TODO: Start async import
-                tracing::info!(path = %path, "MDX file selected for import");
-                state.words.import.start(path);
-            }
-            ImportMessage::MdxProgress { current, total } => {
-                state.words.import.update_progress(current, total);
-            }
-            ImportMessage::MdxCompleted { words, meanings } => {
-                state.words.import.complete(words, meanings, 0);
-                tracing::info!(words = words, meanings = meanings, "MDX import completed");
-            }
-            ImportMessage::MdxFailed { error } => {
-                state.words.import.fail(error.clone());
-                tracing::error!(error = %error, "MDX import failed");
-            }
-            ImportMessage::MdxCancel => {
-                // TODO: Cancel ongoing import
-                state.words.import.dismiss();
-            }
-            ImportMessage::Dismiss => {
-                state.words.import.dismiss();
             }
         },
     }

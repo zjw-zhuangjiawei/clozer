@@ -8,7 +8,6 @@ pub use self::message::Message;
 
 pub mod assets;
 pub mod config;
-pub mod import;
 pub mod models;
 pub mod persistence;
 pub mod registry;

@@ -366,80 +366,6 @@ impl TagDropdownState {
     }
 }
 
-/// Import operation state.
-#[derive(Debug, Clone, Default)]
-pub struct ImportState {
-    /// Whether an import is in progress
-    pub is_importing: bool,
-    /// Current file path being imported
-    pub file_path: Option<String>,
-    /// Import progress (0-100)
-    pub progress: usize,
-    /// Total entries to import
-    pub total: usize,
-    /// Last import result
-    pub last_result: Option<ImportResult>,
-}
-
-/// Result of an import operation.
-#[derive(Debug, Clone)]
-pub struct ImportResult {
-    /// Number of words imported
-    pub words: usize,
-    /// Number of meanings imported
-    pub meanings: usize,
-    /// Number of entries skipped
-    pub skipped: usize,
-    /// Error message if failed
-    pub error: Option<String>,
-}
-
-impl ImportState {
-    /// Start an import operation.
-    pub fn start(&mut self, file_path: String) {
-        self.is_importing = true;
-        self.file_path = Some(file_path);
-        self.progress = 0;
-        self.total = 0;
-        self.last_result = None;
-    }
-
-    /// Update progress.
-    pub fn update_progress(&mut self, current: usize, total: usize) {
-        self.progress = current;
-        self.total = total;
-    }
-
-    /// Complete the import.
-    pub fn complete(&mut self, words: usize, meanings: usize, skipped: usize) {
-        self.is_importing = false;
-        self.progress = 100;
-        self.last_result = Some(ImportResult {
-            words,
-            meanings,
-            skipped,
-            error: None,
-        });
-    }
-
-    /// Mark import as failed.
-    pub fn fail(&mut self, error: String) {
-        self.is_importing = false;
-        self.last_result = Some(ImportResult {
-            words: 0,
-            meanings: 0,
-            skipped: 0,
-            error: Some(error),
-        });
-    }
-
-    /// Dismiss the result and reset state.
-    pub fn dismiss(&mut self) {
-        self.last_result = None;
-        self.file_path = None;
-    }
-}
-
 // ============================================================================
 // Main Panel State
 // ============================================================================
@@ -465,8 +391,6 @@ pub struct WordsState {
     pub new_meaning: NewMeaningForm,
     /// Tag dropdown state (None = dropdown closed)
     pub tag_dropdown: Option<TagDropdownState>,
-    /// Import state
-    pub import: ImportState,
 }
 
 impl WordsState {
