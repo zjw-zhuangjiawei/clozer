@@ -7,7 +7,7 @@ use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
-use crate::ui::theme::ButtonSize;
+use crate::ui::theme::{Breakpoint, ButtonSize};
 use crate::ui::words::message::{
     BatchMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage, SearchMessage,
     SelectionMessage, TagMessage, WordMessage, WordsMessage,
@@ -53,50 +53,72 @@ impl fmt::Display for CefrLevelOption {
 }
 
 // Renders the words panel.
-pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
+pub fn view<'a>(
+    state: &'a MainWindowState,
+    model: &'a Model,
+    breakpoint: Breakpoint,
+) -> Element<'a, WordsMessage> {
     let words_state = &state.words;
+    let (left_ratio, right_ratio) = breakpoint.column_ratio();
 
     // Search and filter bar
-    let search_bar = build_search_bar(words_state, model);
+    let search_bar = build_search_bar(words_state, model, breakpoint);
 
     // Word tree (left panel)
     let word_tree = build_word_tree(state, model);
-    let left_panel = Column::new()
-        .push(search_bar)
-        .push(iced::widget::rule::horizontal(1))
-        .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-        .push(build_action_bar(words_state, model))
-        .spacing(10)
-        .padding(10)
-        .width(iced::Length::FillPortion(4));
 
-    // Detail panel (right panel)
-    let right_panel = Container::new(crate::ui::words::detail_view::view(
-        Some(words_state.detail_selection),
-        words_state.edit_context,
-        &words_state.edit_buffer,
-        model,
-    ))
-    .width(iced::Length::FillPortion(6))
-    .height(iced::Length::Fill)
-    .style(|_| container::Style {
-        background: Some(iced::Color::from_rgb8(248, 248, 248).into()),
-        ..Default::default()
-    });
+    if breakpoint.is_single_column() {
+        // Mobile: single column layout (word tree only, no detail panel)
+        Column::new()
+            .push(search_bar)
+            .push(iced::widget::rule::horizontal(1))
+            .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
+            .push(build_action_bar(words_state, model))
+            .spacing(10)
+            .padding(10)
+            .height(iced::Length::Fill)
+            .into()
+    } else {
+        // Tablet/Desktop: two-column layout
+        let left_panel = Column::new()
+            .push(search_bar)
+            .push(iced::widget::rule::horizontal(1))
+            .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
+            .push(build_action_bar(words_state, model))
+            .spacing(10)
+            .padding(10)
+            .width(iced::Length::FillPortion((left_ratio * 10.0) as u16));
 
-    // Two-column layout
-    Row::new()
-        .push(left_panel)
-        .push(right_panel)
-        .spacing(5)
+        // Detail panel (right panel)
+        let colors = AppTheme::default().colors();
+        let right_panel = Container::new(crate::ui::words::detail_view::view(
+            Some(words_state.detail_selection),
+            words_state.edit_context,
+            &words_state.edit_buffer,
+            model,
+        ))
+        .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
         .height(iced::Length::Fill)
-        .into()
+        .style(move |_| container::Style {
+            background: Some(colors.surface_elevated.into()),
+            ..Default::default()
+        });
+
+        // Two-column layout
+        Row::new()
+            .push(left_panel)
+            .push(right_panel)
+            .spacing(5)
+            .height(iced::Length::Fill)
+            .into()
+    }
 }
 
 /// Build the search and filter bar.
 fn build_search_bar<'a>(
     words_state: &'a WordsState,
     _model: &'a Model,
+    breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage> {
     // Get theme colors
     let colors = AppTheme::default().colors();
@@ -107,7 +129,12 @@ fn build_search_bar<'a>(
         .width(iced::Length::Fill)
         .padding(8);
 
-    // Cloze filter dropdown
+    // Cloze filter dropdown - responsive width based on breakpoint
+    let cloze_filter_width = match breakpoint {
+        Breakpoint::Mobile => iced::Length::Fixed(80.0),
+        Breakpoint::Tablet => iced::Length::Fixed(100.0),
+        Breakpoint::Desktop => iced::Length::Fixed(120.0),
+    };
     let cloze_filter = PickList::new(
         vec![
             ClozeFilter::All,
@@ -118,7 +145,7 @@ fn build_search_bar<'a>(
         Some(words_state.filter.cloze_status),
         |f| WordsMessage::Filter(FilterMessage::ByClozeStatus(f)),
     )
-    .width(iced::Length::Fixed(120.0))
+    .width(cloze_filter_width)
     .placeholder("Filter");
 
     // Clear filter button
@@ -305,20 +332,15 @@ fn build_word_node<'a>(
             .push(iced::widget::rule::horizontal(1))
             .spacing(5);
 
-        // Add meaning form if active
-        if words_state.new_meaning.is_active() && words_state.new_meaning.word_id == Some(word.id) {
-            content = content.push(build_add_meaning_form(words_state));
-        } else {
-            // Add meaning button
-            content = content.push(
-                Button::new(Text::new("+ Add Meaning"))
-                    .style(button::primary)
-                    .padding(ButtonSize::Medium.to_iced_padding())
-                    .on_press(WordsMessage::Meaning(MeaningMessage::AddStart {
-                        word_id: word.id,
-                    })),
-            );
-        }
+        // Add meaning button (opens detail panel)
+        content = content.push(
+            Button::new(Text::new("+ Add Meaning"))
+                .style(button::primary)
+                .padding(ButtonSize::Medium.to_iced_padding())
+                .on_press(WordsMessage::Detail(DetailMessage::StartAddMeaning(
+                    word.id,
+                ))),
+        );
 
         // Meaning nodes
         for meaning_id in &word.meaning_ids {
@@ -374,68 +396,6 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
         .on_press(WordsMessage::Word(WordMessage::Delete {
             id: word_id.into(),
         }))
-        .into()
-}
-
-/// Build the add meaning inline form.
-fn build_add_meaning_form<'a>(words_state: &'a WordsState) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
-    let pos_options = PartOfSpeech::VARIANTS;
-    let pos_pick_list = PickList::new(
-        pos_options.to_vec(),
-        Some(words_state.new_meaning.pos),
-        |pos| WordsMessage::Meaning(MeaningMessage::AddPos { pos }),
-    )
-    .width(iced::Length::Fixed(100.0));
-
-    // CEFR level picker with "None" option using wrapper enum
-    let cefr_options: Vec<CefrLevelOption> = vec![
-        CefrLevelOption::None,
-        CefrLevelOption::Some(CefrLevel::A1),
-        CefrLevelOption::Some(CefrLevel::A2),
-        CefrLevelOption::Some(CefrLevel::B1),
-        CefrLevelOption::Some(CefrLevel::B2),
-        CefrLevelOption::Some(CefrLevel::C1),
-        CefrLevelOption::Some(CefrLevel::C2),
-    ];
-    let cefr_selected = CefrLevelOption::from_option(words_state.new_meaning.cefr_level);
-    let cefr_pick_list = PickList::new(
-        cefr_options,
-        Some(cefr_selected),
-        |option: CefrLevelOption| {
-            WordsMessage::Meaning(MeaningMessage::AddCefr {
-                level: option.to_option(),
-            })
-        },
-    )
-    .width(iced::Length::Fixed(80.0))
-    .placeholder("CEFR");
-
-    let def_input = TextInput::new("Definition...", &words_state.new_meaning.definition)
-        .on_input(|s| WordsMessage::Meaning(MeaningMessage::AddInput { definition: s }))
-        .width(iced::Length::Fill)
-        .padding(4);
-
-    let save_btn = Button::new(Text::new("Save"))
-        .style(button::primary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Meaning(MeaningMessage::AddSave));
-
-    let cancel_btn = Button::new(Text::new("Cancel"))
-        .style(button::secondary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Meaning(MeaningMessage::AddCancel));
-
-    Row::new()
-        .push(pos_pick_list)
-        .push(cefr_pick_list)
-        .push(def_input)
-        .push(save_btn)
-        .push(cancel_btn)
-        .spacing(5)
-        .padding([5, 0])
         .into()
 }
 
@@ -768,23 +728,22 @@ fn build_action_bar<'a>(
 
     // No cloze selection - check for meaning selection
     if meaning_selected_count == 0 {
-        // Show word input when nothing selected
-        let word_input = TextInput::new("Add new word...", &words_state.query)
+        // Show search input and add button
+        let search_input = TextInput::new("Search words...", &words_state.query)
             .on_input(|s| WordsMessage::Search(SearchMessage::QueryChanged(s)))
-            .on_submit(WordsMessage::Word(WordMessage::Create {
-                content: words_state.query.clone(),
-            }))
             .width(iced::Length::Fill)
             .padding(8);
 
-        let add_btn = Button::new(Text::new("Add Word"))
+        let add_btn = Button::new(Text::new("+ Add"))
             .style(button::primary)
             .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::Word(WordMessage::Create {
-                content: words_state.query.clone(),
-            }));
+            .on_press(WordsMessage::Detail(DetailMessage::StartNewWord));
 
-        return Row::new().push(word_input).push(add_btn).spacing(10).into();
+        return Row::new()
+            .push(search_input)
+            .push(add_btn)
+            .spacing(10)
+            .into();
     }
 
     // Selection info for meanings

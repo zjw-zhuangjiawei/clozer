@@ -100,12 +100,22 @@ pub enum DetailMessage {
     SelectCloze(ClozeId),
     /// Clear detail selection
     Clear,
+    /// Start creating a new word
+    StartNewWord,
+    /// Start adding a meaning to a word
+    StartAddMeaning(WordId),
     /// Start editing a word
     StartEditWord(WordId),
     /// Start editing a meaning
     StartEditMeaning(MeaningId),
     /// Edit word content input
     EditWordContent(String),
+    /// Edit word language (for editing existing word)
+    EditWordLanguage(Option<langtag::LangTagBuf>),
+    /// Edit new word content (for NewWord context)
+    EditNewWordContent(String),
+    /// Edit new word language (for NewWord context)
+    EditNewWordLanguage(Option<langtag::LangTagBuf>),
     /// Edit meaning definition input
     EditMeaningDefinition(String),
     /// Edit meaning part of speech
@@ -114,6 +124,10 @@ pub enum DetailMessage {
     EditMeaningCefr(Option<CefrLevel>),
     /// Save current edit
     Save,
+    /// Save new word
+    SaveNewWord,
+    /// Save new meaning
+    SaveNewMeaning,
     /// Cancel current edit
     Cancel,
 }

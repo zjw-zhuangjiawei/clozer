@@ -238,6 +238,10 @@ pub enum EditContext {
     /// Not editing anything
     #[default]
     None,
+    /// Creating a new word
+    NewWord,
+    /// Creating a new meaning for a word
+    NewMeaning(WordId),
     /// Editing a word
     Word(WordId),
     /// Editing a meaning
@@ -256,12 +260,32 @@ impl EditContext {
 pub struct EditBuffer {
     /// Word content being edited
     pub word_content: String,
+    /// Word language being edited
+    pub word_language: Option<langtag::LangTagBuf>,
     /// Meaning definition being edited
     pub meaning_definition: String,
     /// Meaning part of speech being edited
     pub meaning_pos: PartOfSpeech,
     /// Meaning CEFR level being edited
     pub meaning_cefr: Option<CefrLevel>,
+}
+
+impl EditBuffer {
+    /// Clear all fields for new word editing
+    pub fn clear_new_word(&mut self) {
+        self.word_content.clear();
+        self.word_language = None;
+        self.meaning_definition.clear();
+        self.meaning_pos = PartOfSpeech::Noun;
+        self.meaning_cefr = None;
+    }
+
+    /// Clear all fields for new meaning editing
+    pub fn clear_new_meaning(&mut self) {
+        self.meaning_definition.clear();
+        self.meaning_pos = PartOfSpeech::Noun;
+        self.meaning_cefr = None;
+    }
 }
 
 /// Form for adding new meaning.

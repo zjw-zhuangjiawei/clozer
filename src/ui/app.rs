@@ -14,7 +14,15 @@ use iced::{Element, FillPortion, Task};
 
 /// Renders the main window by composing words, queue, and settings panels.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Message> {
-    // Navigation bar
+    // Determine breakpoint from window width for responsive layout
+    let breakpoint = Breakpoint::from_width(state.window_width as f32);
+
+    // Navigation bar with responsive spacing
+    let nav_spacing = if breakpoint == Breakpoint::Mobile {
+        5
+    } else {
+        10
+    };
     let nav_buttons: Vec<Element<'a, Message>> =
         [NavItem::Words, NavItem::Queue, NavItem::Settings]
             .iter()
@@ -32,16 +40,13 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
             })
             .collect();
 
-    let nav_bar = iced::widget::Row::with_children(nav_buttons).spacing(10);
-
-    // Determine breakpoint from window width for responsive layout
-    let breakpoint = Breakpoint::from_width(state.window_width as f32);
+    let nav_bar = iced::widget::Row::with_children(nav_buttons).spacing(nav_spacing);
     let (left_ratio, right_ratio) = breakpoint.column_ratio();
 
     // Content based on current navigation view
     let content: Element<'a, Message> = match state.current_view {
         NavItem::Words => {
-            let left_panel = crate::ui::words::view(state, model).map(Message::Words);
+            let left_panel = crate::ui::words::view(state, model, breakpoint).map(Message::Words);
             // Show words panel, hide queue panel
             if breakpoint.is_single_column() {
                 // Mobile: single column, full width

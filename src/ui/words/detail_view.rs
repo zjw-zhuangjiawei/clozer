@@ -18,6 +18,18 @@ pub fn view<'a>(
     edit_buffer: &'a EditBuffer,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // NewWord mode - show form for creating new word
+    if edit_mode == EditContext::NewWord {
+        return new_word_view(edit_buffer).map(WordsMessage::Detail);
+    }
+
+    // NewMeaning mode - show form for adding new meaning to a word
+    if let EditContext::NewMeaning(word_id) = edit_mode {
+        if let Some(word) = model.word_registry.get(word_id) {
+            return new_meaning_view(word.content.clone(), edit_buffer).map(WordsMessage::Detail);
+        }
+    }
+
     match selected_detail {
         Some(DetailSelection::Word(word_id)) => {
             if let Some(word) = model.word_registry.get(word_id) {
@@ -72,6 +84,115 @@ fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
         .center_y(iced::Length::Fill)
         .padding(20)
         .into()
+}
+
+/// View for creating a new word in the detail panel.
+fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
+    let word_input = text_input("Word *", &buffer.word_content)
+        .on_input(|s| DetailMessage::EditNewWordContent(s))
+        .width(iced::Length::Fill);
+
+    let lang_string = buffer
+        .word_language
+        .as_ref()
+        .map(|l| l.to_string())
+        .unwrap_or_default();
+    let lang_input = text_input("Language (optional)", &lang_string)
+        .on_input(|s| {
+            let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
+            DetailMessage::EditNewWordLanguage(parsed)
+        })
+        .width(iced::Length::Fill);
+
+    let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
+        .on_input(|s| DetailMessage::EditMeaningDefinition(s))
+        .width(iced::Length::Fill);
+
+    let pos_text = buffer.meaning_pos.to_string();
+    let pos_display = format!("POS: {}", pos_text);
+    let cefr_text = buffer
+        .meaning_cefr
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "None".to_string());
+    let cefr_display = format!("CEFR: {}", cefr_text);
+
+    let save_btn = Button::new(Text::new("Save"))
+        .style(button::primary)
+        .padding(ButtonSize::Medium.to_iced_padding())
+        .on_press(DetailMessage::SaveNewWord);
+    let cancel_btn = Button::new(Text::new("Cancel"))
+        .style(button::secondary)
+        .padding(ButtonSize::Medium.to_iced_padding())
+        .on_press(DetailMessage::Cancel);
+
+    Container::new(
+        Column::new()
+            .spacing(15)
+            .push(Text::new("Add New Word").size(20))
+            .push(word_input)
+            .push(lang_input)
+            .push(def_input)
+            .push(
+                Row::new()
+                    .push(Text::new(pos_display))
+                    .push(Text::new(" | "))
+                    .push(Text::new(cefr_display)),
+            )
+            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+    )
+    .padding(20)
+    .width(iced::Length::Fill)
+    .height(iced::Length::Fill)
+    .center_x(iced::Length::Fill)
+    .center_y(iced::Length::Fill)
+    .into()
+}
+
+/// View for adding a new meaning in the detail panel.
+fn new_meaning_view<'a>(
+    word_content: String,
+    buffer: &'a EditBuffer,
+) -> Element<'a, DetailMessage> {
+    let def_input = text_input("Definition *", &buffer.meaning_definition)
+        .on_input(|s| DetailMessage::EditMeaningDefinition(s))
+        .width(iced::Length::Fill);
+
+    let pos_text = buffer.meaning_pos.to_string();
+    let pos_display = format!("POS: {}", pos_text);
+    let cefr_text = buffer
+        .meaning_cefr
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "None".to_string());
+    let cefr_display = format!("CEFR: {}", cefr_text);
+
+    let save_btn = Button::new(Text::new("Save Meaning"))
+        .style(button::primary)
+        .padding(ButtonSize::Medium.to_iced_padding())
+        .on_press(DetailMessage::SaveNewMeaning);
+    let cancel_btn = Button::new(Text::new("Cancel"))
+        .style(button::secondary)
+        .padding(ButtonSize::Medium.to_iced_padding())
+        .on_press(DetailMessage::Cancel);
+
+    Container::new(
+        Column::new()
+            .spacing(15)
+            .push(Text::new(format!("Add Meaning to \"{}\"", word_content)).size(20))
+            .push(def_input)
+            .push(
+                Row::new()
+                    .push(Text::new(pos_display))
+                    .push(Text::new(" | "))
+                    .push(Text::new(cefr_display)),
+            )
+            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+    )
+    .padding(20)
+    .width(iced::Length::Fill)
+    .height(iced::Length::Fill)
+    .center_x(iced::Length::Fill)
+    .center_y(iced::Length::Fill)
+    .into()
 }
 
 /// Renders word details in the detail panel.
@@ -152,13 +273,33 @@ fn word_detail_view<'a>(
 
 /// Renders word edit form in the detail panel.
 fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
+    let word_input = text_input("Word *", &buffer.word_content)
+        .on_input(|s| WordsMessage::Detail(DetailMessage::EditWordContent(s)))
+        .width(iced::Length::Fill);
 
-    let close_btn = Button::new(Text::new("×"))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Clear));
+    let lang_string = buffer
+        .word_language
+        .as_ref()
+        .map(|l| l.to_string())
+        .unwrap_or_default();
+    let lang_input = text_input("Language (optional)", &lang_string)
+        .on_input(|s| {
+            let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
+            WordsMessage::Detail(DetailMessage::EditWordLanguage(parsed))
+        })
+        .width(iced::Length::Fill);
+
+    let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
+        .on_input(|s| WordsMessage::Detail(DetailMessage::EditMeaningDefinition(s)))
+        .width(iced::Length::Fill);
+
+    let pos_text = buffer.meaning_pos.to_string();
+    let pos_display = format!("POS: {}", pos_text);
+    let cefr_text = buffer
+        .meaning_cefr
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "None".to_string());
+    let cefr_display = format!("CEFR: {}", cefr_text);
 
     let save_btn = Button::new(Text::new("Save"))
         .style(button::primary)
@@ -170,34 +311,27 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
         .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Cancel));
 
-    Column::new()
-        .push(
-            Row::new()
-                .push(Text::new("Edit Word").size(20))
-                .push(Text::new(" ").width(iced::Length::Fill))
-                .push(close_btn)
-                .align_y(iced::Alignment::Center),
-        )
-        .push(iced::widget::rule::horizontal(1))
-        .push(
-            Column::new()
-                .push(Text::new("Content").size(14))
-                .push(
-                    text_input("Word", &buffer.word_content)
-                        .on_input(|s| WordsMessage::Detail(DetailMessage::EditWordContent(s))),
-                )
-                .spacing(8),
-        )
-        .push(
-            Row::new()
-                .push(Text::new(" ").width(iced::Length::Fill))
-                .push(save_btn)
-                .push(cancel_btn)
-                .align_y(iced::Alignment::Center),
-        )
-        .spacing(10)
-        .padding(15)
-        .into()
+    Container::new(
+        Column::new()
+            .spacing(15)
+            .push(Text::new("Edit Word").size(20))
+            .push(word_input)
+            .push(lang_input)
+            .push(def_input)
+            .push(
+                Row::new()
+                    .push(Text::new(pos_display))
+                    .push(Text::new(" | "))
+                    .push(Text::new(cefr_display)),
+            )
+            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+    )
+    .padding(20)
+    .width(iced::Length::Fill)
+    .height(iced::Length::Fill)
+    .center_x(iced::Length::Fill)
+    .center_y(iced::Length::Fill)
+    .into()
 }
 
 /// Renders meaning details in the detail panel.

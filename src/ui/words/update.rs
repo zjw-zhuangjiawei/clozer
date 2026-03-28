@@ -8,7 +8,7 @@ use crate::ui::words::message::{
     BatchMessage, ClozeMessage, DetailMessage, ExportMessage, FilterMessage, ImportMessage,
     MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage, WordsMessage,
 };
-use crate::ui::words::state::{DetailSelection, TagDropdownState};
+use crate::ui::words::state::{DetailSelection, EditContext, TagDropdownState};
 use iced::Task;
 
 /// Handles all words-related messages.
@@ -93,6 +93,16 @@ pub fn update(
             DetailMessage::Clear => {
                 state.words.detail_selection = DetailSelection::None;
             }
+            DetailMessage::StartNewWord => {
+                state.words.detail_selection = DetailSelection::None;
+                state.words.edit_context = EditContext::NewWord;
+                state.words.edit_buffer.clear_new_word();
+            }
+            DetailMessage::StartAddMeaning(word_id) => {
+                state.words.detail_selection = DetailSelection::None;
+                state.words.edit_context = EditContext::NewMeaning(word_id);
+                state.words.edit_buffer.clear_new_meaning();
+            }
             DetailMessage::StartEditWord(word_id) => {
                 if let Some(word) = model.word_registry.get(word_id) {
                     state.words.edit_context = crate::ui::words::state::EditContext::Word(word_id);
@@ -110,6 +120,15 @@ pub fn update(
             }
             DetailMessage::EditWordContent(content) => {
                 state.words.edit_buffer.word_content = content;
+            }
+            DetailMessage::EditWordLanguage(lang) => {
+                state.words.edit_buffer.word_language = lang;
+            }
+            DetailMessage::EditNewWordContent(content) => {
+                state.words.edit_buffer.word_content = content;
+            }
+            DetailMessage::EditNewWordLanguage(lang) => {
+                state.words.edit_buffer.word_language = lang;
             }
             DetailMessage::EditMeaningDefinition(definition) => {
                 state.words.edit_buffer.meaning_definition = definition;
@@ -142,12 +161,117 @@ pub fn update(
                             tracing::debug!("Updated meaning: {} (id={})", meaning.definition, id);
                         }
                     }
+                    // NewWord is handled by SaveNewWord, not Save
+                    crate::ui::words::state::EditContext::NewWord => {}
+                    // NewMeaning is handled by SaveNewMeaning, not Save
+                    crate::ui::words::state::EditContext::NewMeaning(_) => {}
                     crate::ui::words::state::EditContext::None => {}
                 }
                 state.words.edit_context = crate::ui::words::state::EditContext::None;
             }
+            DetailMessage::SaveNewWord => {
+                let buffer = &state.words.edit_buffer;
+                let word_content = buffer.word_content.trim();
+
+                if word_content.is_empty() {
+                    // Cancel if empty
+                    state.words.edit_context = EditContext::None;
+                    state.words.detail_selection = DetailSelection::None;
+                    return Task::none();
+                }
+
+                // Check for duplicate
+                let exists = model
+                    .word_registry
+                    .iter()
+                    .any(|(_, w)| w.content.to_lowercase() == word_content.to_lowercase());
+                if exists {
+                    // Already exists, just exit edit mode
+                    state.words.edit_context = EditContext::None;
+                    state.words.detail_selection = DetailSelection::None;
+                    return Task::none();
+                }
+
+                // Create Word
+                let word_id = if let Some(ref lang) = buffer.word_language {
+                    let word = Word::builder()
+                        .content(word_content.to_string())
+                        .language(lang.clone())
+                        .build();
+                    tracing::debug!("Creating word: {} (id={})", word.content, word.id);
+                    let id = word.id;
+                    model.word_registry.add(word);
+                    id
+                } else {
+                    let word = Word::builder().content(word_content.to_string()).build();
+                    tracing::debug!("Creating word: {} (id={})", word.content, word.id);
+                    let id = word.id;
+                    model.word_registry.add(word);
+                    id
+                };
+
+                // If definition is provided, create Meaning
+                if !buffer.meaning_definition.trim().is_empty() {
+                    let meaning = Meaning::builder()
+                        .word_id(word_id)
+                        .definition(buffer.meaning_definition.trim().to_string())
+                        .pos(buffer.meaning_pos)
+                        .cefr_level(buffer.meaning_cefr)
+                        .build();
+
+                    tracing::debug!(
+                        "Creating meaning: {} (id={})",
+                        meaning.definition,
+                        meaning.id
+                    );
+
+                    let meaning_id = meaning.id;
+                    model.meaning_registry.add(meaning);
+                    model.word_registry.add_meaning(word_id, meaning_id);
+                }
+
+                state.words.edit_context = EditContext::None;
+                state.words.detail_selection = DetailSelection::Word(word_id);
+            }
+            DetailMessage::SaveNewMeaning => {
+                let buffer = &state.words.edit_buffer;
+                let definition = buffer.meaning_definition.trim();
+
+                if definition.is_empty() {
+                    // Cancel if empty
+                    state.words.edit_context = EditContext::None;
+                    return Task::none();
+                }
+
+                if let EditContext::NewMeaning(word_id) = state.words.edit_context {
+                    // Create meaning
+                    let meaning = Meaning::builder()
+                        .word_id(word_id)
+                        .definition(definition.to_string())
+                        .pos(buffer.meaning_pos)
+                        .cefr_level(buffer.meaning_cefr)
+                        .build();
+
+                    tracing::debug!(
+                        "Creating meaning: {} (id={}, word_id={})",
+                        meaning.definition,
+                        meaning.id,
+                        word_id
+                    );
+
+                    let meaning_id = meaning.id;
+                    model.meaning_registry.add(meaning);
+                    model.word_registry.add_meaning(word_id, meaning_id);
+
+                    state.words.edit_context = EditContext::None;
+                    state.words.detail_selection = DetailSelection::Meaning(meaning_id);
+                }
+            }
             DetailMessage::Cancel => {
-                state.words.edit_context = crate::ui::words::state::EditContext::None;
+                state.words.edit_context = EditContext::None;
+                if matches!(state.words.detail_selection, DetailSelection::None) {
+                    // If we were in NewWord context, detail_selection might already be None
+                }
             }
         },
 
