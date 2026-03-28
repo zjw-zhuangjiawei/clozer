@@ -1,8 +1,5 @@
-use std::fmt;
-
 use crate::assets;
 use crate::models::types::{MeaningId, WordId};
-use crate::models::{CefrLevel, PartOfSpeech};
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
@@ -17,40 +14,7 @@ use iced::Element;
 use iced::widget::{
     Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
 };
-use strum::VariantArray;
 use uuid::Uuid;
-
-/// Wrapper for CEFR level picker that handles None option.
-#[derive(Debug, Clone, PartialEq)]
-enum CefrLevelOption {
-    None,
-    Some(CefrLevel),
-}
-
-impl CefrLevelOption {
-    fn to_option(&self) -> Option<CefrLevel> {
-        match self {
-            CefrLevelOption::None => None,
-            CefrLevelOption::Some(level) => Some(*level),
-        }
-    }
-
-    fn from_option(opt: Option<CefrLevel>) -> Self {
-        match opt {
-            None => CefrLevelOption::None,
-            Some(level) => CefrLevelOption::Some(level),
-        }
-    }
-}
-
-impl fmt::Display for CefrLevelOption {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CefrLevelOption::None => write!(f, "None"),
-            CefrLevelOption::Some(level) => write!(f, "{}", level),
-        }
-    }
-}
 
 // Renders the words panel.
 pub fn view<'a>(
@@ -120,9 +84,6 @@ fn build_search_bar<'a>(
     _model: &'a Model,
     breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Search input
     let search_input = TextInput::new("Search words or definitions...", &words_state.query)
         .on_input(|s| WordsMessage::Search(SearchMessage::QueryChanged(s)))
@@ -379,9 +340,6 @@ fn build_word_node<'a>(
 
 /// Build word action buttons.
 fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -516,9 +474,6 @@ fn build_meaning_node<'a>(
 
 /// Build meaning action buttons.
 fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -543,9 +498,6 @@ fn build_tags_row<'a>(
     meaning: &'a crate::models::Meaning,
 ) -> Element<'a, WordsMessage> {
     let words_state = &state.words;
-
-    // Get theme colors
-    let colors = AppTheme::default().colors();
 
     // Tag chips
     let mut tag_chips: Vec<Element<'a, WordsMessage>> = meaning
@@ -693,9 +645,6 @@ fn build_action_bar<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     let meaning_selected_count = words_state.selection.meaning_count();
     let cloze_selected_count = words_state.selection.cloze_count();
 

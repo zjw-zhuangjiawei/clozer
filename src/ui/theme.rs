@@ -249,14 +249,29 @@ impl Spacing {
         xl: 24.0,
         xxl: 32.0,
     };
+
+    /// Detail panel section spacing (24px)
+    pub const DETAIL_SECTION: f32 = 24.0;
+    /// Detail panel item spacing (12px)
+    pub const DETAIL_ITEM: f32 = 12.0;
+    /// Detail panel label spacing (8px)
+    pub const DETAIL_LABEL: f32 = 8.0;
 }
 
 impl fmt::Display for Spacing {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={})",
-            self.xs, self.s, self.m, self.l, self.xl, self.xxl
+            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={}, DETAIL_SECTION={}, DETAIL_ITEM={}, DETAIL_LABEL={})",
+            self.xs,
+            self.s,
+            self.m,
+            self.l,
+            self.xl,
+            self.xxl,
+            Self::DETAIL_SECTION,
+            Self::DETAIL_ITEM,
+            Self::DETAIL_LABEL
         )
     }
 }

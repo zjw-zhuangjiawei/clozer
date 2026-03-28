@@ -41,7 +41,7 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
             .collect();
 
     let nav_bar = iced::widget::Row::with_children(nav_buttons).spacing(nav_spacing);
-    let (left_ratio, right_ratio) = breakpoint.column_ratio();
+    let (left_ratio, _right_ratio) = breakpoint.column_ratio();
 
     // Content based on current navigation view
     let content: Element<'a, Message> = match state.current_view {

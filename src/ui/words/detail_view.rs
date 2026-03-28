@@ -4,7 +4,7 @@ use crate::assets;
 use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
-use crate::ui::AppTheme;
+use crate::ui::components::detail::empty_state;
 use crate::ui::theme::ButtonSize;
 use crate::ui::words::message::{DetailMessage, WordsMessage};
 use crate::ui::words::state::{DetailSelection, EditBuffer, EditContext};
@@ -79,11 +79,11 @@ pub fn view<'a>(
 
 /// Renders the placeholder when nothing is selected.
 fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
-    Container::new(Text::new("Select an item to view details"))
-        .center_x(iced::Length::Fill)
-        .center_y(iced::Length::Fill)
-        .padding(20)
-        .into()
+    empty_state(
+        "No Selection",
+        "Select an item from the list to view details",
+    )
+    .map(WordsMessage::Detail)
 }
 
 /// View for creating a new word in the detail panel.
@@ -201,9 +201,6 @@ fn word_detail_view<'a>(
     word_content: String,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Get all meanings for this word
     let meaning_items: Vec<Element<'a, WordsMessage>> = model
         .word_registry
@@ -344,9 +341,6 @@ fn meaning_detail_view<'a>(
     tag_ids: &std::collections::BTreeSet<TagId>,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Get tag names
     let tag_names: Vec<String> = tag_ids
         .iter()
@@ -435,9 +429,6 @@ fn meaning_edit_view<'a>(
     word_content: String,
     buffer: &'a EditBuffer,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
@@ -534,9 +525,6 @@ fn cloze_detail_view<'a>(
     cloze: &Cloze,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Get the source meaning and word
     let (word_content, definition) = model
         .meaning_registry
