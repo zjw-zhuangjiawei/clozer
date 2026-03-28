@@ -32,4 +32,7 @@ pub enum Message {
 
     // Application close request (from subscription)
     CloseRequested,
+
+    // Window resize event for responsive layout
+    WindowResized(u16),
 }

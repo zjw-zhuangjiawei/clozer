@@ -5,6 +5,7 @@ use crate::models::types::MeaningId;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
+use crate::ui::theme::ButtonSize;
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text, button};
 
@@ -60,7 +61,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
 
             let remove_btn = Button::new(Text::new("remove"))
                 .style(button::secondary)
-                .padding([2, 6])
+                .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(QueueMessage::Action(QueueActionMessage::Remove(item_id)));
 
             Row::new()
@@ -89,14 +90,14 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
     let select_buttons = Row::new()
         .push(
             Button::new(Text::new("Select All"))
-                .style(button::secondary)
-                .padding([8, 16])
+                .style(button::primary)
+                .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(QueueMessage::Selection(QueueSelectionMessage::SelectAll)),
         )
         .push(
             Button::new(Text::new("Select None"))
-                .style(button::secondary)
-                .padding([8, 16])
+                .style(button::primary)
+                .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(QueueMessage::Selection(QueueSelectionMessage::DeselectAll)),
         )
         .spacing(5);
@@ -107,8 +108,8 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
 
     let clear_button: Element<'a, QueueMessage> = if has_completed {
         Button::new(Text::new("Clear Done"))
-            .style(button::secondary)
-            .padding([8, 16])
+            .style(button::danger)
+            .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(QueueMessage::Action(QueueActionMessage::ClearCompleted))
             .into()
     } else {
@@ -120,12 +121,8 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
             (selected_count > 0).then_some(QueueMessage::Action(QueueActionMessage::Process)),
         )
         .width(iced::Length::Fill)
-        .style(if selected_count > 0 {
-            button::primary
-        } else {
-            button::secondary
-        })
-        .padding([12, 16]);
+        .style(button::primary)
+        .padding(ButtonSize::Large.to_iced_padding());
 
     Column::new()
         .push(Text::new("Queue").size(24))

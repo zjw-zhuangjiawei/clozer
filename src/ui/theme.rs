@@ -3,7 +3,9 @@
 //! Provides consistent styling across all UI components with support
 //! for light and dark themes.
 
-use iced::{Color, Theme};
+use iced::{Color, Length, Theme};
+use std::fmt;
+use strum::{Display, VariantArray};
 
 /// Application theme variants.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -127,5 +129,160 @@ impl ThemeColors {
 impl From<AppTheme> for Option<Theme> {
     fn from(value: AppTheme) -> Self {
         Some(value.to_iced_theme())
+    }
+}
+
+/// Button size variants for consistent sizing across the application.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum ButtonSize {
+    /// Small button (compact UI)
+    Small,
+    /// Medium button (default for most cases)
+    Medium,
+    /// Standard button (default)
+    #[default]
+    Standard,
+    /// Large button (prominent actions)
+    Large,
+}
+
+impl ButtonSize {
+    /// Returns the padding (horizontal, vertical) for this button size.
+    pub fn padding(self) -> (f32, f32) {
+        match self {
+            ButtonSize::Small => (8.0, 4.0),
+            ButtonSize::Medium => (12.0, 6.0),
+            ButtonSize::Standard => (16.0, 8.0),
+            ButtonSize::Large => (24.0, 12.0),
+        }
+    }
+
+    /// Returns the text size for this button size.
+    pub fn text_size(self) -> f32 {
+        match self {
+            ButtonSize::Small => 12.0,
+            ButtonSize::Medium => 14.0,
+            ButtonSize::Standard => 14.0,
+            ButtonSize::Large => 16.0,
+        }
+    }
+}
+
+/// Responsive breakpoint for layout adaptation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum Breakpoint {
+    /// Mobile devices (width < 600px)
+    Mobile,
+    /// Tablet devices (600px <= width < 1024px)
+    Tablet,
+    /// Desktop devices (width >= 1024px)
+    #[default]
+    Desktop,
+}
+
+impl Breakpoint {
+    /// Determine breakpoint from window width.
+    pub fn from_width(width: f32) -> Self {
+        if width < 600.0 {
+            Breakpoint::Mobile
+        } else if width < 1024.0 {
+            Breakpoint::Tablet
+        } else {
+            Breakpoint::Desktop
+        }
+    }
+
+    /// Returns the sidebar-to-content ratio for this breakpoint.
+    /// Returns (sidebar_fraction, content_fraction).
+    ///
+    /// Ratios:
+    /// - Desktop (>1024px): 4:6
+    /// - Tablet (600-1024px): 3:7
+    /// - Mobile (<=600px): single column
+    pub fn column_ratio(self) -> (f32, f32) {
+        match self {
+            Breakpoint::Mobile => (0.0, 1.0),  // Single column, no sidebar
+            Breakpoint::Tablet => (0.3, 0.7),  // 3:7 ratio
+            Breakpoint::Desktop => (0.4, 0.6), // 4:6 ratio
+        }
+    }
+
+    /// Returns the sidebar width as a Length for this breakpoint.
+    pub fn sidebar_width(self) -> Length {
+        match self {
+            Breakpoint::Mobile => Length::Fill,
+            Breakpoint::Tablet => Length::Fixed(200.0),
+            Breakpoint::Desktop => Length::Fixed(250.0),
+        }
+    }
+
+    /// Check if content should be shown in single column.
+    pub fn is_single_column(self) -> bool {
+        matches!(self, Breakpoint::Mobile)
+    }
+}
+
+/// Spacing constants for consistent layout spacing.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Spacing {
+    /// Extra small spacing (4px)
+    pub xs: f32,
+    /// Small spacing (8px)
+    pub s: f32,
+    /// Medium spacing (12px)
+    pub m: f32,
+    /// Large spacing (16px)
+    pub l: f32,
+    /// Extra large spacing (24px)
+    pub xl: f32,
+    /// Extra extra large spacing (32px)
+    pub xxl: f32,
+}
+
+impl Spacing {
+    /// Default spacing constants.
+    pub const DEFAULT: Self = Self {
+        xs: 4.0,
+        s: 8.0,
+        m: 12.0,
+        l: 16.0,
+        xl: 24.0,
+        xxl: 32.0,
+    };
+}
+
+impl fmt::Display for Spacing {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={})",
+            self.xs, self.s, self.m, self.l, self.xl, self.xxl
+        )
+    }
+}
+
+/// Default application styles for components.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ApplicationStyle {
+    /// Default button size
+    pub button_size: ButtonSize,
+    /// Default spacing
+    pub spacing: Spacing,
+}
+
+impl ApplicationStyle {
+    /// Create a new application style with defaults.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Returns the default button padding.
+    pub fn button_padding(&self) -> (f32, f32) {
+        self.button_size.padding()
+    }
+
+    /// Returns the default button text size.
+    pub fn button_text_size(&self) -> f32 {
+        self.button_size.text_size()
     }
 }

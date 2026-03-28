@@ -94,6 +94,12 @@ impl App {
                 self.on_exit();
                 iced::exit()
             }
+
+            // Window resize for responsive layout
+            Message::WindowResized(width) => {
+                self.window_state.window_width = width;
+                Task::none()
+            }
         }
     }
 
@@ -109,10 +115,13 @@ impl App {
 
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
-        // Listen for window close request to save data
+        // Listen for window close request and resize events
         iced::event::listen_with(|event, _status, _id| match event {
             iced::Event::Window(iced::window::Event::CloseRequested) => {
                 Some(Message::CloseRequested)
+            }
+            iced::Event::Window(iced::window::Event::Resized(size)) => {
+                Some(Message::WindowResized(size.width as u16))
             }
             _ => None,
         })

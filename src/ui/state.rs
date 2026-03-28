@@ -18,6 +18,8 @@ pub struct MainWindowState {
     pub settings: SettingsState,
     /// Current navigation view
     pub current_view: NavItem,
+    /// Current window width for responsive layout
+    pub window_width: u16,
 }
 
 impl MainWindowState {
@@ -28,6 +30,7 @@ impl MainWindowState {
             queue: QueueState::new(),
             settings: SettingsState::new(),
             current_view: NavItem::default(),
+            window_width: 1024, // Default width for desktop breakpoint
         }
     }
 }

@@ -8,8 +8,9 @@ pub use crate::ui::state::MainWindowState;
 
 use crate::message::Message;
 use crate::state::Model;
+use crate::ui::theme::Breakpoint;
 use crate::ui::words::message::WordsMessage;
-use iced::{Element, Task};
+use iced::{Element, FillPortion, Task};
 
 /// Renders the main window by composing words, queue, and settings panels.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Message> {
@@ -33,29 +34,65 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
 
     let nav_bar = iced::widget::Row::with_children(nav_buttons).spacing(10);
 
+    // Determine breakpoint from window width for responsive layout
+    let breakpoint = Breakpoint::from_width(state.window_width as f32);
+    let (left_ratio, right_ratio) = breakpoint.column_ratio();
+
     // Content based on current navigation view
     let content: Element<'a, Message> = match state.current_view {
         NavItem::Words => {
             let left_panel = crate::ui::words::view(state, model).map(Message::Words);
-            // Hide queue panel when in Words view, show full width
-            iced::widget::column![left_panel]
+            // Show words panel, hide queue panel
+            if breakpoint.is_single_column() {
+                // Mobile: single column, full width
+                iced::widget::column![left_panel]
+                    .spacing(20)
+                    .padding(20)
+                    .into()
+            } else {
+                // Tablet/Desktop: words panel takes left portion
+                iced::widget::row![
+                    iced::widget::container(left_panel)
+                        .width(FillPortion((left_ratio * 100.0) as u16))
+                        .padding(20),
+                ]
                 .spacing(20)
-                .padding(20)
                 .into()
+            }
         }
         NavItem::Queue => {
             let queue_panel = crate::ui::queue::view(model).map(Message::Queue);
-            iced::widget::column![queue_panel]
+            if breakpoint.is_single_column() {
+                iced::widget::column![queue_panel]
+                    .spacing(20)
+                    .padding(20)
+                    .into()
+            } else {
+                iced::widget::row![
+                    iced::widget::container(queue_panel)
+                        .width(FillPortion((left_ratio * 100.0) as u16))
+                        .padding(20),
+                ]
                 .spacing(20)
-                .padding(20)
                 .into()
+            }
         }
         NavItem::Settings => {
             let settings_panel = crate::ui::settings::view::view(model).map(Message::Settings);
-            iced::widget::column![settings_panel]
+            if breakpoint.is_single_column() {
+                iced::widget::column![settings_panel]
+                    .spacing(20)
+                    .padding(20)
+                    .into()
+            } else {
+                iced::widget::row![
+                    iced::widget::container(settings_panel)
+                        .width(FillPortion((left_ratio * 100.0) as u16))
+                        .padding(20),
+                ]
                 .spacing(20)
-                .padding(20)
                 .into()
+            }
         }
     };
 

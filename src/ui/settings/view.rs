@@ -2,8 +2,9 @@
 
 use super::message::{ModelMessage, ProviderMessage, SettingsMessage};
 use crate::state::Model;
+use crate::ui::theme::ButtonSize;
 use iced::Element;
-use iced::widget::{button, row, text};
+use iced::widget::{Button, button, row, text};
 
 /// Renders the settings page.
 pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
@@ -31,9 +32,13 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
                     row![
                         text(&p.name).width(iced::Length::Fill),
                         text(format!("{:?}", p.provider_type)),
-                        button("Edit")
+                        Button::new(text("Edit"))
+                            .style(button::secondary)
+                            .padding(ButtonSize::Standard.to_iced_padding())
                             .on_press(SettingsMessage::Provider(ProviderMessage::Edit(p.id))),
-                        button("Delete")
+                        Button::new(text("Delete"))
+                            .style(button::danger)
+                            .padding(ButtonSize::Standard.to_iced_padding())
                             .on_press(SettingsMessage::Provider(ProviderMessage::Delete(p.id))),
                     ]
                     .spacing(10),
@@ -45,7 +50,12 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
     let providers_section = iced::widget::Column::new()
         .push(text("AI Providers").size(18))
         .push(iced::widget::Column::with_children(providers_list).spacing(5))
-        .push(button("Add Provider").on_press(SettingsMessage::Provider(ProviderMessage::Add)))
+        .push(
+            Button::new(text("Add Provider"))
+                .style(button::primary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(SettingsMessage::Provider(ProviderMessage::Add)),
+        )
         .spacing(10);
 
     // AI Models Section
@@ -65,8 +75,13 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
                         text(&m.name).width(iced::Length::Fill),
                         text(provider_name),
                         text(&m.model_id),
-                        button("Edit").on_press(SettingsMessage::Model(ModelMessage::Edit(m.id))),
-                        button("Delete")
+                        Button::new(text("Edit"))
+                            .style(button::secondary)
+                            .padding(ButtonSize::Standard.to_iced_padding())
+                            .on_press(SettingsMessage::Model(ModelMessage::Edit(m.id))),
+                        Button::new(text("Delete"))
+                            .style(button::danger)
+                            .padding(ButtonSize::Standard.to_iced_padding())
                             .on_press(SettingsMessage::Model(ModelMessage::Delete(m.id))),
                     ]
                     .spacing(10),
@@ -78,7 +93,12 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
     let models_section = iced::widget::Column::new()
         .push(text("AI Models").size(18))
         .push(iced::widget::Column::with_children(models_list).spacing(5))
-        .push(button("Add Model").on_press(SettingsMessage::Model(ModelMessage::Add)))
+        .push(
+            Button::new(text("Add Model"))
+                .style(button::primary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(SettingsMessage::Model(ModelMessage::Add)),
+        )
         .spacing(10);
 
     // Selected Model Section

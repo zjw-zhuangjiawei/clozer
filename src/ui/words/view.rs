@@ -7,6 +7,7 @@ use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
+use crate::ui::theme::ButtonSize;
 use crate::ui::words::message::{
     BatchMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage, SearchMessage,
     SelectionMessage, TagMessage, WordMessage, WordsMessage,
@@ -97,6 +98,9 @@ fn build_search_bar<'a>(
     words_state: &'a WordsState,
     _model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Search input
     let search_input = TextInput::new("Search words or definitions...", &words_state.query)
         .on_input(|s| WordsMessage::Search(SearchMessage::QueryChanged(s)))
@@ -124,12 +128,12 @@ fn build_search_bar<'a>(
     {
         Button::new(Text::new("Clear"))
             .style(button::secondary)
-            .padding([8, 16])
+            .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(WordsMessage::Filter(FilterMessage::Clear))
     } else {
         Button::new(Text::new("Clear"))
             .style(button::secondary)
-            .padding([8, 16])
+            .padding(ButtonSize::Standard.to_iced_padding())
     };
 
     Row::new()
@@ -232,6 +236,9 @@ fn build_word_node<'a>(
     let is_selected = words_state.selection.is_word_selected(word);
     let is_partial = words_state.selection.is_word_partial(word);
 
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Expand/collapse icon (as button)
     let expand_icon_name = if is_expanded {
         "keyboard_arrow_down_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
@@ -247,7 +254,7 @@ fn build_word_node<'a>(
             .height(iced::Length::Fixed(16.0)),
     )
     .style(button::secondary)
-    .padding([2, 2])
+    .padding(ButtonSize::Small.to_iced_padding())
     .on_press(if is_expanded {
         WordsMessage::Word(WordMessage::Collapse { id: word.id })
     } else {
@@ -273,7 +280,7 @@ fn build_word_node<'a>(
     // Word content (display only - not editable)
     let word_content: Element<'a, WordsMessage> = Button::new(Text::new(&word.content).size(16))
         .style(button::secondary)
-        .padding([2, 6])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::SelectWord(word.id)))
         .into();
 
@@ -291,9 +298,6 @@ fn build_word_node<'a>(
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Build expanded content if needed
     if is_expanded {
         let mut content = Column::new()
@@ -308,8 +312,8 @@ fn build_word_node<'a>(
             // Add meaning button
             content = content.push(
                 Button::new(Text::new("+ Add Meaning"))
-                    .style(button::secondary)
-                    .padding([4, 8])
+                    .style(button::primary)
+                    .padding(ButtonSize::Medium.to_iced_padding())
                     .on_press(WordsMessage::Meaning(MeaningMessage::AddStart {
                         word_id: word.id,
                     })),
@@ -353,6 +357,9 @@ fn build_word_node<'a>(
 
 /// Build word action buttons.
 fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -363,7 +370,7 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
 
     Button::new(delete_icon)
         .style(button::danger)
-        .padding([2, 6])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Word(WordMessage::Delete {
             id: word_id.into(),
         }))
@@ -372,6 +379,9 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
 
 /// Build the add meaning inline form.
 fn build_add_meaning_form<'a>(words_state: &'a WordsState) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     let pos_options = PartOfSpeech::VARIANTS;
     let pos_pick_list = PickList::new(
         pos_options.to_vec(),
@@ -410,12 +420,12 @@ fn build_add_meaning_form<'a>(words_state: &'a WordsState) -> Element<'a, WordsM
 
     let save_btn = Button::new(Text::new("Save"))
         .style(button::primary)
-        .padding([4, 8])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Meaning(MeaningMessage::AddSave));
 
     let cancel_btn = Button::new(Text::new("Cancel"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Meaning(MeaningMessage::AddCancel));
 
     Row::new()
@@ -482,7 +492,7 @@ fn build_meaning_node<'a>(
     let definition: Element<'a, WordsMessage> =
         Button::new(Text::new(&meaning.definition).size(14))
             .style(button::secondary)
-            .padding([2, 4])
+            .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
                 meaning.id,
             )))
@@ -519,7 +529,7 @@ fn build_meaning_node<'a>(
             let text = cloze.render_blanks();
             Button::new(Text::new(text).size(11))
                 .style(button::secondary)
-                .padding([2, 4])
+                .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::Detail(DetailMessage::SelectCloze(*cloze_id)))
                 .into()
         })
@@ -546,6 +556,9 @@ fn build_meaning_node<'a>(
 
 /// Build meaning action buttons.
 fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -556,7 +569,7 @@ fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage>
 
     Button::new(delete_icon)
         .style(button::danger)
-        .padding([2, 6])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Meaning(MeaningMessage::Delete {
             id: meaning_id.into(),
         }))
@@ -571,6 +584,9 @@ fn build_tags_row<'a>(
 ) -> Element<'a, WordsMessage> {
     let words_state = &state.words;
 
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Tag chips
     let mut tag_chips: Vec<Element<'a, WordsMessage>> = meaning
         .tag_ids
@@ -579,7 +595,7 @@ fn build_tags_row<'a>(
         .map(|tag| {
             Button::new(Text::new(&tag.name).size(11))
                 .style(button::secondary)
-                .padding([2, 6])
+                .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::Tag(TagMessage::RemoveFromMeaning {
                     meaning_id: meaning.id,
                     tag_id: tag.id,
@@ -592,7 +608,7 @@ fn build_tags_row<'a>(
     tag_chips.push(
         Button::new(Text::new("+").size(11))
             .style(button::secondary)
-            .padding([2, 6])
+            .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::Tag(TagMessage::ShowDropdown {
                 meaning_id: meaning.id,
             }))
@@ -717,6 +733,9 @@ fn build_action_bar<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     let meaning_selected_count = words_state.selection.meaning_count();
     let cloze_selected_count = words_state.selection.cloze_count();
 
@@ -734,7 +753,7 @@ fn build_action_bar<'a>(
 
         let delete_btn = Button::new(Text::new("Delete Clozes"))
             .style(button::danger)
-            .padding([8, 16])
+            .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(WordsMessage::Batch(BatchMessage::DeleteSelectedClozes));
 
         return Row::new()
@@ -760,7 +779,7 @@ fn build_action_bar<'a>(
 
         let add_btn = Button::new(Text::new("Add Word"))
             .style(button::primary)
-            .padding([8, 16])
+            .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(WordsMessage::Word(WordMessage::Create {
                 content: words_state.query.clone(),
             }));
@@ -778,33 +797,33 @@ fn build_action_bar<'a>(
                 .push(
                     Button::new(Text::new("Add Tag ▾"))
                         .style(button::primary)
-                        .padding([8, 16]),
+                        .padding(ButtonSize::Standard.to_iced_padding()),
                 )
                 .push(build_batch_tag_dropdown(dropdown, model))
                 .spacing(2)
                 .into(),
             _ => Button::new(Text::new("Add Tag"))
                 .style(button::secondary)
-                .padding([8, 16])
+                .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(WordsMessage::Tag(TagMessage::ShowBatchDropdown))
                 .into(),
         }
     } else {
         Button::new(Text::new("Add Tag"))
             .style(button::secondary)
-            .padding([8, 16])
+            .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(WordsMessage::Tag(TagMessage::ShowBatchDropdown))
             .into()
     };
 
     let queue_btn = Button::new(Text::new("Queue"))
         .style(button::primary)
-        .padding([8, 16])
+        .padding(ButtonSize::Standard.to_iced_padding())
         .on_press(WordsMessage::Batch(BatchMessage::QueueSelected));
 
     let delete_btn = Button::new(Text::new("Delete"))
         .style(button::danger)
-        .padding([8, 16])
+        .padding(ButtonSize::Standard.to_iced_padding())
         .on_press(WordsMessage::Batch(BatchMessage::DeleteSelected));
 
     Row::new()

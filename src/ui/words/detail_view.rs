@@ -4,6 +4,8 @@ use crate::assets;
 use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
+use crate::ui::AppTheme;
+use crate::ui::theme::ButtonSize;
 use crate::ui::words::message::{DetailMessage, WordsMessage};
 use crate::ui::words::state::{DetailSelection, EditBuffer, EditContext};
 use iced::Element;
@@ -78,6 +80,9 @@ fn word_detail_view<'a>(
     word_content: String,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Get all meanings for this word
     let meaning_items: Vec<Element<'a, WordsMessage>> = model
         .word_registry
@@ -95,7 +100,7 @@ fn word_detail_view<'a>(
                         .push(
                             Button::new(Text::new(&meaning.definition).size(14))
                                 .style(button::secondary)
-                                .padding([4, 8])
+                                .padding(ButtonSize::Medium.to_iced_padding())
                                 .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
                                     meaning.id,
                                 ))),
@@ -111,7 +116,7 @@ fn word_detail_view<'a>(
 
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Clear));
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
@@ -122,7 +127,7 @@ fn word_detail_view<'a>(
         .height(iced::Length::Fixed(16.0));
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(
             word_id.into(),
         )));
@@ -147,19 +152,22 @@ fn word_detail_view<'a>(
 
 /// Renders word edit form in the detail panel.
 fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Clear));
 
     let save_btn = Button::new(Text::new("Save"))
         .style(button::primary)
-        .padding([4, 12])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Save));
 
     let cancel_btn = Button::new(Text::new("Cancel"))
         .style(button::secondary)
-        .padding([4, 12])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Cancel));
 
     Column::new()
@@ -202,6 +210,9 @@ fn meaning_detail_view<'a>(
     tag_ids: &std::collections::BTreeSet<TagId>,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Get tag names
     let tag_names: Vec<String> = tag_ids
         .iter()
@@ -216,8 +227,8 @@ fn meaning_detail_view<'a>(
             let text = cloze.render_blanks();
             Button::new(Text::new(text).size(13))
                 .style(button::secondary)
+                .padding(ButtonSize::Medium.to_iced_padding())
                 .width(iced::Length::Fill)
-                .padding([6, 8])
                 .on_press(WordsMessage::Detail(DetailMessage::SelectCloze(*cloze_id)))
                 .into()
         })
@@ -225,7 +236,7 @@ fn meaning_detail_view<'a>(
 
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Clear));
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
@@ -236,7 +247,7 @@ fn meaning_detail_view<'a>(
         .height(iced::Length::Fixed(16.0));
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::StartEditMeaning(
             meaning_id,
         )));
@@ -290,19 +301,22 @@ fn meaning_edit_view<'a>(
     word_content: String,
     buffer: &'a EditBuffer,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Clear));
 
     let save_btn = Button::new(Text::new("Save"))
         .style(button::primary)
-        .padding([4, 12])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Save));
 
     let cancel_btn = Button::new(Text::new("Cancel"))
         .style(button::secondary)
-        .padding([4, 12])
+        .padding(ButtonSize::Medium.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Cancel));
 
     let pos_selected = buffer.meaning_pos;
@@ -341,7 +355,7 @@ fn meaning_edit_view<'a>(
                         .push(
                             Button::new(Text::new(pos_selected.to_string()).size(14))
                                 .style(button::secondary)
-                                .padding([4, 8]),
+                                .padding(ButtonSize::Medium.to_iced_padding()),
                         )
                         .spacing(4),
                 )
@@ -362,7 +376,7 @@ fn meaning_edit_view<'a>(
                                 .size(14),
                             )
                             .style(button::secondary)
-                            .padding([4, 8]),
+                            .padding(ButtonSize::Medium.to_iced_padding()),
                         )
                         .spacing(4),
                 )
@@ -386,6 +400,9 @@ fn cloze_detail_view<'a>(
     cloze: &Cloze,
     model: &'a Model,
 ) -> Element<'a, WordsMessage> {
+    // Get theme colors
+    let colors = AppTheme::default().colors();
+
     // Get the source meaning and word
     let (word_content, definition) = model
         .meaning_registry
@@ -401,7 +418,7 @@ fn cloze_detail_view<'a>(
 
     let close_btn = Button::new(Text::new("×"))
         .style(button::secondary)
-        .padding([4, 8])
+        .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Detail(DetailMessage::Clear));
 
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
@@ -431,7 +448,7 @@ fn cloze_detail_view<'a>(
         .push(
             Button::new(delete_icon)
                 .style(button::danger)
-                .padding([4, 8])
+                .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::Cloze(
                     crate::ui::words::message::ClozeMessage::Delete { id: cloze_id },
                 )),
