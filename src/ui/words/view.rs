@@ -153,10 +153,10 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
                 }
                 // Check meanings
                 for mid in &word.meaning_ids {
-                    if let Some(meaning) = model.meaning_registry.get(*mid) {
-                        if meaning.definition.to_lowercase().contains(&query) {
-                            return true;
-                        }
+                    if let Some(meaning) = model.meaning_registry.get(*mid)
+                        && meaning.definition.to_lowercase().contains(&query)
+                    {
+                        return true;
                     }
                 }
                 false
@@ -284,7 +284,7 @@ fn build_word_node<'a>(
         .push(word_content)
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(meaning_count)
-        .push(build_word_actions(word.id.into()))
+        .push(build_word_actions(word.id))
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
@@ -353,9 +353,7 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
     Button::new(delete_icon)
         .style(button::danger)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Word(WordMessage::Delete {
-            id: word_id.into(),
-        }))
+        .on_press(WordsMessage::Word(WordMessage::Delete { id: word_id }))
         .into()
 }
 
@@ -434,7 +432,7 @@ fn build_meaning_node<'a>(
         .push(definition)
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(cloze_status)
-        .push(build_meaning_actions(meaning.id.into()))
+        .push(build_meaning_actions(meaning.id))
         .spacing(8)
         .align_y(iced::Alignment::Center);
 
@@ -489,7 +487,7 @@ fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage>
         .style(button::danger)
         .padding(ButtonSize::Small.to_iced_padding())
         .on_press(WordsMessage::Meaning(MeaningMessage::Delete {
-            id: meaning_id.into(),
+            id: meaning_id,
         }))
         .into()
 }
@@ -594,7 +592,7 @@ fn build_tag_dropdown<'a>(
                     } else {
                         MeaningId(Uuid::nil())
                     },
-                    tag_id: tag.id.into(),
+                    tag_id: tag.id,
                 }))
                 .into()
         })
@@ -656,7 +654,7 @@ fn build_action_bar<'a>(
         let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
 
         // Export dropdown
-        let export_options = vec!["Plaintext", "TypstPdf"];
+        let export_options = ["Plaintext", "TypstPdf"];
         let export_dropdown = PickList::new(export_options.to_vec(), None::<&str>, |_| {
             WordsMessage::Export(ExportMessage::ToPlaintext)
         })

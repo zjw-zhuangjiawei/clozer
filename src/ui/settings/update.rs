@@ -10,10 +10,10 @@ pub fn update(message: SettingsMessage, model: &mut Model) -> Task<SettingsMessa
     match message {
         SettingsMessage::General(msg) => match msg {
             GeneralSettingsMessage::LogLevelChanged(level) => {
-                Arc::get_mut(&mut model.app_config).map(|c| {
+                if let Some(c) = Arc::get_mut(&mut model.app_config) {
                     c.log_level = level;
                     c.save_to_file();
-                });
+                }
                 Task::none()
             }
         },

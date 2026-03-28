@@ -24,10 +24,10 @@ pub fn view<'a>(
     }
 
     // NewMeaning mode - show form for adding new meaning to a word
-    if let EditContext::NewMeaning(word_id) = edit_mode {
-        if let Some(word) = model.word_registry.get(word_id) {
-            return new_meaning_view(word.content.clone(), edit_buffer).map(WordsMessage::Detail);
-        }
+    if let EditContext::NewMeaning(word_id) = edit_mode
+        && let Some(word) = model.word_registry.get(word_id)
+    {
+        return new_meaning_view(word.content.clone(), edit_buffer).map(WordsMessage::Detail);
     }
 
     match selected_detail {
@@ -36,7 +36,7 @@ pub fn view<'a>(
                 if edit_mode == EditContext::Word(word_id) {
                     word_edit_view(word.id.into(), edit_buffer)
                 } else {
-                    word_detail_view(word.id.into(), word.content.clone(), model)
+                    word_detail_view(word.id, word.content.clone(), model)
                 }
             } else {
                 placeholder_view()
@@ -50,10 +50,10 @@ pub fn view<'a>(
                     .map(|w| w.content.clone())
                     .unwrap_or_default();
                 if edit_mode == EditContext::Meaning(meaning_id) {
-                    meaning_edit_view(meaning.id.into(), word_content, edit_buffer)
+                    meaning_edit_view(meaning.id, word_content, edit_buffer)
                 } else {
                     meaning_detail_view(
-                        meaning.id.into(),
+                        meaning.id,
                         word_content,
                         meaning.definition.clone(),
                         meaning.pos,
@@ -68,7 +68,7 @@ pub fn view<'a>(
         }
         Some(DetailSelection::Cloze(cloze_id)) => {
             if let Some(cloze) = model.cloze_registry.get(cloze_id) {
-                cloze_detail_view(cloze_id.into(), cloze, model)
+                cloze_detail_view(cloze_id, cloze, model)
             } else {
                 placeholder_view()
             }
@@ -89,7 +89,7 @@ fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
 /// View for creating a new word in the detail panel.
 fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
     let word_input = text_input("Word *", &buffer.word_content)
-        .on_input(|s| DetailMessage::EditNewWordContent(s))
+        .on_input(DetailMessage::EditNewWordContent)
         .width(iced::Length::Fill);
 
     let lang_string = buffer
@@ -105,7 +105,7 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
         .width(iced::Length::Fill);
 
     let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
-        .on_input(|s| DetailMessage::EditMeaningDefinition(s))
+        .on_input(DetailMessage::EditMeaningDefinition)
         .width(iced::Length::Fill);
 
     let pos_text = buffer.meaning_pos.to_string();
@@ -159,7 +159,7 @@ fn new_meaning_view<'a>(
     buffer: &'a EditBuffer,
 ) -> Element<'a, DetailMessage> {
     let def_input = text_input("Definition *", &buffer.meaning_definition)
-        .on_input(|s| DetailMessage::EditMeaningDefinition(s))
+        .on_input(DetailMessage::EditMeaningDefinition)
         .width(iced::Length::Fill);
 
     let pos_text = buffer.meaning_pos.to_string();
@@ -262,9 +262,7 @@ fn word_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(
-            word_id.into(),
-        )));
+        .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(word_id)));
 
     let word_content = word_content.clone();
     Column::new()

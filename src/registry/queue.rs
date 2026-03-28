@@ -75,6 +75,10 @@ impl QueueRegistry {
         self.items.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     pub fn get_items(&self) -> impl Iterator<Item = &QueueItem> {
         self.items.values()
     }

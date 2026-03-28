@@ -5,9 +5,10 @@ use typed_builder::TypedBuilder;
 use super::{MeaningId, TagId, WordId};
 
 /// Part of speech categories for classifying words.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray, Default)]
 pub enum PartOfSpeech {
     // Major
+    #[default]
     Noun,
     Verb,
     Adjective,

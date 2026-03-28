@@ -301,12 +301,6 @@ pub struct NewMeaningForm {
     pub cefr_level: Option<CefrLevel>,
 }
 
-impl Default for PartOfSpeech {
-    fn default() -> Self {
-        PartOfSpeech::Noun
-    }
-}
-
 impl NewMeaningForm {
     /// Check if currently adding a meaning.
     pub fn is_active(&self) -> bool {
