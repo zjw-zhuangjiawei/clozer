@@ -57,17 +57,36 @@ src/ui/
 ├── nav.rs        # Navigation items
 ├── theme.rs      # Theme definitions (AppTheme, ThemeColors)
 ├── components/
+│   ├── button.rs    # Reusable button component
 │   ├── checkbox.rs
+│   ├── detail.rs    # Detail panel component
 │   └── mod.rs
 ├── queue/        # Queue view sub-module
+│   ├── handlers.rs  # Event handlers
+│   ├── message.rs
+│   ├── state.rs
+│   ├── update.rs
+│   └── view.rs
 ├── settings/     # Settings view sub-module
+│   ├── handlers.rs  # Event handlers
+│   ├── message.rs
+│   ├── state.rs
+│   ├── update.rs
+│   └── view.rs
 └── words/       # Words view sub-module
+    ├── detail_view.rs
+    ├── handlers.rs  # Event handlers
+    ├── message.rs
+    ├── state.rs
+    ├── update.rs
+    └── view.rs
 ```
 
 Each UI feature follows a consistent pattern:
 
 ```
 feature/
+├── handlers.rs   # Event handlers (button clicks, input changes, etc.)
 ├── message.rs    # Message enum for this feature
 ├── state.rs      # State struct for this feature
 ├── update.rs     # Update logic

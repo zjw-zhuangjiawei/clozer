@@ -252,6 +252,56 @@ let child_tag = Tag::builder()
 
 ---
 
+## Newtype ID Types
+
+For enhanced type safety, the codebase uses newtype ID wrappers around UUIDs in `src/models/types.rs`:
+
+```rust
+// From src/models/types.rs
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct WordId(pub Uuid);
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct MeaningId(pub Uuid);
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct TagId(pub Uuid);
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct ClozeId(pub Uuid);
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct ProviderId(pub Uuid);
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Serialize, Deserialize, Default,
+)]
+pub struct ModelId(pub Uuid);
+```
+
+Each ID type implements:
+- `new()` - Create a new random ID
+- `Display` - Format as string
+- `From<Uuid>` / `From<ID> for Uuid` - Conversions
+
+---
+
 ## Derive Conventions
 
 Add these derives to data models:

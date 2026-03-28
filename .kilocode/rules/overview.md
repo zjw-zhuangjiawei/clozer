@@ -74,48 +74,36 @@ The application follows Clean Architecture with five distinct layers:
 ```toml
 [package]
 name = "clozer"
+version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# GUI
 iced = { version = "0.14.0", features = ["tokio", "svg"] }
-rfd = "0.17"
-
-# Core
-uuid = { version = "1", features = ["v4", "serde"] }
-rand = "0.10.0"
-typed-builder = "0.23.2"
-derive_more = { version = "2.1.1", features = ["full"] }
-thiserror = "2.0.18"
-either = "1.15.0"
-
-# Enums
-strum = { version = "0.27.2", features = ["derive"] }
-
-# Persistence
 redb = "3.1.0"
 rmp-serde = "1.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-
-# AI/LLM Integration
+uuid = { version = "1", features = ["v4", "serde"] }
+rand = "0.10.0"
+tokio = { version = "1.49.0", features = ["full"] }
+either = "1.15.0"
+typed-builder = "0.23.2"
+derive_more = { version = "2.1.1", features = ["full"] }
+thiserror = "2.0.18"
 rig-core = "0.31.0"
 reqwest = "0.13.2"
-tokio = { version = "1.49.0", features = ["full"] }
-
-# Configuration
-clap = { version = "4.5", features = ["derive"] }
-dirs = "6.0.0"
-envy = "0.4.2"
-toml = "0.9.8"
-
-# Utilities
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
 langtag = { version = "1.1.0", features = ["serde"] }
 fancy-regex = "0.17.0"
 once_cell = "1.21.3"
+strum = { version = "0.27.2", features = ["derive"] }
 include_dir = { version = "0.7.4", features = ["glob", "metadata"] }
-tracing = "0.1.44"
-tracing-subscriber = "0.3.22"
+envy = "0.4.2"
+dirs = "6.0.0"
+clap = { version = "4.5", features = ["derive"] }
+toml = "0.9.8"
+rfd = "0.17"
 
 # Platform-specific
 [target.'cfg(windows)'.dependencies]

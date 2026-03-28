@@ -31,6 +31,7 @@ src/
 │   ├── tag.rs        # Hierarchical tags
 │   ├── model.rs      # LLM model config
 │   ├── provider.rs   # LLM provider config
+│   ├── types.rs      # Newtype ID types (WordId, MeaningId, etc.)
 │   └── mod.rs
 ├── registry/         # Data access layer with secondary indexes + dirty tracking
 │   ├── word.rs
@@ -68,24 +69,29 @@ src/
     ├── nav.rs        # Navigation items
     ├── theme.rs      # Theme definitions (AppTheme, ThemeColors)
     ├── components/   # Reusable UI components
+    │   ├── button.rs
     │   ├── checkbox.rs
+    │   ├── detail.rs
     │   └── mod.rs
     ├── queue/        # Queue view sub-module
+    │   ├── handlers.rs
     │   ├── message.rs
     │   ├── state.rs
     │   ├── update.rs
     │   └── view.rs
     ├── settings/     # Settings view sub-module
+    │   ├── handlers.rs
     │   ├── message.rs
     │   ├── state.rs
     │   ├── update.rs
     │   └── view.rs
     └── words/        # Words view sub-module
+        ├── detail_view.rs
+        ├── handlers.rs
         ├── message.rs
         ├── state.rs
         ├── update.rs
-        ├── view.rs
-        └── detail_view.rs
+        └── view.rs
 ```
 
 ---

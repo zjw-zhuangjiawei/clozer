@@ -32,6 +32,7 @@ Pure data structures with typed_builder, no business logic.
 - `Tag`: Name, UUID, parent-child hierarchy
 - `Model`: LLM model configuration
 - `Provider`: LLM provider configuration
+- `types.rs`: Newtype ID types (WordId, MeaningId, TagId, ClozeId, ProviderId, ModelId) for enhanced type safety
 
 ### 2. Registry (`src/registry/`)
 
