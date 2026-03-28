@@ -14,10 +14,6 @@ use crate::ui::words::state::{DetailSelection, EditContext, TagDropdownState};
 use iced::Task;
 use uuid::Uuid;
 
-// ============================================================================
-// Search Handler
-// ============================================================================
-
 /// Handle search-related messages.
 pub fn search(state: &mut crate::ui::words::WordsState, message: SearchMessage) {
     match message {
@@ -29,10 +25,6 @@ pub fn search(state: &mut crate::ui::words::WordsState, message: SearchMessage) 
         }
     }
 }
-
-// ============================================================================
-// Filter Handler
-// ============================================================================
 
 /// Handle filter-related messages.
 pub fn filter(state: &mut crate::ui::words::WordsState, message: FilterMessage) {
@@ -49,10 +41,6 @@ pub fn filter(state: &mut crate::ui::words::WordsState, message: FilterMessage) 
         }
     }
 }
-
-// ============================================================================
-// Selection Handler
-// ============================================================================
 
 /// Handle selection-related messages.
 pub fn selection(
@@ -81,10 +69,6 @@ pub fn selection(
         }
     }
 }
-
-// ============================================================================
-// Detail Handler
-// ============================================================================
 
 /// Handle detail panel messages.
 pub fn detail(
@@ -164,10 +148,6 @@ pub fn detail(
     Task::none()
 }
 
-// ============================================================================
-// Word Handler
-// ============================================================================
-
 /// Handle word CRUD messages.
 pub fn word(
     state: &mut crate::ui::words::WordsState,
@@ -228,10 +208,6 @@ pub fn word(
     Task::none()
 }
 
-// ============================================================================
-// Meaning Handler
-// ============================================================================
-
 /// Handle meaning CRUD messages.
 pub fn meaning(
     state: &mut crate::ui::words::WordsState,
@@ -291,10 +267,6 @@ pub fn meaning(
     }
     Task::none()
 }
-
-// ============================================================================
-// Tag Handler
-// ============================================================================
 
 /// Handle tag operation messages.
 pub fn tag(
@@ -358,10 +330,6 @@ pub fn tag(
     Task::none()
 }
 
-// ============================================================================
-// Cloze Handler
-// ============================================================================
-
 /// Handle cloze operation messages.
 pub fn cloze(
     state: &mut crate::ui::words::WordsState,
@@ -379,10 +347,6 @@ pub fn cloze(
     }
     Task::none()
 }
-
-// ============================================================================
-// Batch Handler
-// ============================================================================
 
 /// Handle batch operation messages.
 pub fn batch(
@@ -431,10 +395,6 @@ pub fn batch(
     Task::none()
 }
 
-// ============================================================================
-// Export Handler
-// ============================================================================
-
 /// Handle export operation messages.
 pub fn export(
     state: &mut crate::ui::words::WordsState,
@@ -476,10 +436,6 @@ pub fn export(
     }
     Task::none()
 }
-
-// ============================================================================
-// Main Update Function (delegates to domain handlers)
-// ============================================================================
 
 /// Handle all words-related messages.
 ///

@@ -10,10 +10,6 @@ use crate::ui::settings::SettingsState;
 use iced::Task;
 use std::sync::Arc;
 
-// ============================================================================
-// General Settings Handler
-// ============================================================================
-
 /// Handle general settings messages.
 pub fn general(
     state: &mut SettingsState,
@@ -30,10 +26,6 @@ pub fn general(
     }
     Task::none()
 }
-
-// ============================================================================
-// Provider Handler
-// ============================================================================
 
 /// Handle provider messages.
 pub fn provider(
@@ -95,10 +87,6 @@ pub fn provider(
     }
     Task::none()
 }
-
-// ============================================================================
-// Model Handler
-// ============================================================================
 
 /// Handle model messages.
 pub fn model(
@@ -167,10 +155,6 @@ pub fn model(
     }
     Task::none()
 }
-
-// ============================================================================
-// Main Update Function (delegates to domain handlers)
-// ============================================================================
 
 /// Handle all settings-related messages.
 pub fn update(

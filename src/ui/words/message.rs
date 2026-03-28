@@ -17,10 +17,6 @@ use crate::models::{CefrLevel, PartOfSpeech};
 use crate::ui::words::state::ClozeFilter;
 use strum::{Display, VariantArray};
 
-// ============================================================================
-// Root Message Enum
-// ============================================================================
-
 /// Root message enum for Words panel.
 ///
 /// Delegates to domain-specific message handlers.
@@ -47,10 +43,6 @@ pub enum WordsMessage {
     /// Export operation messages
     Export(ExportMessage),
 }
-
-// ============================================================================
-// Domain-Specific Messages
-// ============================================================================
 
 /// Search-related messages.
 #[derive(Debug, Clone)]

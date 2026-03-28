@@ -17,10 +17,6 @@ use crate::models::{CefrLevel, PartOfSpeech, Word};
 use crate::registry::MeaningRegistry;
 use strum::Display;
 
-// ============================================================================
-// Sub-states
-// ============================================================================
-
 /// Filter state for cloze generation status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display)]
 pub enum ClozeFilter {
@@ -359,10 +355,6 @@ impl TagDropdownState {
         }
     }
 }
-
-// ============================================================================
-// Main Panel State
-// ============================================================================
 
 /// Complete state for Words panel.
 #[derive(Debug, Default)]

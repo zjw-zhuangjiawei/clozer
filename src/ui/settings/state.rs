@@ -7,10 +7,6 @@
 use crate::config::file::ai::{ModelConfig, ProviderConfig};
 use uuid::Uuid;
 
-// ============================================================================
-// Sub-states
-// ============================================================================
-
 /// Editing state for providers.
 #[derive(Debug, Clone)]
 pub struct ProviderEditState {
@@ -149,10 +145,6 @@ impl ModelEditState {
         self.is_new = false;
     }
 }
-
-// ============================================================================
-// Main Panel State
-// ============================================================================
 
 /// Settings panel state.
 #[derive(Debug, Default)]

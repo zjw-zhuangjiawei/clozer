@@ -7,10 +7,6 @@ use iced::{Color, Length, Theme};
 use std::fmt;
 use strum::{Display, VariantArray};
 
-// ============================================================================
-// Font Size System
-// ============================================================================
-
 /// Font size variants for consistent typography.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum FontSize {
@@ -58,10 +54,6 @@ impl FontSize {
         }
     }
 }
-
-// ============================================================================
-// Button Size System
-// ============================================================================
 
 /// Button size variants with consistent padding and text sizing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
@@ -113,10 +105,6 @@ impl ButtonSize {
         iced::Padding::from([v, h])
     }
 }
-
-// ============================================================================
-// Spacing System
-// ============================================================================
 
 /// Spacing constants for consistent layout spacing.
 #[derive(Debug, Clone, Copy, Default)]
@@ -177,10 +165,6 @@ impl fmt::Display for Spacing {
         )
     }
 }
-
-// ============================================================================
-// Dimensions (Icons, Borders, Radius)
-// ============================================================================
 
 /// Dimension constants for UI components.
 #[derive(Debug, Clone, Copy, Default)]
@@ -292,10 +276,6 @@ impl RadiusSize {
         }
     }
 }
-
-// ============================================================================
-// Theme Colors
-// ============================================================================
 
 /// Application theme variants.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -422,10 +402,6 @@ impl From<AppTheme> for Option<Theme> {
     }
 }
 
-// ============================================================================
-// Breakpoint System
-// ============================================================================
-
 /// Responsive breakpoint for layout adaptation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum Breakpoint {
@@ -479,10 +455,6 @@ impl Breakpoint {
         matches!(self, Breakpoint::Mobile)
     }
 }
-
-// ============================================================================
-// Application Style
-// ============================================================================
 
 /// Default application styles for components.
 #[derive(Debug, Clone, Copy, Default)]

@@ -6,10 +6,6 @@
 use std::collections::HashSet;
 use uuid::Uuid;
 
-// ============================================================================
-// Sub-states
-// ============================================================================
-
 /// Selection state for queue items.
 #[derive(Debug, Clone, Default)]
 pub struct SelectionState {
@@ -47,10 +43,6 @@ impl SelectionState {
         self.items.len()
     }
 }
-
-// ============================================================================
-// Main Panel State
-// ============================================================================
 
 /// Queue panel state.
 #[derive(Debug, Default)]

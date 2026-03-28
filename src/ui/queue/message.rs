@@ -6,10 +6,6 @@
 
 use crate::models::WordId;
 
-// ============================================================================
-// Root Message Enum
-// ============================================================================
-
 /// Root message enum for Queue panel.
 ///
 /// Delegates to domain-specific message handlers.
@@ -20,10 +16,6 @@ pub enum QueueMessage {
     /// Action-related messages
     Action(QueueActionMessage),
 }
-
-// ============================================================================
-// Domain-Specific Messages
-// ============================================================================
 
 /// Selection-related messages for queue items.
 #[derive(Debug, Clone)]

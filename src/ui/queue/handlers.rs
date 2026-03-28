@@ -10,10 +10,6 @@ use crate::ui::queue::QueueState;
 use iced::Task;
 use uuid::Uuid;
 
-// ============================================================================
-// Selection Handler
-// ============================================================================
-
 /// Handle selection-related messages.
 pub fn selection(
     state: &mut QueueState,
@@ -38,10 +34,6 @@ pub fn selection(
         }
     }
 }
-
-// ============================================================================
-// Action Handler
-// ============================================================================
 
 /// Handle action-related messages.
 pub fn action(
@@ -68,10 +60,6 @@ pub fn action(
     }
     Task::none()
 }
-
-// ============================================================================
-// Main Update Function (delegates to domain handlers)
-// ============================================================================
 
 /// Handle all queue-related messages.
 ///

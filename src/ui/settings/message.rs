@@ -9,10 +9,6 @@ use crate::config::LogLevel;
 use crate::config::file::ai::ProviderTypeDto;
 use uuid::Uuid;
 
-// ============================================================================
-// Root Message Enum
-// ============================================================================
-
 /// Root message enum for Settings panel.
 ///
 /// Delegates to domain-specific message handlers.
@@ -25,10 +21,6 @@ pub enum SettingsMessage {
     /// AI Model messages
     Model(ModelMessage),
 }
-
-// ============================================================================
-// Domain-Specific Messages
-// ============================================================================
 
 /// General settings messages.
 #[derive(Debug, Clone)]
