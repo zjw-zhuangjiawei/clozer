@@ -2,7 +2,7 @@
 
 use super::message::{ModelMessage, ProviderMessage, SettingsMessage};
 use crate::state::Model;
-use crate::ui::theme::ButtonSize;
+use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use iced::Element;
 use iced::widget::{Button, button, row, text};
 
@@ -12,15 +12,15 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
 
     // General Settings Section
     let general_section = iced::widget::Column::new()
-        .push(text("General").size(18))
+        .push(text("General").size(FontSize::Title.px()))
         .push(
             row![
                 text("Log Level:"),
                 text(format!("{:?}", model.app_config.log_level)),
             ]
-            .spacing(10),
+            .spacing(Spacing::DEFAULT.s),
         )
-        .spacing(10);
+        .spacing(Spacing::DEFAULT.s);
 
     // AI Providers Section
     let providers_list: Vec<Element<'_, SettingsMessage>> = ai_config
@@ -41,22 +41,22 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
                             .padding(ButtonSize::Standard.to_iced_padding())
                             .on_press(SettingsMessage::Provider(ProviderMessage::Delete(p.id))),
                     ]
-                    .spacing(10),
+                    .spacing(Spacing::DEFAULT.s),
                 )
                 .into()
         })
         .collect();
 
     let providers_section = iced::widget::Column::new()
-        .push(text("AI Providers").size(18))
-        .push(iced::widget::Column::with_children(providers_list).spacing(5))
+        .push(text("AI Providers").size(FontSize::Title.px()))
+        .push(iced::widget::Column::with_children(providers_list).spacing(Spacing::DEFAULT.xs))
         .push(
             Button::new(text("Add Provider"))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Provider(ProviderMessage::Add)),
         )
-        .spacing(10);
+        .spacing(Spacing::DEFAULT.s);
 
     // AI Models Section
     let models_list: Vec<Element<'_, SettingsMessage>> = ai_config
@@ -84,22 +84,22 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
                             .padding(ButtonSize::Standard.to_iced_padding())
                             .on_press(SettingsMessage::Model(ModelMessage::Delete(m.id))),
                     ]
-                    .spacing(10),
+                    .spacing(Spacing::DEFAULT.s),
                 )
                 .into()
         })
         .collect();
 
     let models_section = iced::widget::Column::new()
-        .push(text("AI Models").size(18))
-        .push(iced::widget::Column::with_children(models_list).spacing(5))
+        .push(text("AI Models").size(FontSize::Title.px()))
+        .push(iced::widget::Column::with_children(models_list).spacing(Spacing::DEFAULT.xs))
         .push(
             Button::new(text("Add Model"))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Model(ModelMessage::Add)),
         )
-        .spacing(10);
+        .spacing(Spacing::DEFAULT.s);
 
     // Selected Model Section
     let selected_model_text = if let Some(selected_id) = ai_config.selected_model_id {
@@ -115,28 +115,28 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
     };
 
     let selected_model_section = iced::widget::Column::new()
-        .push(text("Active Model").size(18))
-        .push(row![text("Selected:"), selected_model_text].spacing(10))
-        .spacing(10);
+        .push(text("Active Model").size(FontSize::Title.px()))
+        .push(row![text("Selected:"), selected_model_text].spacing(Spacing::DEFAULT.s))
+        .spacing(Spacing::DEFAULT.s);
 
     // Data Directory Section
     let data_dir_section = iced::widget::Column::new()
-        .push(text("Data").size(18))
+        .push(text("Data").size(FontSize::Title.px()))
         .push(text(format!(
             "Data Directory: {:?}",
             model.app_config.data_dir
         )))
-        .spacing(10);
+        .spacing(Spacing::DEFAULT.s);
 
     // Main settings column
     iced::widget::Column::new()
-        .push(text("Settings").size(24))
+        .push(text("Settings").size(FontSize::Display.px()))
         .push(general_section)
         .push(providers_section)
         .push(models_section)
         .push(selected_model_section)
         .push(data_dir_section)
-        .spacing(20)
-        .padding(20)
+        .spacing(Spacing::DEFAULT.l)
+        .padding(Spacing::DEFAULT.l)
         .into()
 }

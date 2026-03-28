@@ -5,7 +5,7 @@ use crate::models::types::MeaningId;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
-use crate::ui::theme::ButtonSize;
+use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text, button};
 
@@ -67,15 +67,15 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
             Row::new()
                 .push(select_indicator)
                 .push(Text::new(content).width(iced::Length::Fill))
-                .push(Text::new(status_text_for_row).size(12))
+                .push(Text::new(status_text_for_row).size(FontSize::Footnote.px()))
                 .push(remove_btn)
-                .spacing(10)
+                .spacing(Spacing::DEFAULT.s)
                 .align_y(iced::Alignment::Center)
                 .into()
         })
         .collect();
 
-    let queue_column = Column::with_children(items).spacing(5);
+    let queue_column = Column::with_children(items).spacing(Spacing::DEFAULT.xs);
 
     let total = queue_registry.len();
     let pending = queue_registry
@@ -100,7 +100,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(QueueMessage::Selection(QueueSelectionMessage::DeselectAll)),
         )
-        .spacing(5);
+        .spacing(Spacing::DEFAULT.xs);
 
     let has_completed = queue_registry
         .get_items()
@@ -125,21 +125,21 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
         .padding(ButtonSize::Large.to_iced_padding());
 
     Column::new()
-        .push(Text::new("Queue").size(24))
+        .push(Text::new("Queue").size(FontSize::Display.px()))
         .push(
             Text::new(format!(
                 "Total: {} | Pending: {} | Selected: {}",
                 total, pending, selected_count
             ))
-            .size(12),
+            .size(FontSize::Footnote.px()),
         )
         .push(iced::widget::rule::horizontal(1))
         .push(select_buttons)
         .push(clear_button)
         .push(iced::widget::scrollable(queue_column).height(iced::Length::Fill))
         .push(process_button)
-        .spacing(10)
-        .padding(10)
+        .spacing(Spacing::DEFAULT.s)
+        .padding(Spacing::DEFAULT.s)
         .height(iced::Length::Fill)
         .into()
 }

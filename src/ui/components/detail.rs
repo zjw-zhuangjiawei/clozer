@@ -6,7 +6,7 @@
 //! - DetailHeader: Standard header with title, edit, and close buttons
 //! - EmptyState: Placeholder when no item is selected
 
-use crate::ui::theme::{AppTheme, ButtonSize, Spacing};
+use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
 use crate::ui::words::message::DetailMessage;
 use iced::widget::{Button, Column, Container, Row, Text};
 use iced::{Color, Element, Length};
@@ -18,12 +18,16 @@ use iced::{Color, Element, Length};
 /// * `bg` - Background color
 /// * `text_color` - Text color
 pub fn badge<'a>(text: &'a str, bg: Color, text_color: Color) -> Container<'a, DetailMessage> {
-    Container::new(Text::new(text).size(12).color(text_color))
-        .padding([4, 8])
-        .style(move |_| iced::widget::container::Style {
-            background: Some(iced::Background::Color(bg)),
-            ..Default::default()
-        })
+    Container::new(
+        Text::new(text)
+            .size(FontSize::Footnote.px())
+            .color(text_color),
+    )
+    .padding([4, 8])
+    .style(move |_| iced::widget::container::Style {
+        background: Some(iced::Background::Color(bg)),
+        ..Default::default()
+    })
 }
 
 /// Creates a section card with a title and content.
@@ -39,11 +43,15 @@ pub fn section_card<'a>(
 
     Container::new(
         Column::new()
-            .spacing(Spacing::DETAIL_ITEM)
-            .push(Text::new(title).size(12).color(colors.text_secondary))
+            .spacing(Spacing::DEFAULT.m)
+            .push(
+                Text::new(title)
+                    .size(FontSize::Footnote.px())
+                    .color(colors.text_secondary),
+            )
             .push(content),
     )
-    .padding(Spacing::DETAIL_ITEM)
+    .padding(Spacing::DEFAULT.m)
     .width(Length::Fill)
     .style(move |_| iced::widget::container::Style {
         background: Some(iced::Background::Color(colors.surface)),
@@ -55,7 +63,7 @@ pub fn section_card<'a>(
 pub fn badge_row<'a>(
     items: impl IntoIterator<Item = Element<'a, DetailMessage>>,
 ) -> Row<'a, DetailMessage> {
-    Row::new().spacing(Spacing::DETAIL_LABEL).extend(items)
+    Row::new().spacing(Spacing::DEFAULT.s).extend(items)
 }
 
 /// Creates a horizontal row of action buttons (e.g., Save/Cancel).
@@ -64,7 +72,7 @@ pub fn action_row<'a>(
     secondary: Button<'a, DetailMessage>,
 ) -> Row<'a, DetailMessage> {
     Row::new()
-        .spacing(Spacing::DETAIL_ITEM)
+        .spacing(Spacing::DEFAULT.m)
         .push(secondary)
         .push(primary)
 }
@@ -81,7 +89,7 @@ pub fn detail_header<'a>(
     on_close: DetailMessage,
 ) -> Row<'a, DetailMessage> {
     // Close button
-    let close_btn = Button::new(Text::new("×").size(18))
+    let close_btn = Button::new(Text::new("×").size(FontSize::Title.px()))
         .padding(ButtonSize::Small.to_iced_padding())
         .on_press(on_close);
 
@@ -97,21 +105,21 @@ pub fn detail_header<'a>(
                 }
                 None => {
                     tracing::warn!("Failed to load edit icon SVG");
-                    Button::new(Text::new("✎").size(16))
+                    Button::new(Text::new("✎").size(FontSize::Subtitle.px()))
                         .padding(6)
                         .on_press(msg)
                 }
             };
 
         Row::new()
-            .push(Text::new(title).size(18))
+            .push(Text::new(title).size(FontSize::Title.px()))
             .push(Text::new(" ").width(Length::Fill))
             .push(edit_btn)
             .push(close_btn)
             .align_y(iced::Alignment::Center)
     } else {
         Row::new()
-            .push(Text::new(title).size(18))
+            .push(Text::new(title).size(FontSize::Title.px()))
             .push(Text::new(" ").width(Length::Fill))
             .push(close_btn)
             .align_y(iced::Alignment::Center)
@@ -128,10 +136,25 @@ pub fn empty_state<'a>(title: &'a str, subtitle: &'a str) -> Element<'a, DetailM
 
     Container::new(
         Column::new()
-            .spacing(Spacing::DETAIL_ITEM)
-            .push(Container::new(Text::new("[ ]").size(24).color(colors.text_secondary)).padding(8))
-            .push(Text::new(title).size(16).color(colors.text))
-            .push(Text::new(subtitle).size(12).color(colors.text_secondary))
+            .spacing(Spacing::DEFAULT.m)
+            .push(
+                Container::new(
+                    Text::new("[ ]")
+                        .size(FontSize::Display.px())
+                        .color(colors.text_secondary),
+                )
+                .padding(8),
+            )
+            .push(
+                Text::new(title)
+                    .size(FontSize::Subtitle.px())
+                    .color(colors.text),
+            )
+            .push(
+                Text::new(subtitle)
+                    .size(FontSize::Footnote.px())
+                    .color(colors.text_secondary),
+            )
             .align_x(iced::Alignment::Center),
     )
     .center_x(Length::Fill)
@@ -144,5 +167,7 @@ pub fn empty_state<'a>(title: &'a str, subtitle: &'a str) -> Element<'a, DetailM
 /// Small text label for section titles.
 pub fn section_title<'a>(text: &'a str) -> Text<'a> {
     let colors = AppTheme::default().colors();
-    Text::new(text).size(12).color(colors.text_secondary)
+    Text::new(text)
+        .size(FontSize::Footnote.px())
+        .color(colors.text_secondary)
 }

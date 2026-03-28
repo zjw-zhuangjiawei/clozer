@@ -4,7 +4,7 @@ use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
-use crate::ui::theme::{Breakpoint, ButtonSize};
+use crate::ui::theme::{Breakpoint, ButtonSize, FontSize};
 use crate::ui::words::message::{
     BatchMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage, SearchMessage,
     SelectionMessage, TagMessage, WordMessage, WordsMessage,
@@ -266,14 +266,16 @@ fn build_word_node<'a>(
     };
 
     // Word content (display only - not editable)
-    let word_content: Element<'a, WordsMessage> = Button::new(Text::new(&word.content).size(16))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::SelectWord(word.id)))
-        .into();
+    let word_content: Element<'a, WordsMessage> =
+        Button::new(Text::new(&word.content).size(FontSize::Subtitle.px()))
+            .style(button::secondary)
+            .padding(ButtonSize::Small.to_iced_padding())
+            .on_press(WordsMessage::Detail(DetailMessage::SelectWord(word.id)))
+            .into();
 
     // Meaning count
-    let meaning_count = Text::new(format!("{} meanings", word.meaning_ids.len())).size(12);
+    let meaning_count =
+        Text::new(format!("{} meanings", word.meaning_ids.len())).size(FontSize::Footnote.px());
 
     // Word header row
     let word_header = Row::new()
@@ -377,21 +379,22 @@ fn build_meaning_node<'a>(
     );
 
     // POS badge
-    let pos_badge = Container::new(Text::new(format!("[{}]", meaning.pos)).size(12))
-        .padding([2, 6])
-        .style(move |_| container::Style {
-            background: Some(colors.pos_badge_bg.into()),
-            text_color: Some(colors.pos_badge_text),
-            border: iced::Border {
-                radius: 4.0.into(),
+    let pos_badge =
+        Container::new(Text::new(format!("[{}]", meaning.pos)).size(FontSize::Footnote.px()))
+            .padding([2, 6])
+            .style(move |_| container::Style {
+                background: Some(colors.pos_badge_bg.into()),
+                text_color: Some(colors.pos_badge_text),
+                border: iced::Border {
+                    radius: 4.0.into(),
+                    ..Default::default()
+                },
                 ..Default::default()
-            },
-            ..Default::default()
-        });
+            });
 
     // CEFR level badge (if set)
     let cefr_badge = if let Some(cefr) = meaning.cefr_level {
-        Container::new(Text::new(cefr.to_string()).size(12))
+        Container::new(Text::new(cefr.to_string()).size(FontSize::Footnote.px()))
             .padding([2, 6])
             .style(move |_| container::Style {
                 background: Some(colors.surface_elevated.into()),
@@ -408,7 +411,7 @@ fn build_meaning_node<'a>(
 
     // Definition - clickable to toggle detail panel
     let definition: Element<'a, WordsMessage> =
-        Button::new(Text::new(&meaning.definition).size(14))
+        Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
             .style(button::secondary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
@@ -418,9 +421,9 @@ fn build_meaning_node<'a>(
 
     // Cloze status indicator
     let cloze_status = if cloze_count > 0 {
-        Text::new(format!("{} clozes ✓", cloze_count)).size(12)
+        Text::new(format!("{} clozes ✓", cloze_count)).size(FontSize::Footnote.px())
     } else {
-        Text::new("0 clozes ○".to_string()).size(12)
+        Text::new("0 clozes ○".to_string()).size(FontSize::Footnote.px())
     };
 
     // Meaning header
@@ -445,7 +448,7 @@ fn build_meaning_node<'a>(
         .take(2)
         .map(|(cloze_id, cloze)| {
             let text = cloze.render_blanks();
-            Button::new(Text::new(text).size(11))
+            Button::new(Text::new(text).size(FontSize::Caption.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::Detail(DetailMessage::SelectCloze(*cloze_id)))
@@ -505,7 +508,7 @@ fn build_tags_row<'a>(
         .iter()
         .filter_map(|tag_id| model.tag_registry.get(*tag_id))
         .map(|tag| {
-            Button::new(Text::new(&tag.name).size(11))
+            Button::new(Text::new(&tag.name).size(FontSize::Caption.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::Tag(TagMessage::RemoveFromMeaning {
@@ -518,7 +521,7 @@ fn build_tags_row<'a>(
 
     // Add tag button
     tag_chips.push(
-        Button::new(Text::new("+").size(11))
+        Button::new(Text::new("+").size(FontSize::Caption.px()))
             .style(button::secondary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::Tag(TagMessage::ShowDropdown {
@@ -541,7 +544,7 @@ fn build_tags_row<'a>(
         };
 
     let mut row = Row::new()
-        .push(Text::new("Tags:").size(11))
+        .push(Text::new("Tags:").size(FontSize::Caption.px()))
         .extend(tag_chips)
         .spacing(4);
 
@@ -583,7 +586,7 @@ fn build_tag_dropdown<'a>(
     let mut tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
         .iter()
         .map(|tag| {
-            Button::new(Text::new(&tag.name).size(12))
+            Button::new(Text::new(&tag.name).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
                 .on_press(WordsMessage::Tag(TagMessage::AddToMeaning {
                     meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
@@ -606,7 +609,7 @@ fn build_tag_dropdown<'a>(
     {
         let search = dropdown.search.clone();
         tag_items.push(
-            Button::new(Text::new(format!("Create \"{}\"", search)).size(12))
+            Button::new(Text::new(format!("Create \"{}\"", search)).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
                 .on_press(WordsMessage::Tag(TagMessage::QuickCreate {
                     meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
@@ -776,7 +779,7 @@ fn build_batch_tag_dropdown<'a>(
     let tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
         .iter()
         .map(|tag| {
-            Button::new(Text::new(&tag.name).size(12))
+            Button::new(Text::new(&tag.name).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
                 .on_press(WordsMessage::Tag(TagMessage::AddToSelected {
                     tag_id: tag.id,

@@ -5,7 +5,7 @@ use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
 use crate::ui::components::detail::empty_state;
-use crate::ui::theme::ButtonSize;
+use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::words::message::{DetailMessage, WordsMessage};
 use crate::ui::words::state::{DetailSelection, EditBuffer, EditContext};
 use iced::Element;
@@ -127,8 +127,8 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
 
     Container::new(
         Column::new()
-            .spacing(15)
-            .push(Text::new("Add New Word").size(20))
+            .spacing(Spacing::DEFAULT.l)
+            .push(Text::new("Add New Word").size(FontSize::Heading.px()))
             .push(word_input)
             .push(lang_input)
             .push(def_input)
@@ -138,9 +138,14 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
                     .push(Text::new(" | "))
                     .push(Text::new(cefr_display)),
             )
-            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+            .push(
+                Row::new()
+                    .spacing(Spacing::DEFAULT.s)
+                    .push(save_btn)
+                    .push(cancel_btn),
+            ),
     )
-    .padding(20)
+    .padding(Spacing::DEFAULT.l)
     .width(iced::Length::Fill)
     .height(iced::Length::Fill)
     .center_x(iced::Length::Fill)
@@ -176,8 +181,11 @@ fn new_meaning_view<'a>(
 
     Container::new(
         Column::new()
-            .spacing(15)
-            .push(Text::new(format!("Add Meaning to \"{}\"", word_content)).size(20))
+            .spacing(Spacing::DEFAULT.l)
+            .push(
+                Text::new(format!("Add Meaning to \"{}\"", word_content))
+                    .size(FontSize::Heading.px()),
+            )
             .push(def_input)
             .push(
                 Row::new()
@@ -185,9 +193,14 @@ fn new_meaning_view<'a>(
                     .push(Text::new(" | "))
                     .push(Text::new(cefr_display)),
             )
-            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+            .push(
+                Row::new()
+                    .spacing(Spacing::DEFAULT.s)
+                    .push(save_btn)
+                    .push(cancel_btn),
+            ),
     )
-    .padding(20)
+    .padding(Spacing::DEFAULT.l)
     .width(iced::Length::Fill)
     .height(iced::Length::Fill)
     .center_x(iced::Length::Fill)
@@ -216,16 +229,19 @@ fn word_detail_view<'a>(
 
                     Row::new()
                         .push(
-                            Button::new(Text::new(&meaning.definition).size(14))
+                            Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
                                 .style(button::secondary)
                                 .padding(ButtonSize::Medium.to_iced_padding())
                                 .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
                                     meaning.id,
                                 ))),
                         )
-                        .push(Text::new(pos_text).size(12))
-                        .push(Text::new(format!("{} clozes", cloze_count)).size(12))
-                        .spacing(10)
+                        .push(Text::new(pos_text).size(FontSize::Footnote.px()))
+                        .push(
+                            Text::new(format!("{} clozes", cloze_count))
+                                .size(FontSize::Footnote.px()),
+                        )
+                        .spacing(Spacing::DEFAULT.s)
                         .into()
                 })
                 .collect()
@@ -254,17 +270,17 @@ fn word_detail_view<'a>(
     Column::new()
         .push(
             Row::new()
-                .push(Text::new(word_content).size(20))
+                .push(Text::new(word_content).size(FontSize::Heading.px()))
                 .push(Text::new(" ").width(iced::Length::Fill))
                 .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
         .push(iced::widget::rule::horizontal(1))
-        .push(Text::new("Meanings").size(14))
+        .push(Text::new("Meanings").size(FontSize::Body.px()))
         .extend(meaning_items)
-        .spacing(10)
-        .padding(15)
+        .spacing(Spacing::DEFAULT.s)
+        .padding(Spacing::DEFAULT.m)
         .into()
 }
 
@@ -310,8 +326,8 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
 
     Container::new(
         Column::new()
-            .spacing(15)
-            .push(Text::new("Edit Word").size(20))
+            .spacing(Spacing::DEFAULT.l)
+            .push(Text::new("Edit Word").size(FontSize::Heading.px()))
             .push(word_input)
             .push(lang_input)
             .push(def_input)
@@ -321,9 +337,14 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
                     .push(Text::new(" | "))
                     .push(Text::new(cefr_display)),
             )
-            .push(Row::new().spacing(10).push(save_btn).push(cancel_btn)),
+            .push(
+                Row::new()
+                    .spacing(Spacing::DEFAULT.s)
+                    .push(save_btn)
+                    .push(cancel_btn),
+            ),
     )
-    .padding(20)
+    .padding(Spacing::DEFAULT.l)
     .width(iced::Length::Fill)
     .height(iced::Length::Fill)
     .center_x(iced::Length::Fill)
@@ -353,7 +374,7 @@ fn meaning_detail_view<'a>(
         .iter_by_meaning_id(meaning_id)
         .map(|(cloze_id, cloze)| {
             let text = cloze.render_blanks();
-            Button::new(Text::new(text).size(13))
+            Button::new(Text::new(text).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Medium.to_iced_padding())
                 .width(iced::Length::Fill)
@@ -383,40 +404,41 @@ fn meaning_detail_view<'a>(
     let mut column = Column::new()
         .push(
             Row::new()
-                .push(Text::new(word_content).size(20))
+                .push(Text::new(word_content).size(FontSize::Heading.px()))
                 .push(Text::new(" ").width(iced::Length::Fill))
                 .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
         .push(iced::widget::rule::horizontal(1))
-        .spacing(10)
-        .padding(15);
+        .spacing(Spacing::DEFAULT.s)
+        .padding(Spacing::DEFAULT.m);
 
     // Definition
-    column = column.push(Text::new(definition).size(16));
+    column = column.push(Text::new(definition).size(FontSize::Subtitle.px()));
 
     // POS and CEFR
     let mut meta_row = Row::new()
-        .push(Text::new(format!("[{}]", pos)).size(14))
-        .spacing(10);
+        .push(Text::new(format!("[{}]", pos)).size(FontSize::Body.px()))
+        .spacing(Spacing::DEFAULT.s);
 
     if let Some(cefr) = cefr_level {
-        meta_row = meta_row.push(Text::new(cefr.to_string()).size(14));
+        meta_row = meta_row.push(Text::new(cefr.to_string()).size(FontSize::Body.px()));
     }
     column = column.push(meta_row);
 
     // Tags
     if !tag_names.is_empty() {
         let tags_text = tag_names.join(", ");
-        column = column.push(Text::new(format!("Tags: {}", tags_text)).size(12));
+        column =
+            column.push(Text::new(format!("Tags: {}", tags_text)).size(FontSize::Footnote.px()));
     }
 
     // Clozes section
     if !cloze_items.is_empty() {
         column = column
             .push(iced::widget::rule::horizontal(1))
-            .push(Text::new("Clozes").size(14))
+            .push(Text::new("Clozes").size(FontSize::Body.px()))
             .extend(cloze_items);
     }
 
@@ -450,7 +472,7 @@ fn meaning_edit_view<'a>(
     Column::new()
         .push(
             Row::new()
-                .push(Text::new("Edit Meaning").size(20))
+                .push(Text::new("Edit Meaning").size(FontSize::Heading.px()))
                 .push(Text::new(" ").width(iced::Length::Fill))
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
@@ -458,37 +480,39 @@ fn meaning_edit_view<'a>(
         .push(iced::widget::rule::horizontal(1))
         .push(
             Column::new()
-                .push(Text::new("Word").size(14))
-                .push(Text::new(word_content).size(16))
-                .spacing(4),
+                .push(Text::new("Word").size(FontSize::Body.px()))
+                .push(Text::new(word_content).size(FontSize::Subtitle.px()))
+                .spacing(Spacing::DEFAULT.xs),
         )
         .push(
             Column::new()
-                .push(Text::new("Definition").size(14))
+                .push(Text::new("Definition").size(FontSize::Body.px()))
                 .push(
                     text_input("Definition", &buffer.meaning_definition).on_input(|s| {
                         WordsMessage::Detail(DetailMessage::EditMeaningDefinition(s))
                     }),
                 )
-                .spacing(8),
+                .spacing(Spacing::DEFAULT.s),
         )
         .push(
             Column::new()
-                .push(Text::new("Part of Speech").size(14))
+                .push(Text::new("Part of Speech").size(FontSize::Body.px()))
                 .push(
                     Row::new()
                         .push(
-                            Button::new(Text::new(pos_selected.to_string()).size(14))
-                                .style(button::secondary)
-                                .padding(ButtonSize::Medium.to_iced_padding()),
+                            Button::new(
+                                Text::new(pos_selected.to_string()).size(FontSize::Body.px()),
+                            )
+                            .style(button::secondary)
+                            .padding(ButtonSize::Medium.to_iced_padding()),
                         )
-                        .spacing(4),
+                        .spacing(Spacing::DEFAULT.xs),
                 )
-                .spacing(4),
+                .spacing(Spacing::DEFAULT.xs),
         )
         .push(
             Column::new()
-                .push(Text::new("CEFR Level").size(14))
+                .push(Text::new("CEFR Level").size(FontSize::Body.px()))
                 .push(
                     Row::new()
                         .push(
@@ -498,14 +522,14 @@ fn meaning_edit_view<'a>(
                                         .map(|c| c.to_string())
                                         .unwrap_or_else(|| "None".to_string()),
                                 )
-                                .size(14),
+                                .size(FontSize::Body.px()),
                             )
                             .style(button::secondary)
                             .padding(ButtonSize::Medium.to_iced_padding()),
                         )
-                        .spacing(4),
+                        .spacing(Spacing::DEFAULT.xs),
                 )
-                .spacing(4),
+                .spacing(Spacing::DEFAULT.xs),
         )
         .push(
             Row::new()
@@ -514,8 +538,8 @@ fn meaning_edit_view<'a>(
                 .push(cancel_btn)
                 .align_y(iced::Alignment::Center),
         )
-        .spacing(10)
-        .padding(15)
+        .spacing(Spacing::DEFAULT.s)
+        .padding(Spacing::DEFAULT.m)
         .into()
 }
 
@@ -553,19 +577,19 @@ fn cloze_detail_view<'a>(
     Column::new()
         .push(
             Row::new()
-                .push(Text::new(word_content).size(20))
+                .push(Text::new(word_content).size(FontSize::Heading.px()))
                 .push(Text::new(" ").width(iced::Length::Fill))
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
         .push(iced::widget::rule::horizontal(1))
-        .push(Text::new(definition).size(14))
+        .push(Text::new(definition).size(FontSize::Body.px()))
         .push(iced::widget::rule::horizontal(1))
-        .push(Text::new("Cloze Sentence").size(14))
-        .push(Text::new(cloze.render_blanks()).size(16))
+        .push(Text::new("Cloze Sentence").size(FontSize::Body.px()))
+        .push(Text::new(cloze.render_blanks()).size(FontSize::Subtitle.px()))
         .push(iced::widget::rule::horizontal(1))
-        .push(Text::new("Answer").size(14))
-        .push(Text::new(cloze.render_answers()).size(16))
+        .push(Text::new("Answer").size(FontSize::Body.px()))
+        .push(Text::new(cloze.render_answers()).size(FontSize::Subtitle.px()))
         .push(iced::widget::rule::horizontal(1))
         .push(
             Button::new(delete_icon)
@@ -575,7 +599,7 @@ fn cloze_detail_view<'a>(
                     crate::ui::words::message::ClozeMessage::Delete { id: cloze_id },
                 )),
         )
-        .spacing(10)
-        .padding(15)
+        .spacing(Spacing::DEFAULT.s)
+        .padding(Spacing::DEFAULT.m)
         .into()
 }

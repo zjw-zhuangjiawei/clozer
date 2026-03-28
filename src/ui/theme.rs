@@ -7,6 +7,296 @@ use iced::{Color, Length, Theme};
 use std::fmt;
 use strum::{Display, VariantArray};
 
+// ============================================================================
+// Font Size System
+// ============================================================================
+
+/// Font size variants for consistent typography.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum FontSize {
+    /// Caption size (11px) - auxiliary text, secondary labels
+    #[default]
+    Caption,
+    /// Footnote size (12px) - badges, section titles, secondary info
+    Footnote,
+    /// Body size (14px) - main text, button labels, most UI text
+    Body,
+    /// Subtitle size (16px) - small headings, dialog titles
+    Subtitle,
+    /// Title size (18px) - panel titles, detail page titles
+    Title,
+    /// Heading size (20px) - page main headings
+    Heading,
+    /// Display size (24px) - empty state text
+    Display,
+}
+
+impl FontSize {
+    /// Returns the font size in pixels.
+    pub const fn px(self) -> f32 {
+        match self {
+            FontSize::Caption => 11.0,
+            FontSize::Footnote => 12.0,
+            FontSize::Body => 14.0,
+            FontSize::Subtitle => 16.0,
+            FontSize::Title => 18.0,
+            FontSize::Heading => 20.0,
+            FontSize::Display => 24.0,
+        }
+    }
+
+    /// Returns the line height in pixels.
+    pub const fn line_height(self) -> f32 {
+        match self {
+            FontSize::Caption => 16.0,
+            FontSize::Footnote => 18.0,
+            FontSize::Body => 20.0,
+            FontSize::Subtitle => 24.0,
+            FontSize::Title => 26.0,
+            FontSize::Heading => 28.0,
+            FontSize::Display => 32.0,
+        }
+    }
+}
+
+// ============================================================================
+// Button Size System
+// ============================================================================
+
+/// Button size variants with consistent padding and text sizing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum ButtonSize {
+    /// Small button (24px height) - inline actions, dense lists
+    #[default]
+    Small,
+    /// Medium button (30px height) - secondary actions, toolbar
+    Medium,
+    /// Standard button (36px height) - default size, most buttons
+    Standard,
+    /// Large button (48px height) - primary actions, CTA
+    Large,
+}
+
+impl ButtonSize {
+    /// Returns the padding (horizontal, vertical) for this button size.
+    pub fn padding(self) -> (f32, f32) {
+        match self {
+            ButtonSize::Small => (8.0, 3.0),
+            ButtonSize::Medium => (12.0, 6.0),
+            ButtonSize::Standard => (16.0, 8.0),
+            ButtonSize::Large => (24.0, 12.0),
+        }
+    }
+
+    /// Returns the text size for this button size.
+    pub fn font_size(self) -> FontSize {
+        match self {
+            ButtonSize::Small => FontSize::Footnote,
+            ButtonSize::Medium => FontSize::Body,
+            ButtonSize::Standard => FontSize::Body,
+            ButtonSize::Large => FontSize::Subtitle,
+        }
+    }
+
+    /// Returns the recommended height for this button.
+    /// Height = line_height + v_padding * 2
+    /// Example: Small = 18 + 3 * 2 = 24px
+    pub fn height(self) -> f32 {
+        let line_height = self.font_size().line_height();
+        let (_, v_padding) = self.padding();
+        line_height + v_padding * 2.0
+    }
+
+    /// Convert to iced::Padding for direct use.
+    pub fn to_iced_padding(self) -> iced::Padding {
+        let (h, v) = self.padding();
+        iced::Padding::from([v, h])
+    }
+}
+
+// ============================================================================
+// Spacing System
+// ============================================================================
+
+/// Spacing constants for consistent layout spacing.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Spacing {
+    /// Extra small spacing (4px)
+    pub xs: f32,
+    /// Small spacing (8px)
+    pub s: f32,
+    /// Medium spacing (12px)
+    pub m: f32,
+    /// Large spacing (16px)
+    pub l: f32,
+    /// Extra large spacing (24px)
+    pub xl: f32,
+    /// Extra extra large spacing (32px)
+    pub xxl: f32,
+}
+
+impl Spacing {
+    /// Default spacing constants.
+    pub const DEFAULT: Self = Self {
+        xs: 4.0,
+        s: 8.0,
+        m: 12.0,
+        l: 16.0,
+        xl: 24.0,
+        xxl: 32.0,
+    };
+
+    /// Detail panel section spacing (24px)
+    ///
+    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.xl` instead.
+    /// This constant is kept for backward compatibility only.
+    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.xl instead")]
+    pub const DETAIL_SECTION: f32 = 24.0;
+
+    /// Detail panel item spacing (12px)
+    ///
+    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.m` instead.
+    /// This constant is kept for backward compatibility only.
+    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.m instead")]
+    pub const DETAIL_ITEM: f32 = 12.0;
+
+    /// Detail panel label spacing (8px)
+    ///
+    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.s` instead.
+    /// This constant is kept for backward compatibility only.
+    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.s instead")]
+    pub const DETAIL_LABEL: f32 = 8.0;
+}
+
+impl fmt::Display for Spacing {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={})",
+            self.xs, self.s, self.m, self.l, self.xl, self.xxl
+        )
+    }
+}
+
+// ============================================================================
+// Dimensions (Icons, Borders, Radius)
+// ============================================================================
+
+/// Dimension constants for UI components.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Dimensions {
+    /// Input field height for single-line inputs (36px).
+    pub input_height: f32,
+    /// Input field height for multi-line text areas (72px).
+    pub textarea_min_height: f32,
+    /// Icon sizes.
+    pub icon: IconSize,
+    /// Border dimensions.
+    pub border: BorderSize,
+    /// Corner radius values.
+    pub radius: RadiusSize,
+}
+
+impl Dimensions {
+    /// Default dimensions.
+    pub const DEFAULT: Self = Self {
+        input_height: 36.0,
+        textarea_min_height: 72.0,
+        icon: IconSize::Small,       // 16px - default icon size
+        border: BorderSize::DEFAULT, // thin=1, medium=2, thick=3
+        radius: RadiusSize::Small,   // 4px - default radius
+    };
+}
+
+/// Icon size variants.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum IconSize {
+    /// Small icon (16px) - inline icons
+    #[default]
+    Small,
+    /// Medium icon (20px) - toolbar, navigation
+    Medium,
+    /// Large icon (24px) - primary actions, empty states
+    Large,
+    /// Extra large icon (32px) - special emphasis
+    XLarge,
+}
+
+impl IconSize {
+    /// Returns the icon size in pixels.
+    pub const fn px(self) -> f32 {
+        match self {
+            IconSize::Small => 16.0,
+            IconSize::Medium => 20.0,
+            IconSize::Large => 24.0,
+            IconSize::XLarge => 32.0,
+        }
+    }
+}
+
+/// Border size variants.
+#[derive(Debug, Clone, Copy)]
+pub struct BorderSize {
+    /// Thin border width (1px) - standard borders
+    pub thin: f32,
+    /// Medium border width (2px) - emphasis borders
+    pub medium: f32,
+    /// Thick border width (3px) - strong emphasis
+    pub thick: f32,
+}
+
+impl Default for BorderSize {
+    fn default() -> Self {
+        Self {
+            thin: 1.0,
+            medium: 2.0,
+            thick: 3.0,
+        }
+    }
+}
+
+impl BorderSize {
+    /// Returns the default border sizes.
+    pub const DEFAULT: Self = Self {
+        thin: 1.0,
+        medium: 2.0,
+        thick: 3.0,
+    };
+}
+
+/// Radius size variants.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum RadiusSize {
+    /// No radius (0px) - sharp corners
+    None,
+    /// Small radius (4px) - inputs, small buttons
+    #[default]
+    Small,
+    /// Medium radius (8px) - cards, panels
+    Medium,
+    /// Large radius (12px) - modals, large elements
+    Large,
+    /// Full radius - circular elements
+    Full,
+}
+
+impl RadiusSize {
+    /// Returns the radius in pixels.
+    pub const fn px(self) -> f32 {
+        match self {
+            RadiusSize::None => 0.0,
+            RadiusSize::Small => 4.0,
+            RadiusSize::Medium => 8.0,
+            RadiusSize::Large => 12.0,
+            RadiusSize::Full => 999.0,
+        }
+    }
+}
+
+// ============================================================================
+// Theme Colors
+// ============================================================================
+
 /// Application theme variants.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum AppTheme {
@@ -132,41 +422,9 @@ impl From<AppTheme> for Option<Theme> {
     }
 }
 
-/// Button size variants for consistent sizing across the application.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum ButtonSize {
-    /// Small button (compact UI)
-    Small,
-    /// Medium button (default for most cases)
-    Medium,
-    /// Standard button (default)
-    #[default]
-    Standard,
-    /// Large button (prominent actions)
-    Large,
-}
-
-impl ButtonSize {
-    /// Returns the padding (horizontal, vertical) for this button size.
-    pub fn padding(self) -> (f32, f32) {
-        match self {
-            ButtonSize::Small => (8.0, 4.0),
-            ButtonSize::Medium => (12.0, 6.0),
-            ButtonSize::Standard => (16.0, 8.0),
-            ButtonSize::Large => (24.0, 12.0),
-        }
-    }
-
-    /// Returns the text size for this button size.
-    pub fn text_size(self) -> f32 {
-        match self {
-            ButtonSize::Small => 12.0,
-            ButtonSize::Medium => 14.0,
-            ButtonSize::Standard => 14.0,
-            ButtonSize::Large => 16.0,
-        }
-    }
-}
+// ============================================================================
+// Breakpoint System
+// ============================================================================
 
 /// Responsive breakpoint for layout adaptation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
@@ -222,59 +480,9 @@ impl Breakpoint {
     }
 }
 
-/// Spacing constants for consistent layout spacing.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Spacing {
-    /// Extra small spacing (4px)
-    pub xs: f32,
-    /// Small spacing (8px)
-    pub s: f32,
-    /// Medium spacing (12px)
-    pub m: f32,
-    /// Large spacing (16px)
-    pub l: f32,
-    /// Extra large spacing (24px)
-    pub xl: f32,
-    /// Extra extra large spacing (32px)
-    pub xxl: f32,
-}
-
-impl Spacing {
-    /// Default spacing constants.
-    pub const DEFAULT: Self = Self {
-        xs: 4.0,
-        s: 8.0,
-        m: 12.0,
-        l: 16.0,
-        xl: 24.0,
-        xxl: 32.0,
-    };
-
-    /// Detail panel section spacing (24px)
-    pub const DETAIL_SECTION: f32 = 24.0;
-    /// Detail panel item spacing (12px)
-    pub const DETAIL_ITEM: f32 = 12.0;
-    /// Detail panel label spacing (8px)
-    pub const DETAIL_LABEL: f32 = 8.0;
-}
-
-impl fmt::Display for Spacing {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={}, DETAIL_SECTION={}, DETAIL_ITEM={}, DETAIL_LABEL={})",
-            self.xs,
-            self.s,
-            self.m,
-            self.l,
-            self.xl,
-            self.xxl,
-            Self::DETAIL_SECTION,
-            Self::DETAIL_ITEM,
-            Self::DETAIL_LABEL
-        )
-    }
-}
+// ============================================================================
+// Application Style
+// ============================================================================
 
 /// Default application styles for components.
 #[derive(Debug, Clone, Copy, Default)]
@@ -298,6 +506,6 @@ impl ApplicationStyle {
 
     /// Returns the default button text size.
     pub fn button_text_size(&self) -> f32 {
-        self.button_size.text_size()
+        self.button_size.font_size().px()
     }
 }
