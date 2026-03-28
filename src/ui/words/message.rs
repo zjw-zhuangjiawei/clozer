@@ -46,6 +46,8 @@ pub enum WordsMessage {
     Batch(BatchMessage),
     /// Export operation messages
     Export(ExportMessage),
+    /// Import operation messages
+    Import(ImportMessage),
 }
 
 // ============================================================================
@@ -213,4 +215,30 @@ pub enum ExportMessage {
 pub enum ExportKind {
     Plaintext,
     TypstPdf,
+}
+
+/// Import operation messages.
+#[derive(Debug, Clone)]
+pub enum ImportMessage {
+    /// Start import from MDX file
+    MdxStart,
+    /// File selected from dialog
+    MdxFileSelected(String),
+    /// Import in progress (with progress percentage)
+    MdxProgress { current: usize, total: usize },
+    /// Import completed
+    MdxCompleted { words: usize, meanings: usize },
+    /// Import failed
+    MdxFailed { error: String },
+    /// Cancel import
+    MdxCancel,
+    /// Dismiss import result
+    Dismiss,
+}
+
+/// Import source format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
+pub enum ImportSource {
+    Mdx,
+    Json,
 }
