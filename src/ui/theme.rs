@@ -133,27 +133,6 @@ impl Spacing {
         xl: 24.0,
         xxl: 32.0,
     };
-
-    /// Detail panel section spacing (24px)
-    ///
-    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.xl` instead.
-    /// This constant is kept for backward compatibility only.
-    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.xl instead")]
-    pub const DETAIL_SECTION: f32 = 24.0;
-
-    /// Detail panel item spacing (12px)
-    ///
-    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.m` instead.
-    /// This constant is kept for backward compatibility only.
-    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.m instead")]
-    pub const DETAIL_ITEM: f32 = 12.0;
-
-    /// Detail panel label spacing (8px)
-    ///
-    /// ⚠️ **DEPRECATED**: Use `Spacing::DEFAULT.s` instead.
-    /// This constant is kept for backward compatibility only.
-    #[deprecated(since = "1.1.0", note = "Use Spacing::DEFAULT.s instead")]
-    pub const DETAIL_LABEL: f32 = 8.0;
 }
 
 impl fmt::Display for Spacing {

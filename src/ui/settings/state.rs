@@ -155,9 +155,6 @@ pub struct SettingsState {
     pub model_edit: ModelEditState,
 }
 
-/// Alias for backward compatibility.
-pub type SettingsUiState = SettingsState;
-
 impl SettingsState {
     /// Creates a new SettingsState.
     pub fn new() -> Self {

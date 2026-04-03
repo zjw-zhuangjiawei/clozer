@@ -51,9 +51,6 @@ pub struct QueueState {
     pub selection: SelectionState,
 }
 
-/// Alias for backward compatibility.
-pub type QueueUiState = QueueState;
-
 impl QueueState {
     /// Creates a new QueueState.
     pub fn new() -> Self {

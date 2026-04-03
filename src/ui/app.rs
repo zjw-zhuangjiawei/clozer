@@ -8,17 +8,30 @@ pub use crate::ui::state::MainWindowState;
 
 use crate::message::Message;
 use crate::state::Model;
-use crate::ui::theme::Breakpoint;
+use crate::ui::layout::{LayoutConfig, LayoutMode, adaptive_layout, breakpoint::Breakpoint};
+use crate::ui::theme::Breakpoint as ThemeBreakpoint;
 use crate::ui::words::message::WordsMessage;
 use iced::{Element, FillPortion, Task};
+
+/// Layout configuration for the application.
+/// Can be extended to support user preferences or settings persistence.
+static LAYOUT_CONFIG: std::sync::OnceLock<LayoutConfig> = std::sync::OnceLock::new();
+
+fn get_layout_config() -> &'static LayoutConfig {
+    LAYOUT_CONFIG.get_or_init(|| {
+        // Default to adaptive layout
+        LayoutConfig::adaptive()
+    })
+}
 
 /// Renders the main window by composing words, queue, and settings panels.
 pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Message> {
     // Determine breakpoint from window width for responsive layout
-    let breakpoint = Breakpoint::from_width(state.window_width as f32);
+    let breakpoint = ThemeBreakpoint::from_width(state.window_width as f32);
+    let _ex_breakpoint = Breakpoint::from_width(state.window_width as f32);
 
     // Navigation bar with responsive spacing
-    let nav_spacing = if breakpoint == Breakpoint::Mobile {
+    let nav_spacing = if breakpoint == ThemeBreakpoint::Mobile {
         5
     } else {
         10
@@ -101,7 +114,18 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
         }
     };
 
-    iced::widget::column![nav_bar, content].into()
+    // Use layout system based on configuration
+    let layout_config = get_layout_config();
+    match layout_config.mode {
+        LayoutMode::Adaptive => {
+            // Use adaptive layout with nav bar and content
+            adaptive_layout(nav_bar.into(), content, breakpoint)
+        }
+        _ => {
+            // Fallback to existing behavior for other modes
+            iced::widget::column![nav_bar, content].into()
+        }
+    }
 }
 
 /// Handles words panel update - returns Task<Message> for async operations.
@@ -115,9 +139,10 @@ pub fn update_words(
 
 /// Handles settings panel update - returns Task<Message> for async operations.
 pub fn update_settings(
-    _state: &mut MainWindowState,
+    state: &mut MainWindowState,
     message: crate::ui::settings::SettingsMessage,
     model: &mut Model,
 ) -> Task<Message> {
-    crate::ui::settings::update::update(message, model).map(Message::Settings)
+    crate::ui::settings::handlers::update(&mut state.settings, message, model)
+        .map(Message::Settings)
 }

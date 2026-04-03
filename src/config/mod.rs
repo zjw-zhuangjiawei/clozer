@@ -113,6 +113,9 @@ impl AppConfig {
     /// # Example
     ///
     /// ```rust
+    /// use clozer::config::{AppConfig, LogLevel};
+    ///
+    /// let app_config = AppConfig::default();
     /// let file_config = app_config.construct_file_config();
     /// ```
     pub fn construct_file_config(&self) -> FileConfig {

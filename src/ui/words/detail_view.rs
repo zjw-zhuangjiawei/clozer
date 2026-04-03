@@ -4,10 +4,11 @@ use crate::assets;
 use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
-use crate::ui::components::detail::empty_state;
+use crate::ui::components::dsl::empty_state;
+use crate::ui::components::dsl::{primary_btn, secondary_btn};
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
-use crate::ui::words::message::{DetailMessage, WordsMessage};
-use crate::ui::words::state::{DetailSelection, EditBuffer, EditContext};
+use crate::ui::words::manager::{DetailSelection, EditBuffer, EditContext};
+use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::{Button, Column, Container, Row, Text, button, text_input};
 
@@ -20,14 +21,14 @@ pub fn view<'a>(
 ) -> Element<'a, WordsMessage> {
     // NewWord mode - show form for creating new word
     if edit_mode == EditContext::NewWord {
-        return new_word_view(edit_buffer).map(WordsMessage::Detail);
+        return new_word_view(edit_buffer);
     }
 
     // NewMeaning mode - show form for adding new meaning to a word
     if let EditContext::NewMeaning(word_id) = edit_mode
         && let Some(word) = model.word_registry.get(word_id)
     {
-        return new_meaning_view(word.content.clone(), edit_buffer).map(WordsMessage::Detail);
+        return new_meaning_view(word.content.clone(), edit_buffer);
     }
 
     match selected_detail {
@@ -83,13 +84,13 @@ fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
         "No Selection",
         "Select an item from the list to view details",
     )
-    .map(WordsMessage::Detail)
+    .map(|_| WordsMessage::DetailClosed)
 }
 
 /// View for creating a new word in the detail panel.
-fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
+fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
     let word_input = text_input("Word *", &buffer.word_content)
-        .on_input(DetailMessage::EditNewWordContent)
+        .on_input(WordsMessage::EditNewWordContentChanged)
         .width(iced::Length::Fill);
 
     let lang_string = buffer
@@ -100,12 +101,12 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
     let lang_input = text_input("Language (optional)", &lang_string)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
-            DetailMessage::EditNewWordLanguage(parsed)
+            WordsMessage::EditNewWordLanguageChanged(parsed)
         })
         .width(iced::Length::Fill);
 
     let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
-        .on_input(DetailMessage::EditMeaningDefinition)
+        .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill);
 
     let pos_text = buffer.meaning_pos.to_string();
@@ -116,14 +117,8 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = Button::new(Text::new("Save"))
-        .style(button::primary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(DetailMessage::SaveNewWord);
-    let cancel_btn = Button::new(Text::new("Cancel"))
-        .style(button::secondary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(DetailMessage::Cancel);
+    let save_btn = primary_btn("Save", WordsMessage::NewWordSaved);
+    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -154,12 +149,9 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, DetailMessage> {
 }
 
 /// View for adding a new meaning in the detail panel.
-fn new_meaning_view<'a>(
-    word_content: String,
-    buffer: &'a EditBuffer,
-) -> Element<'a, DetailMessage> {
+fn new_meaning_view<'a>(word_content: String, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
     let def_input = text_input("Definition *", &buffer.meaning_definition)
-        .on_input(DetailMessage::EditMeaningDefinition)
+        .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill);
 
     let pos_text = buffer.meaning_pos.to_string();
@@ -170,14 +162,8 @@ fn new_meaning_view<'a>(
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = Button::new(Text::new("Save Meaning"))
-        .style(button::primary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(DetailMessage::SaveNewMeaning);
-    let cancel_btn = Button::new(Text::new("Cancel"))
-        .style(button::secondary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(DetailMessage::Cancel);
+    let save_btn = primary_btn("Save Meaning", WordsMessage::NewMeaningSaved);
+    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -232,9 +218,7 @@ fn word_detail_view<'a>(
                             Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
                                 .style(button::secondary)
                                 .padding(ButtonSize::Medium.to_iced_padding())
-                                .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
-                                    meaning.id,
-                                ))),
+                                .on_press(WordsMessage::MeaningSelected(meaning.id)),
                         )
                         .push(Text::new(pos_text).size(FontSize::Footnote.px()))
                         .push(
@@ -248,10 +232,7 @@ fn word_detail_view<'a>(
         })
         .unwrap_or_default();
 
-    let close_btn = Button::new(Text::new("×"))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Clear));
+    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -262,7 +243,7 @@ fn word_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::StartEditWord(word_id)));
+        .on_press(WordsMessage::EditWordStarted(word_id));
 
     let word_content = word_content.clone();
     Column::new()
@@ -285,7 +266,7 @@ fn word_detail_view<'a>(
 /// Renders word edit form in the detail panel.
 fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
     let word_input = text_input("Word *", &buffer.word_content)
-        .on_input(|s| WordsMessage::Detail(DetailMessage::EditWordContent(s)))
+        .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill);
 
     let lang_string = buffer
@@ -296,12 +277,12 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
     let lang_input = text_input("Language (optional)", &lang_string)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
-            WordsMessage::Detail(DetailMessage::EditWordLanguage(parsed))
+            WordsMessage::EditWordLanguageChanged(parsed)
         })
         .width(iced::Length::Fill);
 
     let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
-        .on_input(|s| WordsMessage::Detail(DetailMessage::EditMeaningDefinition(s)))
+        .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill);
 
     let pos_text = buffer.meaning_pos.to_string();
@@ -312,15 +293,8 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = Button::new(Text::new("Save"))
-        .style(button::primary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Save));
-
-    let cancel_btn = Button::new(Text::new("Cancel"))
-        .style(button::secondary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Cancel));
+    let save_btn = primary_btn("Save", WordsMessage::EditSaved);
+    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -376,15 +350,12 @@ fn meaning_detail_view<'a>(
                 .style(button::secondary)
                 .padding(ButtonSize::Medium.to_iced_padding())
                 .width(iced::Length::Fill)
-                .on_press(WordsMessage::Detail(DetailMessage::SelectCloze(*cloze_id)))
+                .on_press(WordsMessage::ClozeSelected(*cloze_id))
                 .into()
         })
         .collect();
 
-    let close_btn = Button::new(Text::new("×"))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Clear));
+    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -395,9 +366,7 @@ fn meaning_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::StartEditMeaning(
-            meaning_id,
-        )));
+        .on_press(WordsMessage::EditMeaningStarted(meaning_id));
 
     let mut column = Column::new()
         .push(
@@ -449,20 +418,9 @@ fn meaning_edit_view<'a>(
     word_content: String,
     buffer: &'a EditBuffer,
 ) -> Element<'a, WordsMessage> {
-    let close_btn = Button::new(Text::new("×"))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Clear));
-
-    let save_btn = Button::new(Text::new("Save"))
-        .style(button::primary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Save));
-
-    let cancel_btn = Button::new(Text::new("Cancel"))
-        .style(button::secondary)
-        .padding(ButtonSize::Medium.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Cancel));
+    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
+    let save_btn = primary_btn("Save", WordsMessage::EditSaved);
+    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
 
     let pos_selected = buffer.meaning_pos;
     let cefr_selected = buffer.meaning_cefr;
@@ -486,9 +444,8 @@ fn meaning_edit_view<'a>(
             Column::new()
                 .push(Text::new("Definition").size(FontSize::Body.px()))
                 .push(
-                    text_input("Definition", &buffer.meaning_definition).on_input(|s| {
-                        WordsMessage::Detail(DetailMessage::EditMeaningDefinition(s))
-                    }),
+                    text_input("Definition", &buffer.meaning_definition)
+                        .on_input(WordsMessage::EditMeaningDefinitionChanged),
                 )
                 .spacing(Spacing::DEFAULT.s),
         )
@@ -560,10 +517,7 @@ fn cloze_detail_view<'a>(
         })
         .unwrap_or_default();
 
-    let close_btn = Button::new(Text::new("×"))
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Detail(DetailMessage::Clear));
+    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
 
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -593,9 +547,7 @@ fn cloze_detail_view<'a>(
             Button::new(delete_icon)
                 .style(button::danger)
                 .padding(ButtonSize::Small.to_iced_padding())
-                .on_press(WordsMessage::Cloze(
-                    crate::ui::words::message::ClozeMessage::Delete { id: cloze_id },
-                )),
+                .on_press(WordsMessage::ClozeDeleted(cloze_id)),
         )
         .spacing(Spacing::DEFAULT.s)
         .padding(Spacing::DEFAULT.m)

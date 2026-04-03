@@ -1,0 +1,234 @@
+//! Edit session state management.
+
+use langtag::LangTagBuf;
+
+use crate::models::types::{MeaningId, WordId};
+use crate::models::{CefrLevel, PartOfSpeech};
+
+/// Detail panel editing context.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EditContext {
+    /// Not editing anything
+    #[default]
+    None,
+    /// Creating a new word
+    NewWord,
+    /// Creating a new meaning for a word
+    NewMeaning(WordId),
+    /// Editing a word
+    Word(WordId),
+    /// Editing a meaning
+    Meaning(MeaningId),
+}
+
+impl EditContext {
+    /// Clear editing context.
+    pub fn clear(&mut self) {
+        *self = EditContext::None;
+    }
+}
+
+/// Buffer for storing edits in progress.
+#[derive(Debug, Clone, Default)]
+pub struct EditBuffer {
+    /// Word content being edited
+    pub word_content: String,
+    /// Word language being edited
+    pub word_language: Option<LangTagBuf>,
+    /// Meaning definition being edited
+    pub meaning_definition: String,
+    /// Meaning part of speech being edited
+    pub meaning_pos: PartOfSpeech,
+    /// Meaning CEFR level being edited
+    pub meaning_cefr: Option<CefrLevel>,
+}
+
+impl EditBuffer {
+    /// Clear all fields for new word editing
+    pub fn clear_new_word(&mut self) {
+        self.word_content.clear();
+        self.word_language = None;
+        self.meaning_definition.clear();
+        self.meaning_pos = PartOfSpeech::Noun;
+        self.meaning_cefr = None;
+    }
+
+    /// Clear all fields for new meaning editing
+    pub fn clear_new_meaning(&mut self) {
+        self.meaning_definition.clear();
+        self.meaning_pos = PartOfSpeech::Noun;
+        self.meaning_cefr = None;
+    }
+}
+
+/// Form for adding new meaning.
+#[derive(Debug, Clone, Default)]
+pub struct NewMeaningForm {
+    /// Word ID to add meaning to (None if not adding)
+    pub word_id: Option<WordId>,
+    /// Meaning definition input
+    pub definition: String,
+    /// Meaning part of speech
+    pub pos: PartOfSpeech,
+    /// Meaning CEFR level
+    pub cefr_level: Option<CefrLevel>,
+}
+
+impl NewMeaningForm {
+    /// Check if currently adding a meaning.
+    pub fn is_active(&self) -> bool {
+        self.word_id.is_some()
+    }
+
+    /// Start adding meaning to a word.
+    pub fn start(&mut self, word_id: WordId) {
+        self.word_id = Some(word_id);
+        self.definition.clear();
+        self.pos = PartOfSpeech::default();
+        self.cefr_level = None;
+    }
+
+    /// Cancel adding meaning.
+    pub fn cancel(&mut self) {
+        self.word_id = None;
+        self.definition.clear();
+        self.pos = PartOfSpeech::default();
+        self.cefr_level = None;
+    }
+}
+
+/// Edit session state manager.
+#[derive(Debug)]
+pub struct EditManager {
+    /// Current editing context
+    context: EditContext,
+    /// Edit buffer
+    buffer: EditBuffer,
+    /// New meaning form
+    new_meaning_form: NewMeaningForm,
+}
+
+impl EditManager {
+    /// Creates a new EditManager.
+    pub fn new() -> Self {
+        Self {
+            context: EditContext::None,
+            buffer: EditBuffer::default(),
+            new_meaning_form: NewMeaningForm::default(),
+        }
+    }
+
+    /// Start creating a new word.
+    pub fn start_new_word(&mut self) {
+        self.context = EditContext::NewWord;
+        self.buffer.clear_new_word();
+    }
+
+    /// Start adding meaning to a word.
+    pub fn start_add_meaning(&mut self, word_id: WordId) {
+        self.context = EditContext::NewMeaning(word_id);
+        self.buffer.clear_new_meaning();
+    }
+
+    /// Start editing a word.
+    pub fn start_edit_word(
+        &mut self,
+        word_id: WordId,
+        content: String,
+        language: Option<LangTagBuf>,
+    ) {
+        self.context = EditContext::Word(word_id);
+        self.buffer.word_content = content;
+        self.buffer.word_language = language;
+    }
+
+    /// Start editing a meaning.
+    pub fn start_edit_meaning(
+        &mut self,
+        meaning_id: MeaningId,
+        definition: String,
+        pos: PartOfSpeech,
+        cefr: Option<CefrLevel>,
+    ) {
+        self.context = EditContext::Meaning(meaning_id);
+        self.buffer.meaning_definition = definition;
+        self.buffer.meaning_pos = pos;
+        self.buffer.meaning_cefr = cefr;
+    }
+
+    /// Clear editing context.
+    pub fn clear_context(&mut self) {
+        self.context = EditContext::None;
+    }
+
+    /// Get current editing context.
+    pub fn context(&self) -> EditContext {
+        self.context
+    }
+
+    /// Update word content.
+    pub fn update_word_content(&mut self, content: String) {
+        self.buffer.word_content = content;
+    }
+
+    /// Update word language.
+    pub fn update_word_language(&mut self, language: Option<LangTagBuf>) {
+        self.buffer.word_language = language;
+    }
+
+    /// Update meaning definition.
+    pub fn update_meaning_definition(&mut self, definition: String) {
+        self.buffer.meaning_definition = definition;
+    }
+
+    /// Update meaning part of speech.
+    pub fn update_meaning_pos(&mut self, pos: PartOfSpeech) {
+        self.buffer.meaning_pos = pos;
+    }
+
+    /// Update meaning CEFR level.
+    pub fn update_meaning_cefr(&mut self, cefr: Option<CefrLevel>) {
+        self.buffer.meaning_cefr = cefr;
+    }
+
+    /// Get edit buffer.
+    pub fn buffer(&self) -> &EditBuffer {
+        &self.buffer
+    }
+
+    /// Get new meaning form.
+    pub fn new_meaning_form(&self) -> &NewMeaningForm {
+        &self.new_meaning_form
+    }
+
+    /// Update new meaning definition.
+    pub fn update_new_meaning_definition(&mut self, definition: String) {
+        self.new_meaning_form.definition = definition;
+    }
+
+    /// Update new meaning part of speech.
+    pub fn update_new_meaning_pos(&mut self, pos: PartOfSpeech) {
+        self.new_meaning_form.pos = pos;
+    }
+
+    /// Update new meaning CEFR level.
+    pub fn update_new_meaning_cefr(&mut self, cefr: Option<CefrLevel>) {
+        self.new_meaning_form.cefr_level = cefr;
+    }
+
+    /// Start new meaning form.
+    pub fn start_new_meaning(&mut self, word_id: WordId) {
+        self.new_meaning_form.start(word_id);
+    }
+
+    /// Clear new meaning form.
+    pub fn clear_new_meaning(&mut self) {
+        self.new_meaning_form.cancel();
+    }
+}
+
+impl Default for EditManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}

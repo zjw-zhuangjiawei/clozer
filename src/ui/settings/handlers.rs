@@ -3,16 +3,16 @@
 //! Command handlers process messages and update state.
 
 use crate::state::Model;
+use crate::ui::settings::SettingsState;
 use crate::ui::settings::message::{
     GeneralSettingsMessage, ModelMessage, ProviderMessage, SettingsMessage,
 };
-use crate::ui::settings::SettingsState;
 use iced::Task;
 use std::sync::Arc;
 
 /// Handle general settings messages.
 pub fn general(
-    state: &mut SettingsState,
+    _state: &mut SettingsState,
     message: GeneralSettingsMessage,
     model: &mut Model,
 ) -> Task<SettingsMessage> {
@@ -40,8 +40,10 @@ pub fn provider(
         ProviderMessage::Edit(id) => {
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
                 if let Some(provider) = config.ai.providers.iter().find(|p| p.id == id) {
-                    state.provider_edit =
-                        crate::ui::settings::state::ProviderEditState::start_edit(id, provider.clone());
+                    state.provider_edit = crate::ui::settings::state::ProviderEditState::start_edit(
+                        id,
+                        provider.clone(),
+                    );
                 }
             }
         }
@@ -57,11 +59,13 @@ pub fn provider(
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
                 let is_new = state.provider_edit.is_new;
                 let provider = state.provider_edit.data.clone();
-                
+
                 if is_new {
                     config.ai.providers.push(provider);
                 } else if let Some(editing_id) = state.provider_edit.editing_id {
-                    if let Some(existing) = config.ai.providers.iter_mut().find(|p| p.id == editing_id) {
+                    if let Some(existing) =
+                        config.ai.providers.iter_mut().find(|p| p.id == editing_id)
+                    {
                         *existing = provider;
                     }
                 }
@@ -79,17 +83,17 @@ pub fn provider(
             state.provider_edit.data.provider_type = typ;
         }
         ProviderMessage::BaseUrlChanged(url) => {
-            state.provider_edit.data.base_url = url;
+            state.provider_edit.data.base_url = Some(url);
         }
         ProviderMessage::ApiKeyChanged(key) => {
-            state.provider_edit.data.api_key = key;
+            state.provider_edit.data.api_key = Some(key);
         }
     }
     Task::none()
 }
 
 /// Handle model messages.
-pub fn model(
+pub fn model_handler(
     state: &mut SettingsState,
     message: ModelMessage,
     model: &mut Model,
@@ -120,11 +124,12 @@ pub fn model(
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
                 let is_new = state.model_edit.is_new;
                 let model_config = state.model_edit.data.clone();
-                
+
                 if is_new {
                     config.ai.models.push(model_config);
                 } else if let Some(editing_id) = state.model_edit.editing_id {
-                    if let Some(existing) = config.ai.models.iter_mut().find(|m| m.id == editing_id) {
+                    if let Some(existing) = config.ai.models.iter_mut().find(|m| m.id == editing_id)
+                    {
                         *existing = model_config;
                     }
                 }
@@ -166,6 +171,6 @@ pub fn update(
     match message {
         General(msg) => general(state, msg, model),
         Provider(msg) => provider(state, msg, model),
-        Model(msg) => model(state, msg, model),
+        Model(msg) => model_handler(state, msg, model),
     }
 }

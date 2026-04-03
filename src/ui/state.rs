@@ -34,11 +34,3 @@ impl MainWindowState {
         }
     }
 }
-
-// Backward compatibility aliases
-#[allow(deprecated)]
-pub type WordsUiState = WordsState;
-#[allow(deprecated)]
-pub type QueueUiState = QueueState;
-#[allow(deprecated)]
-pub type SettingsUiState = SettingsState;

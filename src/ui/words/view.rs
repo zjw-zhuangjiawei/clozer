@@ -2,14 +2,13 @@ use crate::assets;
 use crate::models::types::{MeaningId, WordId};
 use crate::state::Model;
 use crate::ui::AppTheme;
+use crate::ui::components::dsl::{cefr_badge, pos_badge};
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
 use crate::ui::theme::{Breakpoint, ButtonSize, FontSize};
-use crate::ui::words::message::{
-    BatchMessage, DetailMessage, ExportMessage, FilterMessage, MeaningMessage, SearchMessage,
-    SelectionMessage, TagMessage, WordMessage, WordsMessage,
-};
-use crate::ui::words::state::{ClozeFilter, TagDropdownState, TagDropdownTarget, WordsState};
+use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
+use crate::ui::words::message::WordsMessage;
+use crate::ui::words::state::{ClozeFilter, WordsState};
 use iced::Element;
 use iced::widget::{
     Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
@@ -56,9 +55,9 @@ pub fn view<'a>(
         // Detail panel (right panel)
         let colors = AppTheme::default().colors();
         let right_panel = Container::new(crate::ui::words::detail_view::view(
-            Some(words_state.detail_selection),
-            words_state.edit_context,
-            &words_state.edit_buffer,
+            Some(words_state.detail.get_selection()),
+            words_state.edit.context(),
+            words_state.edit.buffer(),
             model,
         ))
         .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
@@ -85,8 +84,8 @@ fn build_search_bar<'a>(
     breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage> {
     // Search input
-    let search_input = TextInput::new("Search words or definitions...", &words_state.query)
-        .on_input(|s| WordsMessage::Search(SearchMessage::QueryChanged(s)))
+    let search_input = TextInput::new("Search words or definitions...", &words_state.search.query)
+        .on_input(WordsMessage::SearchQueryChanged)
         .width(iced::Length::Fill)
         .padding(8);
 
@@ -101,23 +100,22 @@ fn build_search_bar<'a>(
             ClozeFilter::All,
             ClozeFilter::HasClozes,
             ClozeFilter::Pending,
-            ClozeFilter::Failed,
         ],
-        Some(words_state.filter.cloze_status),
-        |f| WordsMessage::Filter(FilterMessage::ByClozeStatus(f)),
+        Some(words_state.search.cloze_filter),
+        WordsMessage::ClozeFilterChanged,
     )
     .width(cloze_filter_width)
     .placeholder("Filter");
 
     // Clear filter button
-    let clear_btn = if !words_state.query.is_empty()
-        || words_state.filter.cloze_status != ClozeFilter::All
-        || words_state.filter.tag_id.is_some()
+    let clear_btn = if !words_state.search.query.is_empty()
+        || words_state.search.cloze_filter != ClozeFilter::All
+        || words_state.search.tag_filter.is_some()
     {
         Button::new(Text::new("Clear"))
             .style(button::secondary)
             .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::Filter(FilterMessage::Clear))
+            .on_press(WordsMessage::FiltersCleared)
     } else {
         Button::new(Text::new("Clear"))
             .style(button::secondary)
@@ -143,10 +141,10 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
         .iter()
         .filter(|(_, word)| {
             // Search filter
-            let matches_search = if words_state.query.is_empty() {
+            let matches_search = if words_state.search.query.is_empty() {
                 true
             } else {
-                let query = words_state.query.to_lowercase();
+                let query = words_state.search.query.to_lowercase();
                 // Check word content
                 if word.content.to_lowercase().contains(&query) {
                     return true;
@@ -163,7 +161,7 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
             };
 
             // Cloze status filter
-            let matches_cloze_filter = match words_state.filter.cloze_status {
+            let matches_cloze_filter = match words_state.search.cloze_filter {
                 ClozeFilter::All => true,
                 ClozeFilter::HasClozes => word
                     .meaning_ids
@@ -173,11 +171,10 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
                     .meaning_ids
                     .iter()
                     .all(|mid| model.cloze_registry.iter_by_meaning_id(*mid).count() == 0),
-                ClozeFilter::Failed => false, // TODO: Track failed status
             };
 
             // Tag filter
-            let matches_tag_filter = match words_state.filter.tag_id {
+            let matches_tag_filter = match words_state.search.tag_filter {
                 None => true,
                 Some(tag_id) => word.meaning_ids.iter().any(|mid| {
                     model
@@ -220,7 +217,7 @@ fn build_word_node<'a>(
     word: &'a crate::models::Word,
 ) -> Element<'a, WordsMessage> {
     let words_state = &state.words;
-    let is_expanded = words_state.expansion.words.contains(&word.id);
+    let is_expanded = words_state.expansion.is_expanded(word.id);
     let is_selected = words_state.selection.is_word_selected(word);
     let is_partial = words_state.selection.is_word_partial(word);
 
@@ -244,9 +241,9 @@ fn build_word_node<'a>(
     .style(button::secondary)
     .padding(ButtonSize::Small.to_iced_padding())
     .on_press(if is_expanded {
-        WordsMessage::Word(WordMessage::Collapse { id: word.id })
+        WordsMessage::WordCollapsed(word.id)
     } else {
-        WordsMessage::Word(WordMessage::Expand { id: word.id })
+        WordsMessage::WordExpanded(word.id)
     })
     .into();
 
@@ -256,13 +253,10 @@ fn build_word_node<'a>(
     } else if is_partial {
         svg_checkbox(
             CheckboxState::Indeterminate,
-            WordsMessage::Selection(SelectionMessage::ToggleWord(word.id)),
+            WordsMessage::WordToggled(word.id),
         )
     } else {
-        svg_checkbox(
-            is_selected,
-            WordsMessage::Selection(SelectionMessage::ToggleWord(word.id)),
-        )
+        svg_checkbox(is_selected, WordsMessage::WordToggled(word.id))
     };
 
     // Word content (display only - not editable)
@@ -270,7 +264,7 @@ fn build_word_node<'a>(
         Button::new(Text::new(&word.content).size(FontSize::Subtitle.px()))
             .style(button::secondary)
             .padding(ButtonSize::Small.to_iced_padding())
-            .on_press(WordsMessage::Detail(DetailMessage::SelectWord(word.id)))
+            .on_press(WordsMessage::WordSelected(word.id))
             .into();
 
     // Meaning count
@@ -300,9 +294,7 @@ fn build_word_node<'a>(
             Button::new(Text::new("+ Add Meaning"))
                 .style(button::primary)
                 .padding(ButtonSize::Medium.to_iced_padding())
-                .on_press(WordsMessage::Detail(DetailMessage::StartAddMeaning(
-                    word.id,
-                ))),
+                .on_press(WordsMessage::AddMeaningStarted(word.id)),
         );
 
         // Meaning nodes
@@ -353,7 +345,7 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
     Button::new(delete_icon)
         .style(button::danger)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Word(WordMessage::Delete { id: word_id }))
+        .on_press(WordsMessage::WordDeleted(word_id))
         .into()
 }
 
@@ -364,45 +356,18 @@ fn build_meaning_node<'a>(
     meaning: &'a crate::models::Meaning,
 ) -> Element<'a, WordsMessage> {
     let words_state = &state.words;
-    let is_selected = words_state.selection.meanings.contains(&meaning.id);
+    let is_selected = words_state.selection.is_meaning_selected(meaning.id);
     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
 
-    // Get theme colors
-    let colors = AppTheme::default().colors();
-
     // Checkbox
-    let checkbox = svg_checkbox(
-        is_selected,
-        WordsMessage::Selection(SelectionMessage::ToggleMeaning(meaning.id)),
-    );
+    let checkbox = svg_checkbox(is_selected, WordsMessage::MeaningToggled(meaning.id));
 
     // POS badge
-    let pos_badge =
-        Container::new(Text::new(format!("[{}]", meaning.pos)).size(FontSize::Footnote.px()))
-            .padding([2, 6])
-            .style(move |_| container::Style {
-                background: Some(colors.pos_badge_bg.into()),
-                text_color: Some(colors.pos_badge_text),
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
+    let pos_badge = pos_badge::<WordsMessage>(meaning.pos);
 
     // CEFR level badge (if set)
     let cefr_badge = if let Some(cefr) = meaning.cefr_level {
-        Container::new(Text::new(cefr.to_string()).size(FontSize::Footnote.px()))
-            .padding([2, 6])
-            .style(move |_| container::Style {
-                background: Some(colors.surface_elevated.into()),
-                text_color: Some(colors.text_secondary),
-                border: iced::Border {
-                    radius: 4.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })
+        cefr_badge::<WordsMessage>(cefr)
     } else {
         Container::new(Text::new(""))
     };
@@ -412,9 +377,7 @@ fn build_meaning_node<'a>(
         Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
             .style(button::secondary)
             .padding(ButtonSize::Small.to_iced_padding())
-            .on_press(WordsMessage::Detail(DetailMessage::SelectMeaning(
-                meaning.id,
-            )))
+            .on_press(WordsMessage::MeaningSelected(meaning.id))
             .into();
 
     // Cloze status indicator
@@ -449,7 +412,7 @@ fn build_meaning_node<'a>(
             Button::new(Text::new(text).size(FontSize::Caption.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
-                .on_press(WordsMessage::Detail(DetailMessage::SelectCloze(*cloze_id)))
+                .on_press(WordsMessage::ClozeSelected(*cloze_id))
                 .into()
         })
         .collect();
@@ -486,9 +449,7 @@ fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage>
     Button::new(delete_icon)
         .style(button::danger)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::Meaning(MeaningMessage::Delete {
-            id: meaning_id,
-        }))
+        .on_press(WordsMessage::MeaningDeleted(meaning_id))
         .into()
 }
 
@@ -509,10 +470,10 @@ fn build_tags_row<'a>(
             Button::new(Text::new(&tag.name).size(FontSize::Caption.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
-                .on_press(WordsMessage::Tag(TagMessage::RemoveFromMeaning {
+                .on_press(WordsMessage::TagRemovedFromMeaning {
                     meaning_id: meaning.id,
                     tag_id: tag.id,
-                }))
+                })
                 .into()
         })
         .collect();
@@ -522,15 +483,15 @@ fn build_tags_row<'a>(
         Button::new(Text::new("+").size(FontSize::Caption.px()))
             .style(button::secondary)
             .padding(ButtonSize::Small.to_iced_padding())
-            .on_press(WordsMessage::Tag(TagMessage::ShowDropdown {
-                meaning_id: meaning.id,
-            }))
+            .on_press(WordsMessage::TagDropdownOpened {
+                for_meaning: meaning.id,
+            })
             .into(),
     );
 
     // Tag dropdown if active
     let tag_dropdown: Option<Element<'a, WordsMessage>> =
-        if let Some(ref dropdown) = words_state.tag_dropdown {
+        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SingleMeaning(mid) if mid == meaning.id => {
                     Some(build_tag_dropdown(dropdown, model))
@@ -562,7 +523,7 @@ fn build_tag_dropdown<'a>(
     let colors = AppTheme::default().colors();
 
     let search = TextInput::new("Search or create...", &dropdown.search)
-        .on_input(|s| WordsMessage::Tag(TagMessage::Search { query: s }))
+        .on_input(WordsMessage::TagSearchChanged)
         .width(iced::Length::Fixed(150.0))
         .padding(4);
 
@@ -584,16 +545,17 @@ fn build_tag_dropdown<'a>(
     let mut tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
         .iter()
         .map(|tag| {
+            let meaning_id = if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
+                mid
+            } else {
+                MeaningId(Uuid::nil())
+            };
             Button::new(Text::new(&tag.name).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
-                .on_press(WordsMessage::Tag(TagMessage::AddToMeaning {
-                    meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
-                        mid
-                    } else {
-                        MeaningId(Uuid::nil())
-                    },
+                .on_press(WordsMessage::TagAddedToMeaning {
+                    meaning_id,
                     tag_id: tag.id,
-                }))
+                })
                 .into()
         })
         .collect();
@@ -606,17 +568,18 @@ fn build_tag_dropdown<'a>(
             .any(|(_, t)| t.name.to_lowercase() == dropdown.search.to_lowercase())
     {
         let search = dropdown.search.clone();
+        let meaning_id = if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
+            mid
+        } else {
+            MeaningId(Uuid::nil())
+        };
         tag_items.push(
             Button::new(Text::new(format!("Create \"{}\"", search)).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
-                .on_press(WordsMessage::Tag(TagMessage::QuickCreate {
-                    meaning_id: if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
-                        mid
-                    } else {
-                        MeaningId(Uuid::nil())
-                    },
+                .on_press(WordsMessage::TagQuickCreated {
+                    meaning_id,
                     name: search,
-                }))
+                })
                 .into(),
         );
     }
@@ -653,23 +616,21 @@ fn build_action_bar<'a>(
     if cloze_selected_count > 0 {
         let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
 
-        // Export dropdown
-        let export_options = ["Plaintext", "TypstPdf"];
-        let export_dropdown = PickList::new(export_options.to_vec(), None::<&str>, |_| {
-            WordsMessage::Export(ExportMessage::ToPlaintext)
-        })
-        .width(iced::Length::Fixed(140.0))
-        .placeholder("Export");
+        // Export button
+        let export_btn = Button::new(Text::new("Export"))
+            .style(button::secondary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::ExportPlaintext);
 
         let delete_btn = Button::new(Text::new("Delete Clozes"))
             .style(button::danger)
             .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::Batch(BatchMessage::DeleteSelectedClozes));
+            .on_press(WordsMessage::ClozesDeleted);
 
         return Row::new()
             .push(selection_info)
             .push(Text::new(" ").width(iced::Length::Fill))
-            .push(export_dropdown)
+            .push(export_btn)
             .push(delete_btn)
             .spacing(10)
             .align_y(iced::Alignment::Center)
@@ -679,15 +640,15 @@ fn build_action_bar<'a>(
     // No cloze selection - check for meaning selection
     if meaning_selected_count == 0 {
         // Show search input and add button
-        let search_input = TextInput::new("Search words...", &words_state.query)
-            .on_input(|s| WordsMessage::Search(SearchMessage::QueryChanged(s)))
+        let search_input = TextInput::new("Search words...", &words_state.search.query)
+            .on_input(WordsMessage::SearchQueryChanged)
             .width(iced::Length::Fill)
             .padding(8);
 
         let add_btn = Button::new(Text::new("+ Add"))
             .style(button::primary)
             .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::Detail(DetailMessage::StartNewWord));
+            .on_press(WordsMessage::NewWordStarted);
 
         return Row::new()
             .push(search_input)
@@ -700,40 +661,41 @@ fn build_action_bar<'a>(
     let selection_info = Text::new(format!("☑ {} meanings selected", meaning_selected_count));
 
     // Batch tag dropdown if active
-    let tag_btn: Element<'a, WordsMessage> = if let Some(ref dropdown) = words_state.tag_dropdown {
-        match dropdown.target {
-            TagDropdownTarget::SelectedMeanings => Row::new()
-                .push(
-                    Button::new(Text::new("Add Tag ▾"))
-                        .style(button::primary)
-                        .padding(ButtonSize::Standard.to_iced_padding()),
-                )
-                .push(build_batch_tag_dropdown(dropdown, model))
-                .spacing(2)
-                .into(),
-            _ => Button::new(Text::new("Add Tag"))
+    let tag_btn: Element<'a, WordsMessage> =
+        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
+            match dropdown.target {
+                TagDropdownTarget::SelectedMeanings => Row::new()
+                    .push(
+                        Button::new(Text::new("Add Tag ▾"))
+                            .style(button::primary)
+                            .padding(ButtonSize::Standard.to_iced_padding()),
+                    )
+                    .push(build_batch_tag_dropdown(dropdown, model))
+                    .spacing(2)
+                    .into(),
+                _ => Button::new(Text::new("Add Tag"))
+                    .style(button::secondary)
+                    .padding(ButtonSize::Standard.to_iced_padding())
+                    .on_press(WordsMessage::TagBatchDropdownOpened)
+                    .into(),
+            }
+        } else {
+            Button::new(Text::new("Add Tag"))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
-                .on_press(WordsMessage::Tag(TagMessage::ShowBatchDropdown))
-                .into(),
-        }
-    } else {
-        Button::new(Text::new("Add Tag"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::Tag(TagMessage::ShowBatchDropdown))
-            .into()
-    };
+                .on_press(WordsMessage::TagBatchDropdownOpened)
+                .into()
+        };
 
     let queue_btn = Button::new(Text::new("Queue"))
         .style(button::primary)
         .padding(ButtonSize::Standard.to_iced_padding())
-        .on_press(WordsMessage::Batch(BatchMessage::QueueSelected));
+        .on_press(WordsMessage::MeaningsQueuedForGeneration);
 
     let delete_btn = Button::new(Text::new("Delete"))
         .style(button::danger)
         .padding(ButtonSize::Standard.to_iced_padding())
-        .on_press(WordsMessage::Batch(BatchMessage::DeleteSelected));
+        .on_press(WordsMessage::MeaningsDeleted);
 
     Row::new()
         .push(selection_info)
@@ -755,7 +717,7 @@ fn build_batch_tag_dropdown<'a>(
     let colors = AppTheme::default().colors();
 
     let search = TextInput::new("Search...", &dropdown.search)
-        .on_input(|s| WordsMessage::Tag(TagMessage::Search { query: s }))
+        .on_input(WordsMessage::TagSearchChanged)
         .width(iced::Length::Fixed(150.0))
         .padding(4);
 
@@ -779,9 +741,7 @@ fn build_batch_tag_dropdown<'a>(
         .map(|tag| {
             Button::new(Text::new(&tag.name).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
-                .on_press(WordsMessage::Tag(TagMessage::AddToSelected {
-                    tag_id: tag.id,
-                }))
+                .on_press(WordsMessage::TagAddedToSelected { tag_id: tag.id })
                 .into()
         })
         .collect();

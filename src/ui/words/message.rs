@@ -1,222 +1,155 @@
 //! Words panel message types.
 //!
-//! Messages are organized hierarchically by domain:
-//! - Search: Query handling
-//! - Filter: Cloze status and tag filtering
-//! - Selection: Meaning and cloze selection
-//! - Detail: Detail panel selection and editing
-//! - Word: Word CRUD operations
-//! - Meaning: Meaning CRUD operations
-//! - Tag: Tag operations
-//! - Cloze: Cloze operations
-//! - Batch: Batch operations on selections
-//! - Export: Export operations
+//! Messages are flattened - each operation is a direct variant with all needed data.
 
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::models::{CefrLevel, PartOfSpeech};
 use crate::ui::words::state::ClozeFilter;
-use strum::{Display, VariantArray};
 
-/// Root message enum for Words panel.
+/// Flattened message enum for Words panel.
 ///
-/// Delegates to domain-specific message handlers.
+/// All operations are direct variants, no nested message types.
 #[derive(Debug, Clone)]
 pub enum WordsMessage {
-    /// Search-related messages
-    Search(SearchMessage),
-    /// Filter-related messages
-    Filter(FilterMessage),
-    /// Selection-related messages
-    Selection(SelectionMessage),
-    /// Detail panel messages
-    Detail(DetailMessage),
-    /// Word CRUD messages
-    Word(WordMessage),
-    /// Meaning CRUD messages
-    Meaning(MeaningMessage),
-    /// Tag operation messages
-    Tag(TagMessage),
-    /// Cloze operation messages
-    Cloze(ClozeMessage),
-    /// Batch operation messages
-    Batch(BatchMessage),
-    /// Export operation messages
-    Export(ExportMessage),
-}
-
-/// Search-related messages.
-#[derive(Debug, Clone)]
-pub enum SearchMessage {
+    // Search
     /// Search query changed
-    QueryChanged(String),
+    SearchQueryChanged(String),
     /// Clear search query
-    Clear,
-}
+    SearchCleared,
 
-/// Filter-related messages.
-#[derive(Debug, Clone)]
-pub enum FilterMessage {
+    // Filter
     /// Filter by cloze generation status
-    ByClozeStatus(ClozeFilter),
+    ClozeFilterChanged(ClozeFilter),
     /// Filter by tag
-    ByTag(Option<TagId>),
+    TagFilterChanged(Option<TagId>),
     /// Clear all filters
-    Clear,
-}
+    FiltersCleared,
 
-/// Selection-related messages.
-#[derive(Debug, Clone)]
-pub enum SelectionMessage {
+    // Selection
     /// Toggle selection for all meanings of a word
-    ToggleWord(WordId),
+    WordToggled(WordId),
     /// Toggle selection for a single meaning
-    ToggleMeaning(MeaningId),
+    MeaningToggled(MeaningId),
     /// Toggle selection for a single cloze
-    ToggleCloze(ClozeId),
+    ClozeToggled(ClozeId),
     /// Select all meanings
-    SelectAll,
+    SelectAllTriggered,
     /// Deselect all
-    DeselectAll,
-}
+    DeselectAllTriggered,
 
-/// Detail panel messages.
-#[derive(Debug, Clone)]
-pub enum DetailMessage {
+    // Detail panel selection
     /// Select word detail
-    SelectWord(WordId),
+    WordSelected(WordId),
     /// Select meaning detail
-    SelectMeaning(MeaningId),
+    MeaningSelected(MeaningId),
     /// Select cloze detail
-    SelectCloze(ClozeId),
+    ClozeSelected(ClozeId),
     /// Clear detail selection
-    Clear,
+    DetailClosed,
+
+    // Detail panel editing - start operations
     /// Start creating a new word
-    StartNewWord,
+    NewWordStarted,
     /// Start adding a meaning to a word
-    StartAddMeaning(WordId),
+    AddMeaningStarted(WordId),
     /// Start editing a word
-    StartEditWord(WordId),
+    EditWordStarted(WordId),
     /// Start editing a meaning
-    StartEditMeaning(MeaningId),
+    EditMeaningStarted(MeaningId),
+
+    // Detail panel editing - field updates
     /// Edit word content input
-    EditWordContent(String),
+    EditWordContentChanged(String),
     /// Edit word language (for editing existing word)
-    EditWordLanguage(Option<langtag::LangTagBuf>),
+    EditWordLanguageChanged(Option<langtag::LangTagBuf>),
     /// Edit new word content (for NewWord context)
-    EditNewWordContent(String),
+    EditNewWordContentChanged(String),
     /// Edit new word language (for NewWord context)
-    EditNewWordLanguage(Option<langtag::LangTagBuf>),
+    EditNewWordLanguageChanged(Option<langtag::LangTagBuf>),
     /// Edit meaning definition input
-    EditMeaningDefinition(String),
+    EditMeaningDefinitionChanged(String),
     /// Edit meaning part of speech
-    EditMeaningPos(PartOfSpeech),
+    EditMeaningPosChanged(PartOfSpeech),
     /// Edit meaning CEFR level
-    EditMeaningCefr(Option<CefrLevel>),
-    /// Save current edit
-    Save,
-    /// Save new word
-    SaveNewWord,
-    /// Save new meaning
-    SaveNewMeaning,
+    EditMeaningCefrChanged(Option<CefrLevel>),
+
+    // Detail panel editing - save/cancel
+    /// Save current edit (for Word/Meaning edit contexts)
+    EditSaved,
+    /// Save new word (for NewWord context)
+    NewWordSaved,
+    /// Save new meaning (for NewMeaning context)
+    NewMeaningSaved,
     /// Cancel current edit
-    Cancel,
-}
+    EditCancelled,
 
-/// Word CRUD messages.
-#[derive(Debug, Clone)]
-pub enum WordMessage {
-    /// Create a new word
-    Create { content: String },
+    // Word CRUD
+    /// Create a new word (from inline input)
+    WordCreated { content: String },
     /// Delete a word
-    Delete { id: WordId },
+    WordDeleted(WordId),
     /// Expand a word (show meanings)
-    Expand { id: WordId },
+    WordExpanded(WordId),
     /// Collapse a word (hide meanings)
-    Collapse { id: WordId },
+    WordCollapsed(WordId),
     /// Expand all words
-    ExpandAll,
+    WordsExpandedAll,
     /// Collapse all words
-    CollapseAll,
-}
+    WordsCollapsedAll,
 
-/// Meaning CRUD messages.
-#[derive(Debug, Clone)]
-pub enum MeaningMessage {
-    /// Start adding meaning to a word
-    AddStart { word_id: WordId },
-    /// Input meaning definition
-    AddInput { definition: String },
-    /// Select meaning part of speech
-    AddPos { pos: PartOfSpeech },
-    /// Select meaning CEFR level
-    AddCefr { level: Option<CefrLevel> },
-    /// Save new meaning
-    AddSave,
-    /// Cancel adding meaning
-    AddCancel,
+    // Meaning CRUD
+    /// Start adding meaning to a word (inline form)
+    MeaningAddStarted { word_id: WordId },
+    /// Input meaning definition (inline form)
+    MeaningAddInput { definition: String },
+    /// Select meaning part of speech (inline form)
+    MeaningAddPos { pos: PartOfSpeech },
+    /// Select meaning CEFR level (inline form)
+    MeaningAddCefr { level: Option<CefrLevel> },
+    /// Save new meaning (inline form)
+    MeaningAddSaved,
+    /// Cancel adding meaning (inline form)
+    MeaningAddCancelled,
     /// Delete a meaning
-    Delete { id: MeaningId },
-}
+    MeaningDeleted(MeaningId),
 
-/// Tag operation messages.
-#[derive(Debug, Clone)]
-pub enum TagMessage {
+    // Tag operations
     /// Show tag dropdown for a meaning
-    ShowDropdown { meaning_id: MeaningId },
+    TagDropdownOpened { for_meaning: MeaningId },
     /// Show tag dropdown for batch operation on selected meanings
-    ShowBatchDropdown,
+    TagBatchDropdownOpened,
     /// Tag search query changed
-    Search { query: String },
+    TagSearchChanged(String),
     /// Add tag to a meaning
-    AddToMeaning {
+    TagAddedToMeaning {
         meaning_id: MeaningId,
         tag_id: TagId,
     },
     /// Add tag to all selected meanings
-    AddToSelected { tag_id: TagId },
+    TagAddedToSelected { tag_id: TagId },
     /// Remove tag from a meaning
-    RemoveFromMeaning {
+    TagRemovedFromMeaning {
         meaning_id: MeaningId,
         tag_id: TagId,
     },
     /// Quick create tag and add to meaning
-    QuickCreate { meaning_id: MeaningId, name: String },
+    TagQuickCreated { meaning_id: MeaningId, name: String },
     /// Close tag dropdown
-    Close,
-}
+    TagDropdownClosed,
 
-/// Cloze operation messages.
-#[derive(Debug, Clone)]
-pub enum ClozeMessage {
+    // Cloze operations
     /// Delete a cloze
-    Delete { id: ClozeId },
-    /// Toggle cloze selection (independent of meaning selection)
-    ToggleSelection { id: ClozeId },
-}
+    ClozeDeleted(ClozeId),
 
-/// Batch operation messages.
-#[derive(Debug, Clone)]
-pub enum BatchMessage {
+    // Batch operations
     /// Queue all selected meanings for generation
-    QueueSelected,
+    MeaningsQueuedForGeneration,
     /// Delete all selected meanings
-    DeleteSelected,
+    MeaningsDeleted,
     /// Delete all selected clozes
-    DeleteSelectedClozes,
-}
+    ClozesDeleted,
 
-/// Export operation messages.
-#[derive(Debug, Clone)]
-pub enum ExportMessage {
+    // Export operations
     /// Export to plaintext
-    ToPlaintext,
-    /// Export to Typst PDF
-    ToTypstPdf,
-}
-
-/// Export kind for the export dropdown.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
-pub enum ExportKind {
-    Plaintext,
-    TypstPdf,
+    ExportPlaintext,
 }

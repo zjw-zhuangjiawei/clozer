@@ -10,9 +10,6 @@ mod core;
 pub use core::*;
 mod clozes;
 mod meanings;
-// mod models;
-// mod providers;
-// mod queue;
 mod tags;
 mod words;
 

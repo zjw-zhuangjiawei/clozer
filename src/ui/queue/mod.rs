@@ -6,6 +6,6 @@ pub mod update;
 pub mod view;
 
 pub use self::message::QueueMessage;
-pub use self::state::QueueUiState;
+pub use self::state::QueueState;
 pub use self::update::update;
 pub use self::view::view;

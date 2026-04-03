@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod components;
+pub mod layout;
 pub mod nav;
 pub mod queue;
 pub mod settings;

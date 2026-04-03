@@ -1,125 +1,126 @@
 //! Words panel command handlers.
 //!
-//! Command handlers process messages and update state. Each handler function
-//! corresponds to a domain-specific message type.
+//! Command handlers process messages and update state. Each handler processes
+//! a flattened message variant directly.
 
-use crate::models::{Meaning, Tag, Word};
+use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
+use crate::models::{CefrLevel, Meaning, PartOfSpeech, Tag, Word};
 use crate::state::Model;
-use crate::ui::words::message::{
-    BatchMessage, ClozeMessage, DetailMessage, ExportKind, ExportMessage, FilterMessage,
-    MeaningMessage, SearchMessage, SelectionMessage, TagMessage, WordMessage,
-    WordsMessage,
-};
+use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::{DetailSelection, EditContext, TagDropdownState};
 use iced::Task;
-use uuid::Uuid;
 
-/// Handle search-related messages.
-pub fn search(state: &mut crate::ui::words::WordsState, message: SearchMessage) {
-    match message {
-        SearchMessage::QueryChanged(query) => {
-            state.query = query;
-        }
-        SearchMessage::Clear => {
-            state.query.clear();
-        }
-    }
-}
-
-/// Handle filter-related messages.
-pub fn filter(state: &mut crate::ui::words::WordsState, message: FilterMessage) {
-    match message {
-        FilterMessage::ByClozeStatus(status) => {
-            state.filter.cloze_status = status;
-        }
-        FilterMessage::ByTag(tag_id) => {
-            state.filter.tag_id = tag_id;
-        }
-        FilterMessage::Clear => {
-            state.query.clear();
-            state.filter = Default::default();
-        }
-    }
-}
-
-/// Handle selection-related messages.
-pub fn selection(
+/// Handle all words-related messages.
+///
+/// Returns `Task<WordsMessage>` for async operations.
+pub fn update(
     state: &mut crate::ui::words::WordsState,
-    message: SelectionMessage,
-    model: &Model,
-) {
+    message: WordsMessage,
+    model: &mut Model,
+) -> Task<WordsMessage> {
     match message {
-        SelectionMessage::ToggleWord(word_id) => {
+        // Search
+        WordsMessage::SearchQueryChanged(query) => {
+            state.search.set_query(query);
+        }
+        WordsMessage::SearchCleared => {
+            state.search.clear_query();
+        }
+
+        // Filter
+        WordsMessage::ClozeFilterChanged(status) => {
+            state.search.set_cloze_filter(status);
+        }
+        WordsMessage::TagFilterChanged(tag_id) => {
+            state.search.set_tag_filter(tag_id);
+        }
+        WordsMessage::FiltersCleared => {
+            state.search.clear_filters();
+        }
+
+        // Selection
+        WordsMessage::WordToggled(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
                 let word = word.clone();
                 state.selection.toggle_word(&word);
             }
         }
-        SelectionMessage::ToggleMeaning(meaning_id) => {
+        WordsMessage::MeaningToggled(meaning_id) => {
             state.selection.toggle_meaning(meaning_id);
         }
-        SelectionMessage::ToggleCloze(cloze_id) => {
+        WordsMessage::ClozeToggled(cloze_id) => {
             state.selection.toggle_cloze(cloze_id);
         }
-        SelectionMessage::SelectAll => {
-            state.selection.select_all(&model.meaning_registry);
+        WordsMessage::SelectAllTriggered => {
+            state.selection.select_all_meanings(&model.meaning_registry);
         }
-        SelectionMessage::DeselectAll => {
-            state.selection.clear();
+        WordsMessage::DeselectAllTriggered => {
+            state.selection.clear_all();
         }
-    }
-}
 
-/// Handle detail panel messages.
-pub fn detail(
-    state: &mut crate::ui::words::WordsState,
-    message: DetailMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        DetailMessage::SelectWord(word_id) => {
-            state.detail_selection.toggle_word(word_id);
+        // Detail panel selection
+        WordsMessage::WordSelected(word_id) => {
+            state.detail.select_word(word_id);
         }
-        DetailMessage::SelectMeaning(meaning_id) => {
-            state.detail_selection.toggle_meaning(meaning_id);
+        WordsMessage::MeaningSelected(meaning_id) => {
+            state.detail.select_meaning(meaning_id);
         }
-        DetailMessage::SelectCloze(cloze_id) => {
-            state.detail_selection.toggle_cloze(cloze_id);
+        WordsMessage::ClozeSelected(cloze_id) => {
+            state.detail.select_cloze(cloze_id);
         }
-        DetailMessage::Clear => {
-            state.detail_selection.clear();
+        WordsMessage::DetailClosed => {
+            state.detail.clear_selection();
         }
-        DetailMessage::StartEditWord(word_id) => {
+
+        // Detail panel editing - start operations
+        WordsMessage::NewWordStarted => {
+            state.detail.clear_selection();
+            state.edit.start_new_word();
+        }
+        WordsMessage::AddMeaningStarted(word_id) => {
+            state.detail.clear_selection();
+            state.edit.start_add_meaning(word_id);
+        }
+        WordsMessage::EditWordStarted(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
-                state.edit_context = EditContext::Word(word_id);
-                state.edit_buffer.word_content = word.content.clone();
+                state.edit.start_edit_word(word_id, word.content.clone(), word.language.clone());
             }
         }
-        DetailMessage::StartEditMeaning(meaning_id) => {
+        WordsMessage::EditMeaningStarted(meaning_id) => {
             if let Some(meaning) = model.meaning_registry.get(meaning_id) {
-                state.edit_context = EditContext::Meaning(meaning_id);
-                state.edit_buffer.meaning_definition = meaning.definition.clone();
-                state.edit_buffer.meaning_pos = meaning.pos;
-                state.edit_buffer.meaning_cefr = meaning.cefr_level;
+                state.edit.start_edit_meaning(meaning_id, meaning.definition.clone(), meaning.pos, meaning.cefr_level);
             }
         }
-        DetailMessage::EditWordContent(content) => {
-            state.edit_buffer.word_content = content;
+
+        // Detail panel editing - field updates
+        WordsMessage::EditWordContentChanged(content) => {
+            state.edit.update_word_content(content);
         }
-        DetailMessage::EditMeaningDefinition(definition) => {
-            state.edit_buffer.meaning_definition = definition;
+        WordsMessage::EditWordLanguageChanged(lang) => {
+            state.edit.update_word_language(lang);
         }
-        DetailMessage::EditMeaningPos(pos) => {
-            state.edit_buffer.meaning_pos = pos;
+        WordsMessage::EditNewWordContentChanged(content) => {
+            state.edit.update_word_content(content);
         }
-        DetailMessage::EditMeaningCefr(cefr) => {
-            state.edit_buffer.meaning_cefr = cefr;
+        WordsMessage::EditNewWordLanguageChanged(lang) => {
+            state.edit.update_word_language(lang);
         }
-        DetailMessage::Save => {
-            match state.edit_context {
+        WordsMessage::EditMeaningDefinitionChanged(definition) => {
+            state.edit.update_meaning_definition(definition);
+        }
+        WordsMessage::EditMeaningPosChanged(pos) => {
+            state.edit.update_meaning_pos(pos);
+        }
+        WordsMessage::EditMeaningCefrChanged(cefr) => {
+            state.edit.update_meaning_cefr(cefr);
+        }
+
+        // Detail panel editing - save/cancel
+        WordsMessage::EditSaved => {
+            match state.edit.context() {
                 EditContext::Word(id) => {
                     if let Some(word) = model.word_registry.get_mut(id) {
-                        let trimmed = state.edit_buffer.word_content.trim();
+                        let trimmed = state.edit.buffer().word_content.trim();
                         if !trimmed.is_empty() {
                             word.content = trimmed.to_string();
                             tracing::debug!("Updated word: {} (id={})", word.content, id);
@@ -128,34 +129,25 @@ pub fn detail(
                 }
                 EditContext::Meaning(id) => {
                     if let Some(meaning) = model.meaning_registry.get_mut(id) {
-                        let trimmed = state.edit_buffer.meaning_definition.trim();
+                        let trimmed = state.edit.buffer().meaning_definition.trim();
                         if !trimmed.is_empty() {
                             meaning.definition = trimmed.to_string();
                         }
-                        meaning.pos = state.edit_buffer.meaning_pos;
-                        meaning.cefr_level = state.edit_buffer.meaning_cefr;
+                        meaning.pos = state.edit.buffer().meaning_pos;
+                        meaning.cefr_level = state.edit.buffer().meaning_cefr;
                         tracing::debug!("Updated meaning: {} (id={})", meaning.definition, id);
                     }
                 }
                 EditContext::None => {}
             }
-            state.edit_context.clear();
+            state.edit.clear_context();
         }
-        DetailMessage::Cancel => {
-            state.edit_context.clear();
+        WordsMessage::EditCancelled => {
+            state.edit.clear_context();
         }
-    }
-    Task::none()
-}
 
-/// Handle word CRUD messages.
-pub fn word(
-    state: &mut crate::ui::words::WordsState,
-    message: WordMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        WordMessage::Create { content } => {
+        // Word CRUD
+        WordsMessage::WordCreated { content } => {
             let trimmed = content.trim();
             if !trimmed.is_empty() {
                 // Check for duplicate
@@ -167,11 +159,11 @@ pub fn word(
                     let word = Word::builder().content(trimmed.to_string()).build();
                     tracing::debug!("Creating word: {} (id={})", word.content, word.id);
                     model.word_registry.add(word);
-                    state.query.clear();
+                    state.search.clear_query();
                 }
             }
         }
-        WordMessage::Delete { id } => {
+        WordsMessage::WordDeleted(id) => {
             tracing::debug!("Deleting word: {}", id);
             // Delete all clozes for meanings of this word
             if let Some(word) = model.word_registry.get(id) {
@@ -186,57 +178,47 @@ pub fn word(
             // Clear selection for this word's meanings
             if let Some(word) = model.word_registry.get(id) {
                 for mid in &word.meaning_ids {
-                    state.selection.meanings.remove(mid);
+                    state.selection.remove_meaning(mid);
                 }
             }
         }
-        WordMessage::Expand { id } => {
-            state.expansion.words.insert(id);
+        WordsMessage::WordExpanded(id) => {
+            state.expansion.expand(id);
         }
-        WordMessage::Collapse { id } => {
-            state.expansion.words.remove(&id);
+        WordsMessage::WordCollapsed(id) => {
+            state.expansion.collapse(id);
         }
-        WordMessage::ExpandAll => {
-            for (id, _) in model.word_registry.iter() {
-                state.expansion.words.insert(*id);
-            }
+        WordsMessage::WordsExpandedAll => {
+            let ids: Vec<_> = model.word_registry.iter().map(|(id, _)| *id).collect();
+            state.expansion.expand_all(ids);
         }
-        WordMessage::CollapseAll => {
-            state.expansion.words.clear();
+        WordsMessage::WordsCollapsedAll => {
+            state.expansion.collapse_all();
         }
-    }
-    Task::none()
-}
 
-/// Handle meaning CRUD messages.
-pub fn meaning(
-    state: &mut crate::ui::words::WordsState,
-    message: MeaningMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        MeaningMessage::AddStart { word_id } => {
-            state.new_meaning.start(word_id);
+        // Meaning CRUD
+        WordsMessage::MeaningAddStarted { word_id } => {
+            state.edit.start_new_meaning(word_id);
         }
-        MeaningMessage::AddInput { definition } => {
-            state.new_meaning.definition = definition;
+        WordsMessage::MeaningAddInput { definition } => {
+            state.edit.update_new_meaning_definition(definition);
         }
-        MeaningMessage::AddPos { pos } => {
-            state.new_meaning.pos = pos;
+        WordsMessage::MeaningAddPos { pos } => {
+            state.edit.update_new_meaning_pos(pos);
         }
-        MeaningMessage::AddCefr { level } => {
-            state.new_meaning.cefr_level = level;
+        WordsMessage::MeaningAddCefr { level } => {
+            state.edit.update_new_meaning_cefr(level);
         }
-        MeaningMessage::AddSave => {
-            if let Some(word_id) = state.new_meaning.word_id {
-                let trimmed = state.new_meaning.definition.trim();
+        WordsMessage::MeaningAddSaved => {
+            if let Some(word_id) = state.edit.new_meaning_form().word_id {
+                let trimmed = state.edit.new_meaning_form().definition.trim();
                 if !trimmed.is_empty() {
                     let mut meaning = Meaning::builder()
                         .word_id(word_id)
                         .definition(trimmed.to_string())
-                        .pos(state.new_meaning.pos)
+                        .pos(state.edit.new_meaning_form().pos)
                         .build();
-                    meaning.cefr_level = state.new_meaning.cefr_level;
+                    meaning.cefr_level = state.edit.new_meaning_form().cefr_level;
 
                     tracing::debug!(
                         "Creating meaning: {} (id={}, word_id={})",
@@ -248,12 +230,12 @@ pub fn meaning(
                     model.word_registry.add_meaning(word_id, meaning.id);
                 }
             }
-            state.new_meaning.cancel();
+            state.edit.clear_new_meaning();
         }
-        MeaningMessage::AddCancel => {
-            state.new_meaning.cancel();
+        WordsMessage::MeaningAddCancelled => {
+            state.edit.clear_new_meaning();
         }
-        MeaningMessage::Delete { id } => {
+        WordsMessage::MeaningDeleted(id) => {
             let word_id = model.meaning_registry.get(id).map(|m| m.word_id);
 
             if let Some(word_id) = word_id {
@@ -261,45 +243,36 @@ pub fn meaning(
                 model.cloze_registry.delete_by_meaning(id);
                 model.word_registry.remove_meaning(word_id, id);
                 model.meaning_registry.delete(id);
-                state.selection.meanings.remove(&id);
+                state.selection.remove_meaning(&id);
             }
         }
-    }
-    Task::none()
-}
 
-/// Handle tag operation messages.
-pub fn tag(
-    state: &mut crate::ui::words::WordsState,
-    message: TagMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        TagMessage::ShowDropdown { meaning_id } => {
-            state.tag_dropdown = Some(TagDropdownState::for_meaning(meaning_id));
+        // Tag operations
+        WordsMessage::TagDropdownOpened { for_meaning } => {
+            state.detail.open_tag_dropdown(TagDropdownTarget::SingleMeaning(for_meaning));
         }
-        TagMessage::ShowBatchDropdown => {
-            state.tag_dropdown = Some(TagDropdownState::for_batch());
+        WordsMessage::TagBatchDropdownOpened => {
+            state.detail.open_tag_dropdown(TagDropdownTarget::SelectedMeanings);
         }
-        TagMessage::Search { query } => {
-            if let Some(ref mut dropdown) = state.tag_dropdown {
+        WordsMessage::TagSearchChanged(query) => {
+            if let Some(ref mut dropdown) = state.detail.tag_dropdown_mut() {
                 dropdown.search = query;
             }
         }
-        TagMessage::AddToMeaning { meaning_id, tag_id } => {
+        WordsMessage::TagAddedToMeaning { meaning_id, tag_id } => {
             model.meaning_registry.add_tag(meaning_id, tag_id);
-            state.tag_dropdown = None;
+            state.detail.close_tag_dropdown();
         }
-        TagMessage::AddToSelected { tag_id } => {
-            for meaning_id in state.selection.meanings.iter() {
+        WordsMessage::TagAddedToSelected { tag_id } => {
+            for meaning_id in state.selection.selected_meanings().iter() {
                 model.meaning_registry.add_tag(*meaning_id, tag_id);
             }
-            state.tag_dropdown = None;
+            state.detail.close_tag_dropdown();
         }
-        TagMessage::RemoveFromMeaning { meaning_id, tag_id } => {
+        WordsMessage::TagRemovedFromMeaning { meaning_id, tag_id } => {
             model.meaning_registry.remove_tag(meaning_id, tag_id);
         }
-        TagMessage::QuickCreate { meaning_id, name } => {
+        WordsMessage::TagQuickCreated { meaning_id, name } => {
             let trimmed = name.trim();
             if !trimmed.is_empty() {
                 // Check for existing tag
@@ -320,52 +293,31 @@ pub fn tag(
                 };
 
                 model.meaning_registry.add_tag(meaning_id, tag_id);
-                state.tag_dropdown = None;
+                state.detail.close_tag_dropdown();
             }
         }
-        TagMessage::Close => {
-            state.tag_dropdown = None;
+        WordsMessage::TagDropdownClosed => {
+            state.detail.close_tag_dropdown();
         }
-    }
-    Task::none()
-}
 
-/// Handle cloze operation messages.
-pub fn cloze(
-    state: &mut crate::ui::words::WordsState,
-    message: ClozeMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        ClozeMessage::Delete { id } => {
-            model.cloze_registry.delete(id);
-            tracing::debug!("Deleted cloze: {}", id);
+        // Cloze operations
+        WordsMessage::ClozeDeleted(cloze_id) => {
+            model.cloze_registry.delete(cloze_id);
+            tracing::debug!("Deleted cloze: {}", cloze_id);
         }
-        ClozeMessage::ToggleSelection { id } => {
-            state.selection.toggle_cloze(id);
-        }
-    }
-    Task::none()
-}
 
-/// Handle batch operation messages.
-pub fn batch(
-    state: &mut crate::ui::words::WordsState,
-    message: BatchMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    match message {
-        BatchMessage::QueueSelected => {
+        // Batch operations
+        WordsMessage::MeaningsQueuedForGeneration => {
             let count = state.selection.meaning_count();
-            for meaning_id in state.selection.meanings.iter() {
+            for meaning_id in state.selection.selected_meanings().iter() {
                 model.queue_registry.enqueue(*meaning_id);
             }
             tracing::info!("Added {} meanings to queue", count);
-            state.selection.clear();
+            state.selection.clear_all();
         }
-        BatchMessage::DeleteSelected => {
+        WordsMessage::MeaningsDeleted => {
             let count = state.selection.meaning_count();
-            let meaning_ids: Vec<Uuid> = state.selection.meanings.iter().copied().collect();
+            let meaning_ids: Vec<Uuid> = state.selection.selected_meanings().iter().copied().collect();
 
             for meaning_id in &meaning_ids {
                 let word_id = model.meaning_registry.get(*meaning_id).map(|m| m.word_id);
@@ -378,11 +330,11 @@ pub fn batch(
             }
 
             tracing::info!("Deleted {} meanings", count);
-            state.selection.clear();
+            state.selection.clear_all();
         }
-        BatchMessage::DeleteSelectedClozes => {
+        WordsMessage::ClozesDeleted => {
             let count = state.selection.cloze_count();
-            let cloze_ids: Vec<Uuid> = state.selection.clozes.iter().copied().collect();
+            let cloze_ids: Vec<Uuid> = state.selection.selected_clozes().iter().copied().collect();
 
             for cloze_id in &cloze_ids {
                 model.cloze_registry.delete(*cloze_id);
@@ -391,18 +343,9 @@ pub fn batch(
             tracing::info!("Deleted {} clozes", count);
             state.selection.clear_clozes();
         }
-    }
-    Task::none()
-}
 
-/// Handle export operation messages.
-pub fn export(
-    state: &mut crate::ui::words::WordsState,
-    message: ExportMessage,
-    model: &Model,
-) -> Task<WordsMessage> {
-    match message {
-        ExportMessage::ToPlaintext => {
+        // Export operations
+        WordsMessage::ExportPlaintext => {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("Text", &["txt"])
                 .set_file_name("clozes.txt")
@@ -411,7 +354,7 @@ pub fn export(
                 // Collect cloze sentences from selected clozes
                 let sentences: Vec<String> = state
                     .selection
-                    .clozes
+                    .selected_clozes()
                     .iter()
                     .filter_map(|cloze_id| {
                         model
@@ -429,34 +372,11 @@ pub fn export(
                 }
             }
         }
-        ExportMessage::ToTypstPdf => {
-            // TODO: Implement PDF export with Typst
-            tracing::warn!("Typst PDF export not yet implemented");
-        }
-    }
-    Task::none()
-}
 
-/// Handle all words-related messages.
-///
-/// Returns `Task<WordsMessage>` for async operations.
-pub fn update(
-    state: &mut crate::ui::words::WordsState,
-    message: WordsMessage,
-    model: &mut Model,
-) -> Task<WordsMessage> {
-    use WordsMessage::*;
-    match message {
-        Search(msg) => search(state, msg),
-        Filter(msg) => filter(state, msg),
-        Selection(msg) => selection(state, msg, model),
-        Detail(msg) => return detail(state, msg, model),
-        Word(msg) => word(state, msg, model),
-        Meaning(msg) => meaning(state, msg, model),
-        Tag(msg) => tag(state, msg, model),
-        Cloze(msg) => cloze(state, msg, model),
-        Batch(msg) => batch(state, msg, model),
-        Export(msg) => export(state, msg, model),
+        // These messages are handled in update.rs with full model access
+        WordsMessage::NewWordSaved | WordsMessage::NewMeaningSaved => {
+            // Handled by main update
+        }
     }
     Task::none()
 }
