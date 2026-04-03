@@ -4,6 +4,8 @@
 
 **Why**: Provides consistent commit message format that enables automated versioning and changelog generation.
 
+**Last updated**: 2026-04-03
+
 ---
 
 ## Format
@@ -118,23 +120,7 @@ Use /api/v2/words instead.
 4. Footers follow the body, one blank line after
 5. Breaking changes are case-insensitive except for `BREAKING CHANGE` token
 6. Use imperative mood: "add feature" not "added feature"
-
----
-
-## CLI vs MCP Server
-
-Use `git commit` CLI command for commits; use MCP server tools for other git operations.
-
-| Operation | Method | Example |
-|-----------|--------|---------|
-| **Commit** | CLI command | `git commit -m "Your message"` |
-| Add files | MCP server | `git_add` tool |
-| Check status | MCP server | `git_status` tool |
-| View history | MCP server | `git_log` tool |
-| View diff | MCP server | `git_diff` tool |
-| Create branch | MCP server | `git_create_branch` tool |
-| Switch branch | MCP server | `git_checkout` tool |
-| View staged changes | MCP server | `git_diff_staged` tool |
+7. Never use `git commit --amend` after a pre-commit hook failure - create a new commit instead because the previous commit attempt failed and has no valid HEAD to amend from
 
 ---
 
