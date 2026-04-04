@@ -18,7 +18,7 @@ pub fn default(theme: &AppTheme) -> Style {
     let colors = theme.colors();
 
     Style {
-        color: colors.danger,
+        color: colors.semantic.border.default,
         radius: 0.0.into(),
         fill_mode: FillMode::Full,
         snap: true,

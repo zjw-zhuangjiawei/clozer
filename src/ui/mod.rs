@@ -1,6 +1,7 @@
 //! UI module with single-window sub-modules and shared components.
 
 pub mod app;
+
 pub mod components;
 pub mod design_tokens;
 pub mod layout;
@@ -9,6 +10,7 @@ pub mod queue;
 pub mod settings;
 pub mod state;
 pub mod theme;
+pub mod widgets;
 pub mod words;
 
 pub use theme::{AppTheme, ThemeColors};

@@ -1,6 +1,5 @@
 //! Shared reusable UI components.
 
-pub mod button;
 pub mod checkbox;
 pub mod combo_box;
 pub mod container;

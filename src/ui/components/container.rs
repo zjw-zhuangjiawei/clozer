@@ -1,5 +1,4 @@
 use crate::ui::theme::AppTheme;
-use iced::Color;
 use iced::widget::container::{Catalog, Style, StyleFn};
 
 impl Catalog for AppTheme {

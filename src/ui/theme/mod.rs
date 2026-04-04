@@ -3,14 +3,24 @@
 //! Provides consistent styling across all UI components with support
 //! for light and dark themes. The theme system is built on design tokens
 //! that ensure visual consistency and accessibility compliance.
+pub mod color;
+pub mod role;
+pub mod semantic;
 
 use clap::ValueEnum;
+use iced::Length;
 use iced::theme::{Base as ThemeBase, Mode, Palette, Style as ThemeStyle};
 use iced::widget::button::Style;
-use iced::{Color, Length};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use strum::{Display, VariantArray};
+
+pub use color::ThemeColors;
+pub use semantic::{
+    BorderSemantic, InteractiveSemantic, SemanticPalette, SurfaceSemantic, TextSemantic,
+};
+
+pub use role::{BackgroundRole, BorderRole, ForegroundRole, InteractiveRole};
 
 pub type StyleFn<'a> = Box<dyn Fn(&AppTheme, iced::widget::button::Status) -> Style + 'a>;
 
@@ -19,10 +29,6 @@ pub use super::design_tokens::{
     InputHeightTokens, LineHeights, RadiusVariant, ScaleFactor, ScaleSystem, SpacingScale,
     SpacingValue, TouchTargetSize, TypographyScale, TypographySizes, TypographyVariant,
 };
-
-pub mod prelude {
-    pub use super::{AppTheme, ButtonSize, FontSize, Spacing, ThemeColors};
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum Breakpoint {
@@ -270,10 +276,10 @@ pub enum AppTheme {
 }
 
 impl AppTheme {
-    pub fn colors(&self) -> ThemeColors {
+    pub fn colors(&self) -> color::ThemeColors {
         match self {
-            AppTheme::Light => ThemeColors::light(),
-            AppTheme::Dark => ThemeColors::dark(),
+            AppTheme::Light => color::ThemeColors::light(),
+            AppTheme::Dark => color::ThemeColors::dark(),
         }
     }
 }
@@ -297,20 +303,20 @@ impl ThemeBase for AppTheme {
     fn base(&self) -> ThemeStyle {
         let colors = self.colors();
         ThemeStyle {
-            background_color: colors.background,
-            text_color: colors.text,
+            background_color: colors.neutral.w50(),
+            text_color: colors.neutral.w900(),
         }
     }
 
     fn palette(&self) -> Option<Palette> {
         let colors = self.colors();
         Some(Palette {
-            background: colors.background,
-            text: colors.text,
-            primary: colors.primary,
-            success: colors.success,
-            warning: colors.secondary,
-            danger: colors.danger,
+            background: colors.neutral.w900(),
+            text: colors.neutral.w50(),
+            primary: colors.primary.w500(),
+            success: colors.functional.success.w500(),
+            warning: colors.functional.warning.w500(),
+            danger: colors.functional.danger.w500(),
         })
     }
 
@@ -318,100 +324,6 @@ impl ThemeBase for AppTheme {
         match self {
             AppTheme::Light => "clozer_light",
             AppTheme::Dark => "clozer_dark",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ThemeColors {
-    pub primary: Color,
-    pub primary_hover: Color,
-    pub primary_active: Color,
-    pub secondary: Color,
-    pub neutral_100: Color,
-    pub neutral_200: Color,
-    pub danger: Color,
-    pub danger_hover: Color,
-    pub danger_active: Color,
-    pub success: Color,
-
-    pub background: Color,
-    pub surface: Color,
-    pub surface_elevated: Color,
-    pub surface_hover: Color,
-
-    pub text: Color,
-    pub text_secondary: Color,
-    pub text_on_primary: Color,
-
-    pub border: Color,
-    pub border_emphasis: Color,
-    pub border_focus: Color,
-
-    pub pos_badge_bg: Color,
-    pub pos_badge_text: Color,
-}
-
-impl ThemeColors {
-    pub fn light() -> Self {
-        Self {
-            primary: Color::from_rgb(0.30, 0.56, 0.57),
-            primary_hover: Color::from_rgb(0.25, 0.46, 0.47),
-            primary_active: Color::from_rgb(0.20, 0.36, 0.37),
-            secondary: Color::from_rgb(0.45, 0.45, 0.45),
-            neutral_100: Color::from_rgb(0.96, 0.96, 0.96),
-            neutral_200: Color::from_rgb(0.91, 0.91, 0.91),
-            danger: Color::from_rgb(0.70, 0.25, 0.25),
-            danger_hover: Color::from_rgb(0.58, 0.18, 0.18),
-            danger_active: Color::from_rgb(0.45, 0.12, 0.12),
-            success: Color::from_rgb(0.22, 0.62, 0.38),
-
-            background: Color::from_rgb(0.98, 0.98, 0.98),
-            surface: Color::from_rgb(1.0, 1.0, 1.0),
-            surface_elevated: Color::from_rgb(0.96, 0.96, 0.96),
-            surface_hover: Color::from_rgb(0.92, 0.92, 0.92),
-
-            text: Color::from_rgb(0.1, 0.1, 0.1),
-            text_secondary: Color::from_rgb(0.4, 0.4, 0.4),
-            text_on_primary: Color::from_rgb(1.0, 1.0, 1.0),
-
-            border: Color::from_rgb(0.85, 0.85, 0.85),
-            border_emphasis: Color::from_rgb(0.65, 0.65, 0.65),
-            border_focus: Color::from_rgb(0.30, 0.56, 0.57),
-
-            pos_badge_bg: Color::from_rgb(0.82, 0.82, 0.82),
-            pos_badge_text: Color::from_rgb(0.32, 0.32, 0.32),
-        }
-    }
-
-    pub fn dark() -> Self {
-        Self {
-            primary: Color::from_rgb(0.40, 0.60, 0.62),
-            primary_hover: Color::from_rgb(0.50, 0.70, 0.72),
-            primary_active: Color::from_rgb(0.60, 0.78, 0.80),
-            secondary: Color::from_rgb(0.62, 0.62, 0.68),
-            neutral_100: Color::from_rgb(0.25, 0.25, 0.29),
-            neutral_200: Color::from_rgb(0.35, 0.35, 0.40),
-            danger: Color::from_rgb(0.88, 0.38, 0.38),
-            danger_hover: Color::from_rgb(0.98, 0.52, 0.52),
-            danger_active: Color::from_rgb(1.0, 0.70, 0.70),
-            success: Color::from_rgb(0.25, 0.70, 0.45),
-
-            background: Color::from_rgb(0.1, 0.1, 0.12),
-            surface: Color::from_rgb(0.15, 0.15, 0.18),
-            surface_elevated: Color::from_rgb(0.20, 0.20, 0.24),
-            surface_hover: Color::from_rgb(0.25, 0.25, 0.28),
-
-            text: Color::from_rgb(0.92, 0.92, 0.95),
-            text_secondary: Color::from_rgb(0.65, 0.65, 0.7),
-            text_on_primary: Color::from_rgb(0.1, 0.1, 0.12),
-
-            border: Color::from_rgb(0.3, 0.3, 0.35),
-            border_emphasis: Color::from_rgb(0.45, 0.45, 0.5),
-            border_focus: Color::from_rgb(0.40, 0.60, 0.62),
-
-            pos_badge_bg: Color::from_rgb(0.35, 0.35, 0.40),
-            pos_badge_text: Color::from_rgb(0.92, 0.92, 0.95),
         }
     }
 }

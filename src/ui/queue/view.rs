@@ -9,7 +9,7 @@ use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text};
 
-use crate::ui::components::button;
+use crate::ui::widgets::button;
 
 fn status_label(status: &QueueItemStatus) -> String {
     match status {
@@ -63,7 +63,7 @@ pub fn view<'a>(model: &'a Model, theme: AppTheme) -> Element<'a, QueueMessage, 
                 };
 
             let remove_btn = Button::new(Text::new("remove"))
-                .style(crate::ui::components::button::secondary)
+                .style(crate::ui::widgets::button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(QueueMessage::Action(QueueActionMessage::Remove(item_id)));
 

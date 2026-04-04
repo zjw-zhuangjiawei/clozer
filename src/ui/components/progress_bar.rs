@@ -15,7 +15,7 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn primary(theme: &AppTheme) -> Style {
+pub fn primary(_theme: &AppTheme) -> Style {
     iced::widget::progress_bar::primary(&iced::Theme::Light)
 }
 

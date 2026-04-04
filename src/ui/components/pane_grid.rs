@@ -13,6 +13,6 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(theme: &AppTheme) -> Style {
+pub fn default(_theme: &AppTheme) -> Style {
     iced::widget::pane_grid::default(&iced::Theme::Light)
 }

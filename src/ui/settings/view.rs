@@ -4,9 +4,9 @@ use super::message::{ModelMessage, ProviderMessage, SettingsMessage};
 use crate::state::Model;
 use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
 use iced::Element;
-use iced::widget::{Button, PickList, row, text};
+use iced::widget::{Button, row, text};
 
-use crate::ui::components::button;
+use crate::ui::widgets::button;
 
 /// Renders the settings page.
 pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage, AppTheme> {

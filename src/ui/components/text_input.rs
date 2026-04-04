@@ -1,6 +1,5 @@
 use crate::ui::theme::AppTheme;
 use iced::widget::text_input::{Catalog, Status, Style, StyleFn};
-use iced::{Background, Border};
 
 impl Catalog for AppTheme {
     type Class<'a> = StyleFn<'a, Self>;
@@ -15,7 +14,7 @@ impl Catalog for AppTheme {
 }
 
 /// The default style of a [`TextInput`].
-pub fn default(theme: &AppTheme, status: Status) -> Style {
+pub fn default(_theme: &AppTheme, status: Status) -> Style {
     // let colors = theme.colors();
 
     // let active = Style {

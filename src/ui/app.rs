@@ -11,6 +11,7 @@ use crate::message::Message;
 use crate::state::Model;
 use crate::ui::layout::{LayoutConfig, LayoutMode, adaptive_layout, breakpoint::Breakpoint};
 use crate::ui::theme::Spacing;
+use crate::ui::widgets::button;
 use crate::ui::words::message::WordsMessage;
 use iced::{Element, FillPortion, Task};
 
@@ -36,9 +37,9 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
                 let label = item.label();
                 let button = iced::widget::button(iced::widget::text(label))
                     .style(if is_active {
-                        crate::ui::components::button::primary
+                        button::primary
                     } else {
-                        crate::ui::components::button::secondary
+                        button::secondary
                     })
                     .on_press(Message::Navigate(*item));
                 button.into()

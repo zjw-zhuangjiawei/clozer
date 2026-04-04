@@ -13,6 +13,6 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(theme: &AppTheme, status: Status) -> Style {
+pub fn default(_theme: &AppTheme, status: Status) -> Style {
     iced::widget::slider::default(&iced::Theme::Light, status)
 }

@@ -5,8 +5,8 @@ use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
 use crate::ui::AppTheme;
-use crate::ui::components::button;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
+use crate::ui::widgets::button;
 use crate::ui::words::manager::{DetailSelection, EditBuffer, EditContext};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
@@ -82,7 +82,7 @@ pub fn view<'a>(
 }
 
 /// Renders the placeholder when nothing is selected.
-fn placeholder_view<'a>(theme: crate::ui::AppTheme) -> Element<'a, WordsMessage, AppTheme> {
+fn placeholder_view<'a>(_theme: crate::ui::AppTheme) -> Element<'a, WordsMessage, AppTheme> {
     Column::new().into()
 }
 
@@ -209,7 +209,7 @@ fn word_detail_view<'a>(
     word_id: WordId,
     word_content: String,
     model: &'a Model,
-    theme: crate::ui::AppTheme,
+    _theme: crate::ui::AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     // Get all meanings for this word
     let meaning_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
@@ -221,7 +221,7 @@ fn word_detail_view<'a>(
                 .iter()
                 .filter_map(|mid| model.meaning_registry.get(*mid))
                 .map(|meaning| {
-                    let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
+                    let _cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
 
                     Row::new()
                         .push(
@@ -346,11 +346,11 @@ fn meaning_detail_view<'a>(
     meaning_id: MeaningId,
     word_content: String,
     definition: String,
-    pos: crate::models::PartOfSpeech,
-    cefr_level: Option<crate::models::CefrLevel>,
+    _pos: crate::models::PartOfSpeech,
+    _cefr_level: Option<crate::models::CefrLevel>,
     tag_ids: &std::collections::BTreeSet<TagId>,
     model: &'a Model,
-    theme: crate::ui::AppTheme,
+    _theme: crate::ui::AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     // Get tag names
     let tag_names: Vec<String> = tag_ids
@@ -405,7 +405,7 @@ fn meaning_detail_view<'a>(
     column = column.push(Text::new(definition).size(FontSize::Subtitle.px()));
 
     // POS and CEFR badges
-    let mut meta_row = Row::new();
+    let meta_row = Row::new();
     // .push(pos_badge::<WordsMessage>(pos, theme));
 
     // if let Some(cefr) = cefr_level {

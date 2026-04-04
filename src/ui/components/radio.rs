@@ -1,5 +1,4 @@
 use crate::ui::theme::AppTheme;
-use iced::Color;
 use iced::widget::radio::{Catalog, Status, Style, StyleFn};
 
 impl Catalog for AppTheme {
@@ -14,6 +13,6 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(theme: &AppTheme, status: Status) -> Style {
+pub fn default(_theme: &AppTheme, status: Status) -> Style {
     iced::widget::radio::default(&iced::Theme::Light, status)
 }

@@ -1,7 +1,6 @@
 //! Adaptive layout implementation.
 
 use super::breakpoint::Breakpoint;
-use crate::ui::AppTheme;
 use crate::ui::theme::Spacing;
 use iced::Element;
 use iced::widget::Column;

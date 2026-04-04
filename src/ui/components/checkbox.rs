@@ -6,7 +6,7 @@ use iced::widget::checkbox::{Catalog, Status, Style, StyleFn};
 use iced::widget::{Button, svg};
 
 use crate::assets;
-use crate::ui::components::button;
+use crate::ui::widgets::button;
 
 impl Catalog for AppTheme {
     type Class<'a> = StyleFn<'a, Self>;
@@ -20,7 +20,7 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(theme: &AppTheme, status: Status) -> Style {
+pub fn default(_theme: &AppTheme, status: Status) -> Style {
     // let colors = theme.colors();
     // let is_checked = status.is_checked();
     // let is_hovered = matches!(status, Status::Hovered { .. });
@@ -78,7 +78,7 @@ impl From<bool> for CheckboxState {
 pub fn svg_checkbox<'a, M: Clone + 'a>(
     state: impl Into<CheckboxState>,
     on_toggle: M,
-    theme: AppTheme,
+    _theme: AppTheme,
 ) -> Element<'a, M, AppTheme> {
     let icon_name = match state.into() {
         CheckboxState::Checked => "check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg",

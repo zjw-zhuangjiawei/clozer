@@ -2,10 +2,11 @@ use crate::assets;
 use crate::models::types::{MeaningId, WordId};
 use crate::state::Model;
 use crate::ui::AppTheme;
-use crate::ui::components::{CheckboxState, button, svg_checkbox};
+use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::layout::breakpoint::Breakpoint;
 use crate::ui::state::MainWindowState;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
+use crate::ui::widgets::button;
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::{ClozeFilter, WordsState};
@@ -66,7 +67,7 @@ pub fn view<'a>(
         .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
         .height(iced::Length::Fill)
         .style(move |_| container::Style {
-            background: Some(colors.surface_elevated.into()),
+            background: Some(colors.semantic.surface.raised.into()),
             ..Default::default()
         });
 
@@ -319,9 +320,9 @@ fn build_word_node<'a>(
         Container::new(content)
             .padding(Spacing::DEFAULT.s)
             .style(move |_| container::Style {
-                background: Some(colors.surface_elevated.into()),
+                background: Some(colors.semantic.surface.raised.into()),
                 border: iced::Border {
-                    color: colors.border,
+                    color: colors.semantic.border.default,
                     width: 1.0,
                     radius: 6.0.into(),
                 },
@@ -332,9 +333,9 @@ fn build_word_node<'a>(
         Container::new(word_header)
             .padding(Spacing::DEFAULT.s)
             .style(move |_| container::Style {
-                background: Some(colors.surface.into()),
+                background: Some(colors.semantic.surface.raised.into()),
                 border: iced::Border {
-                    color: colors.border,
+                    color: colors.semantic.border.default,
                     width: 1.0,
                     radius: 6.0.into(),
                 },
@@ -404,7 +405,7 @@ fn build_meaning_node<'a>(
     };
     let cloze_status = Text::new(cloze_status_text)
         .size(FontSize::Caption.px())
-        .color(colors.text_secondary);
+        .color(colors.semantic.text.tertiary);
 
     // Meaning header
     let meaning_header = Row::new()
@@ -602,9 +603,9 @@ fn build_tag_dropdown<'a>(
     )
     .width(iced::Length::Fixed(170.0))
     .style(move |_| container::Style {
-        background: Some(colors.surface.into()),
+        background: Some(colors.semantic.surface.raised.into()),
         border: iced::Border {
-            color: colors.border,
+            color: colors.semantic.border.default,
             width: 1.0,
             radius: 6.0.into(),
         },
@@ -661,9 +662,9 @@ fn build_batch_tag_dropdown<'a>(
     )
     .width(iced::Length::Fixed(170.0))
     .style(move |_| container::Style {
-        background: Some(colors.surface.into()),
+        background: Some(colors.semantic.surface.raised.into()),
         border: iced::Border {
-            color: colors.border,
+            color: colors.semantic.border.default,
             width: 1.0,
             radius: 6.0.into(),
         },
@@ -718,7 +719,7 @@ fn build_action_bar<'a>(
         .size(FontSize::Body.px());
 
     let tag_btn: Element<'a, WordsMessage, AppTheme> =
-        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
+        if let Some(dropdown) = words_state.detail.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SelectedMeanings => Row::new()
                     .push(
