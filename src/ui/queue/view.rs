@@ -5,9 +5,11 @@ use crate::models::types::MeaningId;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
 use crate::ui::components::svg_checkbox;
-use crate::ui::theme::{ButtonSize, FontSize, Spacing};
+use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
 use iced::Element;
-use iced::widget::{Button, Column, Row, Text, button};
+use iced::widget::{Button, Column, Row, Text};
+
+use crate::ui::components::button;
 
 fn status_label(status: &QueueItemStatus) -> String {
     match status {
@@ -34,12 +36,12 @@ fn meaning_content(
     }
 }
 
-pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
+pub fn view<'a>(model: &'a Model, theme: AppTheme) -> Element<'a, QueueMessage, AppTheme> {
     let queue_registry = &model.queue_registry;
     let meaning_registry = &model.meaning_registry;
     let word_registry = &model.word_registry;
 
-    let items: Vec<Element<'a, QueueMessage>> = queue_registry
+    let items: Vec<Element<'a, QueueMessage, AppTheme>> = queue_registry
         .get_items()
         .map(|queue_item| {
             let content = meaning_content(queue_item.meaning_id, meaning_registry, word_registry);
@@ -49,18 +51,19 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
             let status_text = status_label(&status);
             let status_text_for_row = status_text.clone();
 
-            let select_indicator: Element<'a, QueueMessage> =
+            let select_indicator: Element<'a, QueueMessage, AppTheme> =
                 if matches!(status, QueueItemStatus::Pending) {
                     svg_checkbox(
                         selected,
                         QueueMessage::Selection(QueueSelectionMessage::Toggle(item_id)),
+                        theme,
                     )
                 } else {
                     Text::new(status_text).into()
                 };
 
             let remove_btn = Button::new(Text::new("remove"))
-                .style(button::secondary)
+                .style(crate::ui::components::button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(QueueMessage::Action(QueueActionMessage::Remove(item_id)));
 
@@ -106,7 +109,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage> {
         .get_items()
         .any(|i| matches!(i.status, QueueItemStatus::Completed));
 
-    let clear_button: Element<'a, QueueMessage> = if has_completed {
+    let clear_button: Element<'a, QueueMessage, AppTheme> = if has_completed {
         Button::new(Text::new("Clear Done"))
             .style(button::danger)
             .padding(ButtonSize::Standard.to_iced_padding())

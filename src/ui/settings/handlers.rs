@@ -172,5 +172,10 @@ pub fn update(
         General(msg) => general(state, msg, model),
         Provider(msg) => provider(state, msg, model),
         Model(msg) => model_handler(state, msg, model),
+        ThemeChanged(_) => {
+            // Theme changes are handled at the App level via update_settings
+            // This branch intentionally does nothing - the message is caught earlier
+            Task::none()
+        }
     }
 }

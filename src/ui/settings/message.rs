@@ -7,6 +7,7 @@
 
 use crate::config::LogLevel;
 use crate::config::file::ai::ProviderTypeDto;
+use crate::ui::AppTheme;
 use uuid::Uuid;
 
 /// Root message enum for Settings panel.
@@ -20,6 +21,8 @@ pub enum SettingsMessage {
     Provider(ProviderMessage),
     /// AI Model messages
     Model(ModelMessage),
+    /// Theme changed
+    ThemeChanged(AppTheme),
 }
 
 /// General settings messages.

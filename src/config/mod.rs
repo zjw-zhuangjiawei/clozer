@@ -10,6 +10,7 @@ pub mod constants;
 pub mod env;
 pub mod file;
 
+use crate::ui::theme::AppTheme;
 use clap::ValueEnum;
 pub use cli::CliConfig;
 pub use constants::paths;
@@ -63,6 +64,9 @@ pub struct AppConfig {
     /// Log level
     pub log_level: LogLevel,
 
+    /// UI theme
+    pub theme: AppTheme,
+
     /// AI configuration
     pub ai: AiConfig,
 }
@@ -73,6 +77,7 @@ impl Default for AppConfig {
             data_dir: paths::data_dir(),
             config_file: paths::config_file(),
             log_level: LogLevel::DEFAULT,
+            theme: AppTheme::Light,
             ai: AiConfig::default(),
         }
     }
@@ -123,6 +128,7 @@ impl AppConfig {
             general: GeneralConfig {
                 data_dir: Some(self.data_dir.clone()),
                 log_level: Some(self.log_level),
+                theme: Some(self.theme),
             },
             ai: self.ai.clone(),
         }
@@ -181,16 +187,25 @@ impl AppConfig {
             .or(file_config.general.log_level)
             .unwrap_or_default();
 
+        // Resolve theme with priority: CLI > env > file > default
+        let theme = cli
+            .theme
+            .or(env.theme)
+            .or(file_config.general.theme)
+            .unwrap_or_default();
+
         tracing::info!(
-            "Configuration loaded: data_dir={:?}, log_level={:?}",
+            "Configuration loaded: data_dir={:?}, log_level={:?}, theme={:?}",
             data_dir,
-            log_level
+            log_level,
+            theme
         );
 
         Ok(Self {
             data_dir,
             config_file,
             log_level,
+            theme,
             ai: file_config.ai,
         })
     }

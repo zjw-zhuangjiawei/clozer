@@ -43,10 +43,16 @@ impl App {
             app_state.model.cloze_registry.count(),
         );
 
+        // Initialize window state with theme from config
+        let window_state = MainWindowState {
+            theme: config.theme,
+            ..MainWindowState::new()
+        };
+
         let app = Self {
             config,
             app_state,
-            window_state: MainWindowState::new(),
+            window_state,
         };
 
         (app, Task::none())
@@ -100,17 +106,27 @@ impl App {
                 self.window_state.window_width = width;
                 Task::none()
             }
+
+            // Theme change
+            Message::ThemeChanged(theme) => {
+                self.window_state.theme = theme;
+                self.config.theme = theme;
+
+                self.config.save_to_file();
+                tracing::info!("Theme changed to: {:?}", theme);
+                Task::none()
+            }
         }
     }
 
     /// Renders the application UI.
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message, AppTheme> {
         ui::app::view(&self.window_state, &self.app_state.model)
     }
 
     /// Returns the theme.
     pub fn theme(&self) -> AppTheme {
-        AppTheme::default()
+        self.window_state.theme
     }
 
     /// Returns the application subscription.

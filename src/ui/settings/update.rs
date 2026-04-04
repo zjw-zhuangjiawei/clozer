@@ -128,5 +128,11 @@ pub fn update(message: SettingsMessage, model: &mut Model) -> Task<SettingsMessa
                 Task::none()
             }
         },
+
+        SettingsMessage::ThemeChanged(_) => {
+            // Theme changes are handled at the App level via update_settings
+            // This branch intentionally does nothing - the message is caught earlier
+            Task::none()
+        }
     }
 }

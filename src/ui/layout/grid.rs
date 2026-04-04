@@ -4,14 +4,14 @@ use iced::Element;
 use iced::widget::{Column, Row};
 
 /// Grid layout builder for multi-column arrangements.
-pub struct GridLayout<'a, M> {
+pub struct GridLayout<'a, M, T> {
     columns: u8,
     column_spacing: f32,
     row_spacing: f32,
-    items: Vec<Element<'a, M>>,
+    items: Vec<Element<'a, M, T>>,
 }
 
-impl<'a, M: 'a> GridLayout<'a, M> {
+impl<'a, M: 'a, T: 'a> GridLayout<'a, M, T> {
     /// Create a new grid layout builder.
     pub fn new(columns: u8) -> Self {
         Self {
@@ -30,21 +30,21 @@ impl<'a, M: 'a> GridLayout<'a, M> {
     }
 
     /// Add an item to the grid.
-    pub fn push<E: Into<Element<'a, M>>>(mut self, item: E) -> Self {
+    pub fn push<E: Into<Element<'a, M, T>>>(mut self, item: E) -> Self {
         self.items.push(item.into());
         self
     }
 
     /// Build the grid layout.
     /// Items are distributed across columns in row-major order.
-    pub fn build(self) -> Element<'a, M> {
+    pub fn build(self) -> Element<'a, M, T> {
         if self.items.is_empty() {
             return Column::new().into();
         }
 
         // Distribute items across columns
-        let mut rows: Vec<Element<'a, M>> = Vec::new();
-        let mut current_row: Vec<Element<'a, M>> = Vec::new();
+        let mut rows: Vec<Element<'a, M, T>> = Vec::new();
+        let mut current_row: Vec<Element<'a, M, T>> = Vec::new();
 
         for item in self.items {
             current_row.push(item);
@@ -71,7 +71,10 @@ impl<'a, M: 'a> GridLayout<'a, M> {
 }
 
 /// Create a grid layout with specified columns.
-pub fn grid_layout<'a, M: 'a>(columns: u8, items: Vec<Element<'a, M>>) -> Element<'a, M> {
+pub fn grid_layout<'a, M: 'a, T: 'a>(
+    columns: u8,
+    items: Vec<Element<'a, M, T>>,
+) -> Element<'a, M, T> {
     let mut builder = GridLayout::new(columns);
     for item in items {
         builder = builder.push(item);

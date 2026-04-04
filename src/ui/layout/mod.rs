@@ -30,22 +30,14 @@ pub use grid::{GridLayout, grid_layout};
 pub use mode::{LayoutConfig, LayoutMode};
 pub use waterfall::{WaterfallLayout, waterfall_layout};
 
-use crate::ui::theme::Breakpoint as ThemeBreakpoint;
 use iced::Element;
 
-/// Build a layout based on configuration.
-///
-/// # Arguments
-/// * `config` - Layout configuration
-/// * `nav_bar` - Navigation bar element
-/// * `content` - Main content element
-/// * `breakpoint` - Current breakpoint (legacy)
-pub fn build_layout<'a, M: 'a>(
+pub fn build_layout<'a, M: 'a, T: 'a>(
     config: &LayoutConfig,
-    nav_bar: Element<'a, M>,
-    content: Element<'a, M>,
-    breakpoint: ThemeBreakpoint,
-) -> Element<'a, M> {
+    nav_bar: Element<'a, M, T>,
+    content: Element<'a, M, T>,
+    breakpoint: Breakpoint,
+) -> Element<'a, M, T> {
     match config.mode {
         LayoutMode::Adaptive => adaptive::adaptive_layout(nav_bar, content, breakpoint),
         LayoutMode::Grid => {

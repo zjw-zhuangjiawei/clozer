@@ -4,15 +4,14 @@ use crate::assets;
 use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
-use crate::ui::components::dsl::empty_state;
-use crate::ui::components::dsl::{cefr_badge, count_badge, pos_badge};
-use crate::ui::components::dsl::{primary_btn, secondary_btn};
+use crate::ui::AppTheme;
+use crate::ui::components::button;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::words::manager::{DetailSelection, EditBuffer, EditContext};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Button, Column, Container, Row, Text, button, text_input};
+use iced::widget::{Button, Column, Container, Row, Text, text_input};
 
 /// Renders the detail panel based on current selection and edit mode.
 pub fn view<'a>(
@@ -20,7 +19,8 @@ pub fn view<'a>(
     edit_mode: EditContext,
     edit_buffer: &'a EditBuffer,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: crate::ui::AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     // NewWord mode - show form for creating new word
     if edit_mode == EditContext::NewWord {
         return new_word_view(edit_buffer);
@@ -39,10 +39,10 @@ pub fn view<'a>(
                 if edit_mode == EditContext::Word(word_id) {
                     word_edit_view(word.id.into(), edit_buffer)
                 } else {
-                    word_detail_view(word.id, word.content.clone(), model)
+                    word_detail_view(word.id, word.content.clone(), model, theme)
                 }
             } else {
-                placeholder_view()
+                placeholder_view(theme)
             }
         }
         Some(DetailSelection::Meaning(meaning_id)) => {
@@ -63,34 +63,31 @@ pub fn view<'a>(
                         meaning.cefr_level,
                         &meaning.tag_ids,
                         model,
+                        theme,
                     )
                 }
             } else {
-                placeholder_view()
+                placeholder_view(theme)
             }
         }
         Some(DetailSelection::Cloze(cloze_id)) => {
             if let Some(cloze) = model.cloze_registry.get(cloze_id) {
                 cloze_detail_view(cloze_id, cloze, model)
             } else {
-                placeholder_view()
+                placeholder_view(theme)
             }
         }
-        None | Some(DetailSelection::None) => placeholder_view(),
+        None | Some(DetailSelection::None) => placeholder_view(theme),
     }
 }
 
 /// Renders the placeholder when nothing is selected.
-fn placeholder_view<'a>() -> Element<'a, WordsMessage> {
-    empty_state(
-        "No Selection",
-        "Select an item from the list to view details",
-    )
-    .map(|_| WordsMessage::DetailClosed)
+fn placeholder_view<'a>(theme: crate::ui::AppTheme) -> Element<'a, WordsMessage, AppTheme> {
+    Column::new().into()
 }
 
 /// View for creating a new word in the detail panel.
-fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
+fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage, AppTheme> {
     let word_input = text_input("Word *", &buffer.word_content)
         .on_input(WordsMessage::EditNewWordContentChanged)
         .width(iced::Length::Fill);
@@ -119,8 +116,12 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = primary_btn("Save", WordsMessage::NewWordSaved);
-    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
+    let save_btn = Button::new("Save")
+        .style(button::primary)
+        .on_press(WordsMessage::NewWordSaved);
+    let cancel_btn = Button::new("Cancel")
+        .style(button::secondary)
+        .on_press(WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -151,7 +152,10 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
 }
 
 /// View for adding a new meaning in the detail panel.
-fn new_meaning_view<'a>(word_content: String, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
+fn new_meaning_view<'a>(
+    word_content: String,
+    buffer: &'a EditBuffer,
+) -> Element<'a, WordsMessage, AppTheme> {
     let def_input = text_input("Definition *", &buffer.meaning_definition)
         .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill);
@@ -164,8 +168,12 @@ fn new_meaning_view<'a>(word_content: String, buffer: &'a EditBuffer) -> Element
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = primary_btn("Save Meaning", WordsMessage::NewMeaningSaved);
-    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
+    let save_btn = Button::new("Save Meaning")
+        .style(button::primary)
+        .on_press(WordsMessage::NewMeaningSaved);
+    let cancel_btn = Button::new("Cancel")
+        .style(button::secondary)
+        .on_press(WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -201,9 +209,10 @@ fn word_detail_view<'a>(
     word_id: WordId,
     word_content: String,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: crate::ui::AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     // Get all meanings for this word
-    let meaning_items: Vec<Element<'a, WordsMessage>> = model
+    let meaning_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .word_registry
         .iter()
         .find(|(_, w)| w.id == word_id)
@@ -221,8 +230,8 @@ fn word_detail_view<'a>(
                                 .padding(ButtonSize::Medium.to_iced_padding())
                                 .on_press(WordsMessage::MeaningSelected(meaning.id)),
                         )
-                        .push(pos_badge::<WordsMessage>(meaning.pos))
-                        .push(count_badge::<WordsMessage>(cloze_count))
+                        // .push(pos_badge::<WordsMessage>(meaning.pos, theme))
+                        // .push(count_badge::<WordsMessage>(cloze_count, theme))
                         .push(Space::new())
                         .spacing(Spacing::DEFAULT.s)
                         .into()
@@ -231,7 +240,9 @@ fn word_detail_view<'a>(
         })
         .unwrap_or_default();
 
-    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
+    let close_btn = Button::new("×")
+        .style(button::secondary)
+        .on_press(WordsMessage::DetailClosed);
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -263,7 +274,10 @@ fn word_detail_view<'a>(
 }
 
 /// Renders word edit form in the detail panel.
-fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'a, WordsMessage> {
+fn word_edit_view<'a>(
+    _word_id: uuid::Uuid,
+    buffer: &'a EditBuffer,
+) -> Element<'a, WordsMessage, AppTheme> {
     let word_input = text_input("Word *", &buffer.word_content)
         .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill);
@@ -292,8 +306,12 @@ fn word_edit_view<'a>(_word_id: uuid::Uuid, buffer: &'a EditBuffer) -> Element<'
         .unwrap_or_else(|| "None".to_string());
     let cefr_display = format!("CEFR: {}", cefr_text);
 
-    let save_btn = primary_btn("Save", WordsMessage::EditSaved);
-    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
+    let save_btn = Button::new("Save")
+        .style(button::primary)
+        .on_press(WordsMessage::EditSaved);
+    let cancel_btn = Button::new("Cancel")
+        .style(button::secondary)
+        .on_press(WordsMessage::EditCancelled);
 
     Container::new(
         Column::new()
@@ -332,7 +350,8 @@ fn meaning_detail_view<'a>(
     cefr_level: Option<crate::models::CefrLevel>,
     tag_ids: &std::collections::BTreeSet<TagId>,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: crate::ui::AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     // Get tag names
     let tag_names: Vec<String> = tag_ids
         .iter()
@@ -340,7 +359,7 @@ fn meaning_detail_view<'a>(
         .collect();
 
     // Get all clozes for this meaning
-    let cloze_items: Vec<Element<'a, WordsMessage>> = model
+    let cloze_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .cloze_registry
         .iter_by_meaning_id(meaning_id)
         .map(|(cloze_id, cloze)| {
@@ -354,7 +373,9 @@ fn meaning_detail_view<'a>(
         })
         .collect();
 
-    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
+    let close_btn = Button::new("×")
+        .style(button::secondary)
+        .on_press(WordsMessage::DetailClosed);
 
     let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)
@@ -384,11 +405,12 @@ fn meaning_detail_view<'a>(
     column = column.push(Text::new(definition).size(FontSize::Subtitle.px()));
 
     // POS and CEFR badges
-    let mut meta_row = Row::new().push(pos_badge::<WordsMessage>(pos));
+    let mut meta_row = Row::new();
+    // .push(pos_badge::<WordsMessage>(pos, theme));
 
-    if let Some(cefr) = cefr_level {
-        meta_row = meta_row.push(cefr_badge::<WordsMessage>(cefr));
-    }
+    // if let Some(cefr) = cefr_level {
+    //     meta_row = meta_row.push(cefr_badge::<WordsMessage>(cefr, theme));
+    // }
     column = column.push(meta_row);
 
     // Tags
@@ -414,10 +436,16 @@ fn meaning_edit_view<'a>(
     _meaning_id: MeaningId,
     word_content: String,
     buffer: &'a EditBuffer,
-) -> Element<'a, WordsMessage> {
-    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
-    let save_btn = primary_btn("Save", WordsMessage::EditSaved);
-    let cancel_btn = secondary_btn("Cancel", WordsMessage::EditCancelled);
+) -> Element<'a, WordsMessage, AppTheme> {
+    let close_btn = Button::new("×")
+        .style(button::primary)
+        .on_press(WordsMessage::DetailClosed);
+    let save_btn = Button::new("Save")
+        .style(button::primary)
+        .on_press(WordsMessage::EditSaved);
+    let cancel_btn = Button::new("Cancel")
+        .style(button::secondary)
+        .on_press(WordsMessage::EditCancelled);
 
     let pos_selected = buffer.meaning_pos;
     let cefr_selected = buffer.meaning_cefr;
@@ -500,7 +528,7 @@ fn cloze_detail_view<'a>(
     cloze_id: ClozeId,
     cloze: &Cloze,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+) -> Element<'a, WordsMessage, AppTheme> {
     // Get the source meaning and word
     let (word_content, definition) = model
         .meaning_registry
@@ -514,7 +542,9 @@ fn cloze_detail_view<'a>(
         })
         .unwrap_or_default();
 
-    let close_btn = secondary_btn("×", WordsMessage::DetailClosed);
+    let close_btn = Button::new("×")
+        .style(button::secondary)
+        .on_press(WordsMessage::DetailClosed);
 
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(iced::widget::svg::Handle::from_memory)

@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use crate::config::LogLevel;
+use crate::ui::theme::AppTheme;
 
 /// Configuration loaded from command-line arguments.
 #[derive(Debug, Clone, Parser)]
@@ -22,6 +23,10 @@ pub struct CliConfig {
     /// Log level (trace, debug, info, warn, error)
     #[clap(long, value_enum)]
     pub log_level: Option<LogLevel>,
+
+    /// UI theme (light, dark)
+    #[clap(long, value_enum)]
+    pub theme: Option<AppTheme>,
 }
 
 impl CliConfig {

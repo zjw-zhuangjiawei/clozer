@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::ui::theme::AppTheme;
 use serde::Deserialize;
 
 /// Configuration loaded from environment variables.
@@ -11,6 +12,7 @@ pub struct EnvConfig {
     pub data_dir: Option<PathBuf>,
     pub config_file: Option<String>,
     pub log_level: Option<super::LogLevel>,
+    pub theme: Option<AppTheme>,
 }
 
 impl EnvConfig {

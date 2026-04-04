@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::LogLevel;
+use crate::ui::AppTheme;
 
 /// General configuration for file-based config.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -12,4 +13,5 @@ use crate::LogLevel;
 pub struct GeneralConfig {
     pub data_dir: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
+    pub theme: Option<AppTheme>,
 }

@@ -4,6 +4,7 @@
 //! the single-window architecture.
 
 use crate::state::QueueGenerationResult;
+use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
 use crate::ui::queue::QueueMessage;
 use crate::ui::settings::SettingsMessage;
@@ -35,4 +36,7 @@ pub enum Message {
 
     // Window resize event for responsive layout
     WindowResized(u16),
+
+    // Theme change request
+    ThemeChanged(AppTheme),
 }

@@ -2,28 +2,41 @@
 
 use super::message::{ModelMessage, ProviderMessage, SettingsMessage};
 use crate::state::Model;
-use crate::ui::theme::{ButtonSize, FontSize, Spacing};
+use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
 use iced::Element;
-use iced::widget::{Button, button, row, text};
+use iced::widget::{Button, PickList, row, text};
+
+use crate::ui::components::button;
 
 /// Renders the settings page.
-pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
+pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage, AppTheme> {
     let ai_config = &model.app_config.ai;
 
     // General Settings Section
-    let general_section = iced::widget::Column::new()
-        .push(text("General").size(FontSize::Title.px()))
-        .push(
-            row![
-                text("Log Level:"),
-                text(format!("{:?}", model.app_config.log_level)),
-            ]
-            .spacing(Spacing::DEFAULT.s),
-        )
-        .spacing(Spacing::DEFAULT.s);
+    // let general_section = iced::widget::Column::new()
+    //     .push(text("General").size(FontSize::Title.px()))
+    //     .push(
+    //         row![
+    //             text("Theme:"),
+    //             PickList::new(
+    //                 vec![AppTheme::Light, AppTheme::Dark],
+    //                 SettingsMessage::ThemeChanged,
+    //             )
+    //             .width(iced::Length::Fixed(120.0)),
+    //         ]
+    //         .spacing(Spacing::DEFAULT.s),
+    //     )
+    //     .push(
+    //         row![
+    //             text("Log Level:"),
+    //             text(format!("{:?}", model.app_config.log_level)),
+    //         ]
+    //         .spacing(Spacing::DEFAULT.s),
+    //     )
+    //     .spacing(Spacing::DEFAULT.s);
 
     // AI Providers Section
-    let providers_list: Vec<Element<'_, SettingsMessage>> = ai_config
+    let providers_list: Vec<Element<'_, SettingsMessage, AppTheme>> = ai_config
         .providers
         .iter()
         .map(|p| {
@@ -59,7 +72,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
         .spacing(Spacing::DEFAULT.s);
 
     // AI Models Section
-    let models_list: Vec<Element<'_, SettingsMessage>> = ai_config
+    let models_list: Vec<Element<'_, SettingsMessage, AppTheme>> = ai_config
         .models
         .iter()
         .map(|m| {
@@ -131,7 +144,7 @@ pub fn view<'a>(model: &'a Model) -> Element<'a, SettingsMessage> {
     // Main settings column
     iced::widget::Column::new()
         .push(text("Settings").size(FontSize::Display.px()))
-        .push(general_section)
+        // .push(general_section)
         .push(providers_section)
         .push(models_section)
         .push(selected_model_section)

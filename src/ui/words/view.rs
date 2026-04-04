@@ -2,18 +2,16 @@ use crate::assets;
 use crate::models::types::{MeaningId, WordId};
 use crate::state::Model;
 use crate::ui::AppTheme;
-use crate::ui::components::dsl::{cefr_badge, count_badge, pos_badge, tag_badge};
-use crate::ui::components::{CheckboxState, svg_checkbox};
+use crate::ui::components::{CheckboxState, button, svg_checkbox};
+use crate::ui::layout::breakpoint::Breakpoint;
 use crate::ui::state::MainWindowState;
-use crate::ui::theme::{Breakpoint, ButtonSize, FontSize, Spacing};
+use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::{ClozeFilter, WordsState};
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{
-    Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
-};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, container, svg};
 use uuid::Uuid;
 
 // Renders the words panel.
@@ -21,15 +19,19 @@ pub fn view<'a>(
     state: &'a MainWindowState,
     model: &'a Model,
     breakpoint: Breakpoint,
-) -> Element<'a, WordsMessage> {
+) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
     let (left_ratio, right_ratio) = breakpoint.column_ratio();
 
     // Search and filter bar
     let search_bar = build_search_bar(words_state, model, breakpoint);
 
+    // Get theme from state
+    let theme = state.theme;
+    let colors = theme.colors();
+
     // Word tree (left panel)
-    let word_tree = build_word_tree(state, model);
+    let word_tree = build_word_tree(state, model, theme);
 
     if breakpoint.is_single_column() {
         // Mobile: single column layout (word tree only, no detail panel)
@@ -37,7 +39,7 @@ pub fn view<'a>(
             .push(search_bar)
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-            .push(build_action_bar(words_state, model))
+            .push(build_action_bar(words_state, model, theme))
             .spacing(Spacing::DEFAULT.s2)
             .padding(Spacing::DEFAULT.s2)
             .height(iced::Length::Fill)
@@ -48,18 +50,18 @@ pub fn view<'a>(
             .push(search_bar)
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-            .push(build_action_bar(words_state, model))
+            .push(build_action_bar(words_state, model, theme))
             .spacing(Spacing::DEFAULT.s2)
             .padding(Spacing::DEFAULT.s2)
             .width(iced::Length::FillPortion((left_ratio * 10.0) as u16));
 
         // Detail panel (right panel)
-        let colors = AppTheme::default().colors();
         let right_panel = Container::new(crate::ui::words::detail_view::view(
             Some(words_state.detail.get_selection()),
             words_state.edit.context(),
             words_state.edit.buffer(),
             model,
+            theme,
         ))
         .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
         .height(iced::Length::Fill)
@@ -83,7 +85,7 @@ fn build_search_bar<'a>(
     words_state: &'a WordsState,
     _model: &'a Model,
     breakpoint: Breakpoint,
-) -> Element<'a, WordsMessage> {
+) -> Element<'a, WordsMessage, AppTheme> {
     // Search input
     let search_input = TextInput::new("Search words or definitions...", &words_state.search.query)
         .on_input(WordsMessage::SearchQueryChanged)
@@ -91,10 +93,12 @@ fn build_search_bar<'a>(
         .padding(Spacing::DEFAULT.s);
 
     // Cloze filter dropdown - responsive width based on breakpoint
-    let cloze_filter_width = match breakpoint {
-        Breakpoint::Mobile => iced::Length::Fixed(80.0),
-        Breakpoint::Tablet => iced::Length::Fixed(100.0),
-        Breakpoint::Desktop => iced::Length::Fixed(120.0),
+    let cloze_filter_width = if breakpoint.is_single_column() {
+        iced::Length::Fixed(80.0)
+    } else if matches!(breakpoint, Breakpoint::Medium) {
+        iced::Length::Fixed(100.0)
+    } else {
+        iced::Length::Fixed(120.0)
     };
     let cloze_filter = PickList::new(
         vec![
@@ -133,7 +137,11 @@ fn build_search_bar<'a>(
 }
 
 /// Build the word tree.
-fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, WordsMessage> {
+fn build_word_tree<'a>(
+    state: &'a MainWindowState,
+    model: &'a Model,
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
 
     // Filter words based on search and filter state
@@ -192,10 +200,10 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
         .collect();
 
     // Build word nodes
-    let word_nodes: Vec<Element<'a, WordsMessage>> = filtered_word_ids
+    let word_nodes: Vec<Element<'a, WordsMessage, AppTheme>> = filtered_word_ids
         .iter()
         .filter_map(|word_id| model.word_registry.get(*word_id))
-        .map(|word| build_word_node(state, model, word))
+        .map(|word| build_word_node(state, model, word, theme))
         .collect();
 
     if word_nodes.is_empty() {
@@ -218,14 +226,15 @@ fn build_word_node<'a>(
     state: &'a MainWindowState,
     model: &'a Model,
     word: &'a crate::models::Word,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
     let is_expanded = words_state.expansion.is_expanded(word.id);
     let is_selected = words_state.selection.is_word_selected(word);
     let is_partial = words_state.selection.is_word_partial(word);
 
     // Get theme colors
-    let colors = AppTheme::default().colors();
+    let colors = theme.colors();
 
     // Expand/collapse icon (as button)
     let expand_icon_name = if is_expanded {
@@ -236,7 +245,7 @@ fn build_word_node<'a>(
     let expand_icon_handle = assets::get_svg(expand_icon_name)
         .map(svg::Handle::from_memory)
         .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
-    let expand_icon: Element<'a, WordsMessage> = Button::new(
+    let expand_icon: Element<'a, WordsMessage, AppTheme> = Button::new(
         svg(expand_icon_handle)
             .width(iced::Length::Fixed(16.0))
             .height(iced::Length::Fixed(16.0)),
@@ -251,34 +260,35 @@ fn build_word_node<'a>(
     .into();
 
     // Checkbox state
-    let checkbox: Element<'a, WordsMessage> = if word.meaning_ids.is_empty() {
+    let checkbox: Element<'a, WordsMessage, AppTheme> = if word.meaning_ids.is_empty() {
         Text::new("○").into()
     } else if is_partial {
         svg_checkbox(
             CheckboxState::Indeterminate,
             WordsMessage::WordToggled(word.id),
+            theme,
         )
     } else {
-        svg_checkbox(is_selected, WordsMessage::WordToggled(word.id))
+        svg_checkbox(is_selected, WordsMessage::WordToggled(word.id), theme)
     };
 
     // Word content (display only - not editable)
-    let word_content: Element<'a, WordsMessage> =
+    let word_content: Element<'a, WordsMessage, AppTheme> =
         Button::new(Text::new(&word.content).size(FontSize::Subtitle.px()))
-            .style(button::secondary)
+            .style(button::tertiary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::WordSelected(word.id))
             .into();
 
     // Meaning count badge
-    let meaning_count_badge = count_badge::<WordsMessage>(word.meaning_ids.len());
+    // let meaning_count_badge = count_badge::<WordsMessage>(word.meaning_ids.len(), theme);
 
     // Word header row
     let word_header = Row::new()
         .push(expand_icon)
         .push(checkbox)
         .push(word_content)
-        .push(meaning_count_badge)
+        // .push(meaning_count_badge)
         .push(Space::new())
         .push(build_word_actions(word.id))
         .spacing(Spacing::DEFAULT.s)
@@ -302,7 +312,7 @@ fn build_word_node<'a>(
         // Meaning nodes
         for meaning_id in &word.meaning_ids {
             if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-                content = content.push(build_meaning_node(state, model, meaning));
+                content = content.push(build_meaning_node(state, model, meaning, theme));
             }
         }
 
@@ -335,7 +345,7 @@ fn build_word_node<'a>(
 }
 
 /// Build word action buttons.
-fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage> {
+fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage, AppTheme> {
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -356,28 +366,32 @@ fn build_meaning_node<'a>(
     state: &'a MainWindowState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
     let is_selected = words_state.selection.is_meaning_selected(meaning.id);
     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
+    let colors = theme.colors();
 
     // Checkbox
-    let checkbox = svg_checkbox(is_selected, WordsMessage::MeaningToggled(meaning.id));
+    let checkbox = svg_checkbox(is_selected, WordsMessage::MeaningToggled(meaning.id), theme);
 
     // POS badge
-    let pos_badge = pos_badge::<WordsMessage>(meaning.pos);
+    // let pos_badge = pos_badge::<WordsMessage>(meaning.pos, theme);
 
     // CEFR level badge (if set)
-    let cefr_badge = if let Some(cefr) = meaning.cefr_level {
-        cefr_badge::<WordsMessage>(cefr)
-    } else {
+    let cefr_badge =
+    // if let Some(cefr) = meaning.cefr_level {
+    //     cefr_badge::<WordsMessage>(cefr, theme)
+    // } else
+     {
         Container::new(Text::new(""))
     };
 
     // Definition - clickable to toggle detail panel
-    let definition: Element<'a, WordsMessage> =
+    let definition: Element<'a, WordsMessage, AppTheme> =
         Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
-            .style(button::secondary)
+            .style(button::tertiary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::MeaningSelected(meaning.id))
             .into();
@@ -390,12 +404,12 @@ fn build_meaning_node<'a>(
     };
     let cloze_status = Text::new(cloze_status_text)
         .size(FontSize::Caption.px())
-        .color(AppTheme::default().colors().text_secondary);
+        .color(colors.text_secondary);
 
     // Meaning header
     let meaning_header = Row::new()
         .push(checkbox)
-        .push(pos_badge)
+        // .push(pos_badge)
         .push(cefr_badge)
         .push(definition)
         .push(Space::new())
@@ -405,17 +419,17 @@ fn build_meaning_node<'a>(
         .align_y(iced::Alignment::Center);
 
     // Tags row
-    let tags_row = build_tags_row(state, model, meaning);
+    let tags_row = build_tags_row(state, model, meaning, theme);
 
     // Collect cloze preview elements (owned) - clickable to toggle detail panel
-    let cloze_preview_items: Vec<Element<'a, WordsMessage>> = model
+    let cloze_preview_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .cloze_registry
         .iter_by_meaning_id(meaning.id)
         .take(2)
         .map(|(cloze_id, cloze)| {
             let text = cloze.render_blanks();
             Button::new(Text::new(text).size(FontSize::Caption.px()))
-                .style(button::secondary)
+                .style(button::tertiary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(WordsMessage::ClozeSelected(*cloze_id))
                 .into()
@@ -442,7 +456,7 @@ fn build_meaning_node<'a>(
 }
 
 /// Build meaning action buttons.
-fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage> {
+fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage, AppTheme> {
     // Delete icon
     let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
         .map(svg::Handle::from_memory)
@@ -463,21 +477,22 @@ fn build_tags_row<'a>(
     state: &'a MainWindowState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
 
     // Tag chips
-    let mut tag_chips: Vec<Element<'a, WordsMessage>> = meaning
+    let mut tag_chips: Vec<Element<'a, WordsMessage, AppTheme>> = meaning
         .tag_ids
         .iter()
         .filter_map(|tag_id| model.tag_registry.get(*tag_id))
-        .map(|tag| tag_badge::<WordsMessage>(&tag.name).into())
+        .map(|tag| Button::new(Text::new(tag.name.clone())).into())
         .collect();
 
     // Add tag button
     tag_chips.push(
         Button::new(Text::new("+").size(FontSize::Caption.px()))
-            .style(button::secondary)
+            .style(button::tertiary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(WordsMessage::TagDropdownOpened {
                 for_meaning: meaning.id,
@@ -486,11 +501,11 @@ fn build_tags_row<'a>(
     );
 
     // Tag dropdown if active
-    let tag_dropdown: Option<Element<'a, WordsMessage>> =
+    let tag_dropdown: Option<Element<'a, WordsMessage, AppTheme>> =
         if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SingleMeaning(mid) if mid == meaning.id => {
-                    Some(build_tag_dropdown(dropdown, model))
+                    Some(build_tag_dropdown(dropdown, model, theme))
                 }
                 _ => None,
             }
@@ -511,9 +526,10 @@ fn build_tags_row<'a>(
 fn build_tag_dropdown<'a>(
     dropdown: &'a TagDropdownState,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     // Get theme colors
-    let colors = AppTheme::default().colors();
+    let colors = theme.colors();
 
     let search = TextInput::new("Search or create...", &dropdown.search)
         .on_input(WordsMessage::TagSearchChanged)
@@ -535,7 +551,7 @@ fn build_tag_dropdown<'a>(
         .take(5)
         .collect();
 
-    let mut tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
+    let mut tag_items: Vec<Element<'a, WordsMessage, AppTheme>> = filtered_tags
         .iter()
         .map(|tag| {
             let meaning_id = if let TagDropdownTarget::SingleMeaning(mid) = dropdown.target {
@@ -601,9 +617,10 @@ fn build_tag_dropdown<'a>(
 fn build_batch_tag_dropdown<'a>(
     dropdown: &'a TagDropdownState,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     // Get theme colors
-    let colors = AppTheme::default().colors();
+    let colors = theme.colors();
 
     let search = TextInput::new("Search...", &dropdown.search)
         .on_input(WordsMessage::TagSearchChanged)
@@ -625,7 +642,7 @@ fn build_batch_tag_dropdown<'a>(
         .take(5)
         .collect();
 
-    let tag_items: Vec<Element<'a, WordsMessage>> = filtered_tags
+    let tag_items: Vec<Element<'a, WordsMessage, AppTheme>> = filtered_tags
         .iter()
         .map(|tag| {
             Button::new(Text::new(&tag.name).size(FontSize::Footnote.px()))
@@ -659,7 +676,8 @@ fn build_batch_tag_dropdown<'a>(
 fn build_action_bar<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
-) -> Element<'a, WordsMessage> {
+    theme: AppTheme,
+) -> Element<'a, WordsMessage, AppTheme> {
     let meaning_selected_count = words_state.selection.meaning_count();
     let cloze_selected_count = words_state.selection.cloze_count();
 
@@ -699,7 +717,7 @@ fn build_action_bar<'a>(
     let selection_info = Text::new(format!("{} meanings selected", meaning_selected_count))
         .size(FontSize::Body.px());
 
-    let tag_btn: Element<'a, WordsMessage> =
+    let tag_btn: Element<'a, WordsMessage, AppTheme> =
         if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SelectedMeanings => Row::new()
@@ -708,7 +726,7 @@ fn build_action_bar<'a>(
                             .style(button::primary)
                             .padding(ButtonSize::Standard.to_iced_padding()),
                     )
-                    .push(build_batch_tag_dropdown(dropdown, model))
+                    .push(build_batch_tag_dropdown(dropdown, model, theme))
                     .spacing(Spacing::DEFAULT.xxs)
                     .into(),
                 _ => Button::new(Text::new("Add Tag").size(FontSize::Body.px()))

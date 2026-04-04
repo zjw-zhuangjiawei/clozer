@@ -4,22 +4,64 @@
 //! for light and dark themes. The theme system is built on design tokens
 //! that ensure visual consistency and accessibility compliance.
 
-use super::design_tokens::{DesignTokens, SemanticColors};
-use iced::{Color, Length, Theme};
+use clap::ValueEnum;
+use iced::theme::{Base as ThemeBase, Mode, Palette, Style as ThemeStyle};
+use iced::widget::button::Style;
+use iced::{Color, Length};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use strum::{Display, VariantArray};
 
+pub type StyleFn<'a> = Box<dyn Fn(&AppTheme, iced::widget::button::Status) -> Style + 'a>;
+
 pub use super::design_tokens::{
-    CategoryColor as ThemeCategoryColor, DesignTokens as ThemeDesignTokens, RadiusVariant,
-    Severity as ThemeSeverity, SpacingScale, SpacingValue,
-    TypographyVariant as ThemeTypographyVariant,
+    BorderRadiusValues, DimensionTokens, FontFamily, FontWeights, IconSizeValues, IconSizeVariant,
+    InputHeightTokens, LineHeights, RadiusVariant, ScaleFactor, ScaleSystem, SpacingScale,
+    SpacingValue, TouchTargetSize, TypographyScale, TypographySizes, TypographyVariant,
 };
 
 pub mod prelude {
-    pub use super::{
-        AppTheme, AppThemeColors, Breakpoint, ButtonSize, DesignTokensHelper, FontSize, Spacing,
-        SpacingValue, ThemeColors,
-    };
+    pub use super::{AppTheme, ButtonSize, FontSize, Spacing, ThemeColors};
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum Breakpoint {
+    #[default]
+    Desktop,
+    Tablet,
+    Mobile,
+}
+
+impl Breakpoint {
+    pub fn from_width(width: f32) -> Self {
+        if width < 600.0 {
+            Breakpoint::Mobile
+        } else if width < 1024.0 {
+            Breakpoint::Tablet
+        } else {
+            Breakpoint::Desktop
+        }
+    }
+
+    pub fn column_ratio(&self) -> (f32, f32) {
+        match self {
+            Breakpoint::Mobile => (0.0, 1.0),
+            Breakpoint::Tablet => (0.3, 0.7),
+            Breakpoint::Desktop => (0.4, 0.6),
+        }
+    }
+
+    pub fn sidebar_width(&self) -> Length {
+        match self {
+            Breakpoint::Mobile => Length::Fill,
+            Breakpoint::Tablet => Length::Fixed(200.0),
+            Breakpoint::Desktop => Length::Fixed(250.0),
+        }
+    }
+
+    pub fn is_single_column(&self) -> bool {
+        matches!(self, Breakpoint::Mobile)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
@@ -59,15 +101,15 @@ impl FontSize {
         }
     }
 
-    pub fn to_typography_variant(&self) -> ThemeTypographyVariant {
+    pub fn to_typography_variant(&self) -> TypographyVariant {
         match self {
-            FontSize::Caption => ThemeTypographyVariant::Caption,
-            FontSize::Footnote => ThemeTypographyVariant::Footnote,
-            FontSize::Body => ThemeTypographyVariant::Body,
-            FontSize::Subtitle => ThemeTypographyVariant::Subtitle,
-            FontSize::Title => ThemeTypographyVariant::Title,
-            FontSize::Heading => ThemeTypographyVariant::Heading,
-            FontSize::Display => ThemeTypographyVariant::Display,
+            FontSize::Caption => TypographyVariant::Caption,
+            FontSize::Footnote => TypographyVariant::Footnote,
+            FontSize::Body => TypographyVariant::Body,
+            FontSize::Subtitle => TypographyVariant::Subtitle,
+            FontSize::Title => TypographyVariant::Title,
+            FontSize::Heading => TypographyVariant::Heading,
+            FontSize::Display => TypographyVariant::Display,
         }
     }
 }
@@ -175,6 +217,26 @@ impl Spacing {
             SpacingValue::Huge => self.xl,
         }
     }
+
+    pub fn tight(&self) -> f32 {
+        self.xs
+    }
+
+    pub fn compact(&self) -> f32 {
+        self.s
+    }
+
+    pub fn standard(&self) -> f32 {
+        self.m
+    }
+
+    pub fn relaxed(&self) -> f32 {
+        self.l
+    }
+
+    pub fn spacious(&self) -> f32 {
+        self.xl
+    }
 }
 
 impl fmt::Display for Spacing {
@@ -196,81 +258,81 @@ impl fmt::Display for Spacing {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum Breakpoint {
-    #[default]
-    Desktop,
-    Tablet,
-    Mobile,
-}
-
-impl Breakpoint {
-    pub fn from_width(width: f32) -> Self {
-        if width < 600.0 {
-            Breakpoint::Mobile
-        } else if width < 1024.0 {
-            Breakpoint::Tablet
-        } else {
-            Breakpoint::Desktop
-        }
-    }
-
-    pub fn column_ratio(&self) -> (f32, f32) {
-        match self {
-            Breakpoint::Mobile => (0.0, 1.0),
-            Breakpoint::Tablet => (0.3, 0.7),
-            Breakpoint::Desktop => (0.4, 0.6),
-        }
-    }
-
-    pub fn sidebar_width(&self) -> Length {
-        match self {
-            Breakpoint::Mobile => Length::Fill,
-            Breakpoint::Tablet => Length::Fixed(200.0),
-            Breakpoint::Desktop => Length::Fixed(250.0),
-        }
-    }
-
-    pub fn is_single_column(&self) -> bool {
-        matches!(self, Breakpoint::Mobile)
-    }
-}
-
-impl AppTheme {
-    pub fn to_iced_theme(self) -> Theme {
-        match self {
-            AppTheme::Light => Theme::Light,
-            AppTheme::Dark => Theme::Dark,
-        }
-    }
-
-    pub fn colors(&self) -> ThemeColors {
-        match self {
-            AppTheme::Light => ThemeColors::light(),
-            AppTheme::Dark => ThemeColors::dark(),
-        }
-    }
-
-    pub fn design_tokens(&self) -> DesignTokens {
-        match self {
-            AppTheme::Light => DesignTokens::light(),
-            AppTheme::Dark => DesignTokens::dark(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ValueEnum, Display,
+)]
+#[serde(rename_all = "snake_case")]
+#[clap(rename_all = "snake_case")]
 pub enum AppTheme {
     #[default]
     Light,
     Dark,
 }
 
+impl AppTheme {
+    pub fn colors(&self) -> ThemeColors {
+        match self {
+            AppTheme::Light => ThemeColors::light(),
+            AppTheme::Dark => ThemeColors::dark(),
+        }
+    }
+}
+
+impl ThemeBase for AppTheme {
+    fn default(preference: Mode) -> Self {
+        match preference {
+            Mode::Light => AppTheme::Light,
+            Mode::Dark => AppTheme::Dark,
+            Mode::None => AppTheme::Light,
+        }
+    }
+
+    fn mode(&self) -> Mode {
+        match self {
+            AppTheme::Light => Mode::Light,
+            AppTheme::Dark => Mode::Dark,
+        }
+    }
+
+    fn base(&self) -> ThemeStyle {
+        let colors = self.colors();
+        ThemeStyle {
+            background_color: colors.background,
+            text_color: colors.text,
+        }
+    }
+
+    fn palette(&self) -> Option<Palette> {
+        let colors = self.colors();
+        Some(Palette {
+            background: colors.background,
+            text: colors.text,
+            primary: colors.primary,
+            success: colors.success,
+            warning: colors.secondary,
+            danger: colors.danger,
+        })
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            AppTheme::Light => "clozer_light",
+            AppTheme::Dark => "clozer_dark",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeColors {
     pub primary: Color,
+    pub primary_hover: Color,
+    pub primary_active: Color,
     pub secondary: Color,
+    pub neutral_100: Color,
+    pub neutral_200: Color,
     pub danger: Color,
+    pub danger_hover: Color,
+    pub danger_active: Color,
     pub success: Color,
 
     pub background: Color,
@@ -280,8 +342,10 @@ pub struct ThemeColors {
 
     pub text: Color,
     pub text_secondary: Color,
+    pub text_on_primary: Color,
 
     pub border: Color,
+    pub border_emphasis: Color,
     pub border_focus: Color,
 
     pub pos_badge_bg: Color,
@@ -291,221 +355,63 @@ pub struct ThemeColors {
 impl ThemeColors {
     pub fn light() -> Self {
         Self {
-            primary: Color::from_rgb(0.2, 0.4, 0.6),
-            secondary: Color::from_rgb(0.5, 0.5, 0.5),
-            danger: Color::from_rgb(0.8, 0.2, 0.2),
-            success: Color::from_rgb(0.2, 0.6, 0.3),
+            primary: Color::from_rgb(0.30, 0.56, 0.57),
+            primary_hover: Color::from_rgb(0.25, 0.46, 0.47),
+            primary_active: Color::from_rgb(0.20, 0.36, 0.37),
+            secondary: Color::from_rgb(0.45, 0.45, 0.45),
+            neutral_100: Color::from_rgb(0.96, 0.96, 0.96),
+            neutral_200: Color::from_rgb(0.91, 0.91, 0.91),
+            danger: Color::from_rgb(0.70, 0.25, 0.25),
+            danger_hover: Color::from_rgb(0.58, 0.18, 0.18),
+            danger_active: Color::from_rgb(0.45, 0.12, 0.12),
+            success: Color::from_rgb(0.22, 0.62, 0.38),
 
             background: Color::from_rgb(0.98, 0.98, 0.98),
             surface: Color::from_rgb(1.0, 1.0, 1.0),
-            surface_elevated: Color::from_rgb(0.95, 0.95, 0.95),
+            surface_elevated: Color::from_rgb(0.96, 0.96, 0.96),
             surface_hover: Color::from_rgb(0.92, 0.92, 0.92),
 
             text: Color::from_rgb(0.1, 0.1, 0.1),
             text_secondary: Color::from_rgb(0.4, 0.4, 0.4),
+            text_on_primary: Color::from_rgb(1.0, 1.0, 1.0),
 
             border: Color::from_rgb(0.85, 0.85, 0.85),
-            border_focus: Color::from_rgb(0.2, 0.4, 0.6),
+            border_emphasis: Color::from_rgb(0.65, 0.65, 0.65),
+            border_focus: Color::from_rgb(0.30, 0.56, 0.57),
 
-            pos_badge_bg: Color::from_rgb(0.2, 0.4, 0.6),
-            pos_badge_text: Color::WHITE,
+            pos_badge_bg: Color::from_rgb(0.82, 0.82, 0.82),
+            pos_badge_text: Color::from_rgb(0.32, 0.32, 0.32),
         }
     }
 
     pub fn dark() -> Self {
         Self {
-            primary: Color::from_rgb(0.4, 0.6, 0.8),
-            secondary: Color::from_rgb(0.6, 0.6, 0.6),
-            danger: Color::from_rgb(0.9, 0.3, 0.3),
-            success: Color::from_rgb(0.3, 0.7, 0.4),
+            primary: Color::from_rgb(0.40, 0.60, 0.62),
+            primary_hover: Color::from_rgb(0.50, 0.70, 0.72),
+            primary_active: Color::from_rgb(0.60, 0.78, 0.80),
+            secondary: Color::from_rgb(0.62, 0.62, 0.68),
+            neutral_100: Color::from_rgb(0.25, 0.25, 0.29),
+            neutral_200: Color::from_rgb(0.35, 0.35, 0.40),
+            danger: Color::from_rgb(0.88, 0.38, 0.38),
+            danger_hover: Color::from_rgb(0.98, 0.52, 0.52),
+            danger_active: Color::from_rgb(1.0, 0.70, 0.70),
+            success: Color::from_rgb(0.25, 0.70, 0.45),
 
             background: Color::from_rgb(0.1, 0.1, 0.12),
             surface: Color::from_rgb(0.15, 0.15, 0.18),
-            surface_elevated: Color::from_rgb(0.2, 0.2, 0.24),
+            surface_elevated: Color::from_rgb(0.20, 0.20, 0.24),
             surface_hover: Color::from_rgb(0.25, 0.25, 0.28),
 
-            text: Color::from_rgb(0.9, 0.9, 0.9),
-            text_secondary: Color::from_rgb(0.6, 0.6, 0.6),
+            text: Color::from_rgb(0.92, 0.92, 0.95),
+            text_secondary: Color::from_rgb(0.65, 0.65, 0.7),
+            text_on_primary: Color::from_rgb(0.1, 0.1, 0.12),
 
             border: Color::from_rgb(0.3, 0.3, 0.35),
-            border_focus: Color::from_rgb(0.4, 0.6, 0.8),
+            border_emphasis: Color::from_rgb(0.45, 0.45, 0.5),
+            border_focus: Color::from_rgb(0.40, 0.60, 0.62),
 
-            pos_badge_bg: Color::from_rgb(0.4, 0.6, 0.8),
-            pos_badge_text: Color::from_rgb(0.1, 0.1, 0.12),
+            pos_badge_bg: Color::from_rgb(0.35, 0.35, 0.40),
+            pos_badge_text: Color::from_rgb(0.92, 0.92, 0.95),
         }
-    }
-
-    pub fn from_semantic(semantic: &SemanticColors) -> Self {
-        Self {
-            primary: semantic.primary.scale(500),
-            secondary: semantic.secondary.scale(500),
-            danger: semantic.danger.scale(500),
-            success: semantic.success.scale(500),
-
-            background: semantic.background.base,
-            surface: semantic.background.surface,
-            surface_elevated: semantic.background.elevated,
-            surface_hover: semantic.neutral.scale(200),
-
-            text: semantic.text.primary,
-            text_secondary: semantic.text.secondary,
-
-            border: semantic.border.default,
-            border_focus: semantic.focus.primary,
-
-            pos_badge_bg: semantic.primary.scale(500),
-            pos_badge_text: semantic.text.on_primary,
-        }
-    }
-}
-
-impl From<AppTheme> for Option<Theme> {
-    fn from(value: AppTheme) -> Self {
-        Some(value.to_iced_theme())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ApplicationStyle {
-    pub button_size: ButtonSize,
-    pub spacing: Spacing,
-}
-
-impl ApplicationStyle {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn button_padding(&self) -> (f32, f32) {
-        self.button_size.padding()
-    }
-
-    pub fn button_text_size(&self) -> f32 {
-        self.button_size.font_size().px()
-    }
-}
-
-pub trait DesignTokensHelper {
-    fn primary(&self) -> Color;
-    fn secondary(&self) -> Color;
-    fn danger(&self) -> Color;
-    fn success(&self) -> Color;
-    fn background(&self) -> Color;
-    fn surface(&self) -> Color;
-    fn surface_elevated(&self) -> Color;
-    fn text(&self) -> Color;
-    fn text_secondary(&self) -> Color;
-    fn border(&self) -> Color;
-    fn border_focus(&self) -> Color;
-    fn pos_badge_bg(&self) -> Color;
-    fn pos_badge_text(&self) -> Color;
-}
-
-impl DesignTokensHelper for AppTheme {
-    fn primary(&self) -> Color {
-        self.colors().primary
-    }
-
-    fn secondary(&self) -> Color {
-        self.colors().secondary
-    }
-
-    fn danger(&self) -> Color {
-        self.colors().danger
-    }
-
-    fn success(&self) -> Color {
-        self.colors().success
-    }
-
-    fn background(&self) -> Color {
-        self.colors().background
-    }
-
-    fn surface(&self) -> Color {
-        self.colors().surface
-    }
-
-    fn surface_elevated(&self) -> Color {
-        self.colors().surface_elevated
-    }
-
-    fn text(&self) -> Color {
-        self.colors().text
-    }
-
-    fn text_secondary(&self) -> Color {
-        self.colors().text_secondary
-    }
-
-    fn border(&self) -> Color {
-        self.colors().border
-    }
-
-    fn border_focus(&self) -> Color {
-        self.colors().border_focus
-    }
-
-    fn pos_badge_bg(&self) -> Color {
-        self.colors().pos_badge_bg
-    }
-
-    fn pos_badge_text(&self) -> Color {
-        self.colors().pos_badge_text
-    }
-}
-
-pub struct AppThemeColors {
-    colors: ThemeColors,
-}
-
-impl AppThemeColors {
-    pub fn from_theme(theme: AppTheme) -> Self {
-        Self {
-            colors: theme.colors(),
-        }
-    }
-
-    pub fn primary(&self) -> Color {
-        self.colors.primary
-    }
-    pub fn secondary(&self) -> Color {
-        self.colors.secondary
-    }
-    pub fn danger(&self) -> Color {
-        self.colors.danger
-    }
-    pub fn success(&self) -> Color {
-        self.colors.success
-    }
-    pub fn background(&self) -> Color {
-        self.colors.background
-    }
-    pub fn surface(&self) -> Color {
-        self.colors.surface
-    }
-    pub fn surface_elevated(&self) -> Color {
-        self.colors.surface_elevated
-    }
-    pub fn surface_hover(&self) -> Color {
-        self.colors.surface_hover
-    }
-    pub fn text(&self) -> Color {
-        self.colors.text
-    }
-    pub fn text_secondary(&self) -> Color {
-        self.colors.text_secondary
-    }
-    pub fn border(&self) -> Color {
-        self.colors.border
-    }
-    pub fn border_focus(&self) -> Color {
-        self.colors.border_focus
-    }
-    pub fn pos_badge_bg(&self) -> Color {
-        self.colors.pos_badge_bg
-    }
-    pub fn pos_badge_text(&self) -> Color {
-        self.colors.pos_badge_text
     }
 }

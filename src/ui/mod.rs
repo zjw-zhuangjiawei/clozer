@@ -11,5 +11,4 @@ pub mod state;
 pub mod theme;
 pub mod words;
 
-pub use design_tokens::DesignTokens;
 pub use theme::{AppTheme, ThemeColors};

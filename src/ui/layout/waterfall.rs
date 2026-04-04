@@ -5,16 +5,16 @@ use iced::widget::{Column, Row};
 
 /// Waterfall layout builder for staggered content arrangement.
 /// Features: columns with varying heights, content interleaved.
-pub struct WaterfallLayout<'a, M> {
+pub struct WaterfallLayout<'a, M, T> {
     columns: u8,
     column_spacing: f32,
     row_spacing: f32,
-    items: Vec<Element<'a, M>>,
+    items: Vec<Element<'a, M, T>>,
     /// Estimated heights for each column (used for placement algorithm)
     column_heights: Vec<f32>,
 }
 
-impl<'a, M: 'a> WaterfallLayout<'a, M> {
+impl<'a, M: 'a, T: 'a> WaterfallLayout<'a, M, T> {
     /// Create a new waterfall layout builder.
     pub fn new(columns: u8) -> Self {
         Self {
@@ -34,14 +34,14 @@ impl<'a, M: 'a> WaterfallLayout<'a, M> {
     }
 
     /// Add an item to the waterfall layout.
-    pub fn push<E: Into<Element<'a, M>>>(mut self, item: E) -> Self {
+    pub fn push<E: Into<Element<'a, M, T>>>(mut self, item: E) -> Self {
         self.items.push(item.into());
         self
     }
 
     /// Add an item with estimated height for waterfall algorithm.
     /// Places the item in the shortest column.
-    pub fn push_with_height<E: Into<Element<'a, M>>>(mut self, item: E, height: f32) -> Self {
+    pub fn push_with_height<E: Into<Element<'a, M, T>>>(mut self, item: E, height: f32) -> Self {
         // Find the shortest column
         let min_col = self
             .column_heights
@@ -57,13 +57,13 @@ impl<'a, M: 'a> WaterfallLayout<'a, M> {
     }
 
     /// Build the waterfall layout.
-    pub fn build(self) -> Element<'a, M> {
+    pub fn build(self) -> Element<'a, M, T> {
         if self.items.is_empty() {
             return Column::new().into();
         }
 
         // Distribute items across columns
-        let mut columns: Vec<Vec<Element<'a, M>>> =
+        let mut columns: Vec<Vec<Element<'a, M, T>>> =
             (0..self.columns as usize).map(|_| Vec::new()).collect();
         for (i, item) in self.items.into_iter().enumerate() {
             let col = i % self.columns as usize;
@@ -71,7 +71,7 @@ impl<'a, M: 'a> WaterfallLayout<'a, M> {
         }
 
         // Build each column
-        let column_elements: Vec<Element<'a, M>> = columns
+        let column_elements: Vec<Element<'a, M, T>> = columns
             .into_iter()
             .map(|items| {
                 Column::with_children(items)
@@ -88,7 +88,10 @@ impl<'a, M: 'a> WaterfallLayout<'a, M> {
 }
 
 /// Create a waterfall layout with specified columns.
-pub fn waterfall_layout<'a, M: 'a>(columns: u8, items: Vec<Element<'a, M>>) -> Element<'a, M> {
+pub fn waterfall_layout<'a, M: 'a, T: 'a>(
+    columns: u8,
+    items: Vec<Element<'a, M, T>>,
+) -> Element<'a, M, T> {
     let mut builder = WaterfallLayout::new(columns);
     for item in items {
         builder = builder.push(item);
