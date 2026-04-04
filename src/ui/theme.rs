@@ -109,14 +109,22 @@ impl ButtonSize {
 /// Spacing constants for consistent layout spacing.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Spacing {
+    /// Extra extra small spacing (2px)
+    pub xxs: f32,
     /// Extra small spacing (4px)
     pub xs: f32,
+    /// Extra small 2 spacing (5px)
+    pub xs2: f32,
     /// Small spacing (8px)
     pub s: f32,
+    /// Small 2 spacing (10px)
+    pub s2: f32,
     /// Medium spacing (12px)
     pub m: f32,
     /// Large spacing (16px)
     pub l: f32,
+    /// Large 2 spacing (20px)
+    pub l2: f32,
     /// Extra large spacing (24px)
     pub xl: f32,
     /// Extra extra large spacing (32px)
@@ -126,10 +134,14 @@ pub struct Spacing {
 impl Spacing {
     /// Default spacing constants.
     pub const DEFAULT: Self = Self {
+        xxs: 2.0,
         xs: 4.0,
+        xs2: 5.0,
         s: 8.0,
+        s2: 10.0,
         m: 12.0,
         l: 16.0,
+        l2: 20.0,
         xl: 24.0,
         xxl: 32.0,
     };
@@ -139,8 +151,17 @@ impl fmt::Display for Spacing {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Spacing(xs={}, s={}, m={}, l={}, xl={}, xxl={})",
-            self.xs, self.s, self.m, self.l, self.xl, self.xxl
+            "Spacing(xxs={}, xs={}, xs2={}, s={}, s2={}, m={}, l={}, l2={}, xl={}, xxl={})",
+            self.xxs,
+            self.xs,
+            self.xs2,
+            self.s,
+            self.s2,
+            self.m,
+            self.l,
+            self.l2,
+            self.xl,
+            self.xxl
         )
     }
 }

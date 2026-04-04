@@ -1,6 +1,6 @@
 //! Adaptive layout implementation.
 
-use crate::ui::theme::Breakpoint;
+use crate::ui::theme::{Breakpoint, Spacing};
 use iced::Element;
 use iced::widget::Column;
 
@@ -21,7 +21,7 @@ impl<'a, M: 'a> AdaptiveLayout<'a, M> {
         Column::new()
             .push(self.nav_bar)
             .push(self.content)
-            .spacing(5)
+            .spacing(Spacing::DEFAULT.xs2)
             .into()
     }
 }

@@ -5,7 +5,7 @@ use crate::ui::AppTheme;
 use crate::ui::components::dsl::{cefr_badge, pos_badge};
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
-use crate::ui::theme::{Breakpoint, ButtonSize, FontSize};
+use crate::ui::theme::{Breakpoint, ButtonSize, FontSize, Spacing};
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::{ClozeFilter, WordsState};
@@ -37,8 +37,8 @@ pub fn view<'a>(
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
             .push(build_action_bar(words_state, model))
-            .spacing(10)
-            .padding(10)
+            .spacing(Spacing::DEFAULT.s2)
+            .padding(Spacing::DEFAULT.s2)
             .height(iced::Length::Fill)
             .into()
     } else {
@@ -48,8 +48,8 @@ pub fn view<'a>(
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
             .push(build_action_bar(words_state, model))
-            .spacing(10)
-            .padding(10)
+            .spacing(Spacing::DEFAULT.s2)
+            .padding(Spacing::DEFAULT.s2)
             .width(iced::Length::FillPortion((left_ratio * 10.0) as u16));
 
         // Detail panel (right panel)
@@ -71,7 +71,7 @@ pub fn view<'a>(
         Row::new()
             .push(left_panel)
             .push(right_panel)
-            .spacing(5)
+            .spacing(Spacing::DEFAULT.xs2)
             .height(iced::Length::Fill)
             .into()
     }
@@ -87,7 +87,7 @@ fn build_search_bar<'a>(
     let search_input = TextInput::new("Search words or definitions...", &words_state.search.query)
         .on_input(WordsMessage::SearchQueryChanged)
         .width(iced::Length::Fill)
-        .padding(8);
+        .padding(Spacing::DEFAULT.s);
 
     // Cloze filter dropdown - responsive width based on breakpoint
     let cloze_filter_width = match breakpoint {
@@ -126,7 +126,7 @@ fn build_search_bar<'a>(
         .push(search_input)
         .push(cloze_filter)
         .push(clear_btn)
-        .spacing(10)
+        .spacing(Spacing::DEFAULT.s2)
         .align_y(iced::Alignment::Center)
         .into()
 }
@@ -202,11 +202,13 @@ fn build_word_tree<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<
             .push(
                 Container::new(Text::new("No words found. Add a word to get started."))
                     .center_x(iced::Length::Fill)
-                    .padding(20),
+                    .padding(Spacing::DEFAULT.l2),
             )
             .into()
     } else {
-        Column::with_children(word_nodes).spacing(5).into()
+        Column::with_children(word_nodes)
+            .spacing(Spacing::DEFAULT.xs2)
+            .into()
     }
 }
 
@@ -279,7 +281,7 @@ fn build_word_node<'a>(
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(meaning_count)
         .push(build_word_actions(word.id))
-        .spacing(8)
+        .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
     // Build expanded content if needed
@@ -287,7 +289,7 @@ fn build_word_node<'a>(
         let mut content = Column::new()
             .push(word_header)
             .push(iced::widget::rule::horizontal(1))
-            .spacing(5);
+            .spacing(Spacing::DEFAULT.xs2);
 
         // Add meaning button (opens detail panel)
         content = content.push(
@@ -305,7 +307,7 @@ fn build_word_node<'a>(
         }
 
         Container::new(content)
-            .padding(10)
+            .padding(Spacing::DEFAULT.s2)
             .style(move |_| container::Style {
                 background: Some(colors.surface_elevated.into()),
                 border: iced::Border {
@@ -318,7 +320,7 @@ fn build_word_node<'a>(
             .into()
     } else {
         Container::new(word_header)
-            .padding(10)
+            .padding(Spacing::DEFAULT.s2)
             .style(move |_| container::Style {
                 background: Some(colors.surface.into()),
                 border: iced::Border {
@@ -396,7 +398,7 @@ fn build_meaning_node<'a>(
         .push(Text::new(" ").width(iced::Length::Fill))
         .push(cloze_status)
         .push(build_meaning_actions(meaning.id))
-        .spacing(8)
+        .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
     // Tags row
@@ -421,15 +423,15 @@ fn build_meaning_node<'a>(
     let mut column = Column::new()
         .push(meaning_header)
         .push(tags_row)
-        .spacing(5)
-        .padding([5, 10]);
+        .spacing(Spacing::DEFAULT.xs2)
+        .padding([Spacing::DEFAULT.xs2, Spacing::DEFAULT.s2]);
 
     // Add cloze previews if any
     if !cloze_preview_items.is_empty() {
         column = column.push(
             Column::with_children(cloze_preview_items)
-                .spacing(2)
-                .padding([2, 10]),
+                .spacing(Spacing::DEFAULT.xxs)
+                .padding([Spacing::DEFAULT.xxs, Spacing::DEFAULT.s2]),
         );
     }
 
@@ -505,7 +507,7 @@ fn build_tags_row<'a>(
     let mut row = Row::new()
         .push(Text::new("Tags:").size(FontSize::Caption.px()))
         .extend(tag_chips)
-        .spacing(4);
+        .spacing(Spacing::DEFAULT.xs);
 
     if let Some(dropdown) = tag_dropdown {
         row = row.push(dropdown);
@@ -525,7 +527,7 @@ fn build_tag_dropdown<'a>(
     let search = TextInput::new("Search or create...", &dropdown.search)
         .on_input(WordsMessage::TagSearchChanged)
         .width(iced::Length::Fixed(150.0))
-        .padding(4);
+        .padding(Spacing::DEFAULT.xs);
 
     // Filter tags by search
     let filtered_tags: Vec<_> = model
@@ -588,8 +590,8 @@ fn build_tag_dropdown<'a>(
         Column::new()
             .push(search)
             .extend(tag_items)
-            .spacing(4)
-            .padding(5),
+            .spacing(Spacing::DEFAULT.xs)
+            .padding(Spacing::DEFAULT.xs2),
     )
     .width(iced::Length::Fixed(170.0))
     .style(move |_| container::Style {
@@ -632,29 +634,19 @@ fn build_action_bar<'a>(
             .push(Text::new(" ").width(iced::Length::Fill))
             .push(export_btn)
             .push(delete_btn)
-            .spacing(10)
+            .spacing(Spacing::DEFAULT.s2)
             .align_y(iced::Alignment::Center)
             .into();
     }
 
     // No cloze selection - check for meaning selection
     if meaning_selected_count == 0 {
-        // Show search input and add button
-        let search_input = TextInput::new("Search words...", &words_state.search.query)
-            .on_input(WordsMessage::SearchQueryChanged)
-            .width(iced::Length::Fill)
-            .padding(8);
-
         let add_btn = Button::new(Text::new("+ Add"))
             .style(button::primary)
             .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(WordsMessage::NewWordStarted);
 
-        return Row::new()
-            .push(search_input)
-            .push(add_btn)
-            .spacing(10)
-            .into();
+        return Row::new().push(add_btn).spacing(Spacing::DEFAULT.s2).into();
     }
 
     // Selection info for meanings
@@ -671,7 +663,7 @@ fn build_action_bar<'a>(
                             .padding(ButtonSize::Standard.to_iced_padding()),
                     )
                     .push(build_batch_tag_dropdown(dropdown, model))
-                    .spacing(2)
+                    .spacing(Spacing::DEFAULT.xxs)
                     .into(),
                 _ => Button::new(Text::new("Add Tag"))
                     .style(button::secondary)
@@ -703,7 +695,7 @@ fn build_action_bar<'a>(
         .push(tag_btn)
         .push(queue_btn)
         .push(delete_btn)
-        .spacing(10)
+        .spacing(Spacing::DEFAULT.s2)
         .align_y(iced::Alignment::Center)
         .into()
 }
@@ -719,7 +711,7 @@ fn build_batch_tag_dropdown<'a>(
     let search = TextInput::new("Search...", &dropdown.search)
         .on_input(WordsMessage::TagSearchChanged)
         .width(iced::Length::Fixed(150.0))
-        .padding(4);
+        .padding(Spacing::DEFAULT.xs);
 
     // Filter tags by search
     let filtered_tags: Vec<_> = model
@@ -750,8 +742,8 @@ fn build_batch_tag_dropdown<'a>(
         Column::new()
             .push(search)
             .extend(tag_items)
-            .spacing(4)
-            .padding(5),
+            .spacing(Spacing::DEFAULT.xs)
+            .padding(Spacing::DEFAULT.xs2),
     )
     .width(iced::Length::Fixed(170.0))
     .style(move |_| container::Style {

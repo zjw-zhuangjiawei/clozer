@@ -9,7 +9,7 @@ pub use crate::ui::state::MainWindowState;
 use crate::message::Message;
 use crate::state::Model;
 use crate::ui::layout::{LayoutConfig, LayoutMode, adaptive_layout, breakpoint::Breakpoint};
-use crate::ui::theme::Breakpoint as ThemeBreakpoint;
+use crate::ui::theme::{Breakpoint as ThemeBreakpoint, Spacing};
 use crate::ui::words::message::WordsMessage;
 use iced::{Element, FillPortion, Task};
 
@@ -32,9 +32,9 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
 
     // Navigation bar with responsive spacing
     let nav_spacing = if breakpoint == ThemeBreakpoint::Mobile {
-        5
+        Spacing::DEFAULT.xs2
     } else {
-        10
+        Spacing::DEFAULT.s2
     };
     let nav_buttons: Vec<Element<'a, Message>> =
         [NavItem::Words, NavItem::Queue, NavItem::Settings]
@@ -64,17 +64,17 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
             if breakpoint.is_single_column() {
                 // Mobile: single column, full width
                 iced::widget::column![left_panel]
-                    .spacing(20)
-                    .padding(20)
+                    .spacing(Spacing::DEFAULT.l2)
+                    .padding(Spacing::DEFAULT.l2)
                     .into()
             } else {
                 // Tablet/Desktop: words panel takes left portion
                 iced::widget::row![
                     iced::widget::container(left_panel)
                         .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(20),
+                        .padding(Spacing::DEFAULT.l2),
                 ]
-                .spacing(20)
+                .spacing(Spacing::DEFAULT.l2)
                 .into()
             }
         }
@@ -82,16 +82,16 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
             let queue_panel = crate::ui::queue::view(model).map(Message::Queue);
             if breakpoint.is_single_column() {
                 iced::widget::column![queue_panel]
-                    .spacing(20)
-                    .padding(20)
+                    .spacing(Spacing::DEFAULT.l2)
+                    .padding(Spacing::DEFAULT.l2)
                     .into()
             } else {
                 iced::widget::row![
                     iced::widget::container(queue_panel)
                         .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(20),
+                        .padding(Spacing::DEFAULT.l2),
                 ]
-                .spacing(20)
+                .spacing(Spacing::DEFAULT.l2)
                 .into()
             }
         }
@@ -99,16 +99,16 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
             let settings_panel = crate::ui::settings::view::view(model).map(Message::Settings);
             if breakpoint.is_single_column() {
                 iced::widget::column![settings_panel]
-                    .spacing(20)
-                    .padding(20)
+                    .spacing(Spacing::DEFAULT.l2)
+                    .padding(Spacing::DEFAULT.l2)
                     .into()
             } else {
                 iced::widget::row![
                     iced::widget::container(settings_panel)
                         .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(20),
+                        .padding(Spacing::DEFAULT.l2),
                 ]
-                .spacing(20)
+                .spacing(Spacing::DEFAULT.l2)
                 .into()
             }
         }
