@@ -217,4 +217,6 @@ impl MeaningRegistry {
 
 - [Dev: Models](./dev-models.md) - Data structures
 - [Dev: Persistence](./dev-persistence.md) - Database operations
+- [Dev: Error Handling](./dev-error-handling.md) - Error handling patterns
+- [Dev: Testing](./dev-testing.md) - Testing patterns
 - [Architecture Layers](./arch-layers.md) - Layer overview

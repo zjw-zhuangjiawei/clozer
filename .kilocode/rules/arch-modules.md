@@ -61,37 +61,58 @@ src/
 │   ├── model.rs      # Model (data + business logic)
 │   ├── queue.rs      # QueueState for generation queue
 │   └── mod.rs        # AppState (orchestrator)
-└── ui/               # Iced UI components
-    ├── mod.rs
-    ├── app.rs        # App-level view/update functions
-    ├── message.rs    # MainWindowMessage enum
-    ├── state.rs      # MainWindowState
-    ├── nav.rs        # Navigation items
-    ├── theme.rs      # Theme definitions (AppTheme, ThemeColors)
-    ├── components/   # Reusable UI components
-    │   ├── button.rs
-    │   ├── checkbox.rs
-    │   ├── detail.rs
-    │   └── mod.rs
-    ├── queue/        # Queue view sub-module
-    │   ├── handlers.rs
-    │   ├── message.rs
-    │   ├── state.rs
-    │   ├── update.rs
-    │   └── view.rs
-    ├── settings/     # Settings view sub-module
-    │   ├── handlers.rs
-    │   ├── message.rs
-    │   ├── state.rs
-    │   ├── update.rs
-    │   └── view.rs
-    └── words/        # Words view sub-module
-        ├── detail_view.rs
-        ├── handlers.rs
-        ├── message.rs
-        ├── state.rs
-        ├── update.rs
-        └── view.rs
+ └── ui/               # Iced UI components
+     ├── mod.rs
+     ├── app.rs        # App-level view/update functions
+     ├── message.rs    # MainWindowMessage enum
+     ├── state.rs      # MainWindowState
+     ├── nav.rs        # Navigation items
+     ├── theme.rs      # Theme definitions (AppTheme, ThemeColors)
+     ├── components/   # Reusable UI components
+     │   ├── button.rs
+     │   ├── checkbox.rs
+     │   ├── detail.rs
+     │   ├── dsl/      # Declarative DSL components
+     │   │   ├── badge.rs
+     │   │   ├── button.rs
+     │   │   ├── card.rs
+     │   │   ├── input.rs
+     │   │   ├── row.rs
+     │   │   └── mod.rs
+     │   └── mod.rs
+     ├── layout/      # Adaptive layout system
+     │   ├── adaptive.rs
+     │   ├── breakpoint.rs
+     │   ├── grid.rs
+     │   ├── mode.rs
+     │   ├── waterfall.rs
+     │   └── mod.rs
+     ├── queue/        # Queue view sub-module
+     │   ├── handlers.rs
+     │   ├── message.rs
+     │   ├── state.rs
+     │   ├── update.rs
+     │   └── view.rs
+     ├── settings/     # Settings view sub-module
+     │   ├── handlers.rs
+     │   ├── message.rs
+     │   ├── state.rs
+     │   ├── update.rs
+     │   └── view.rs
+     └── words/        # Words view sub-module
+         ├── manager/  # State management modules
+         │   ├── detail.rs    # DetailManager, DetailSelection, TagDropdown
+         │   ├── edit.rs      # EditManager, EditBuffer, EditContext
+         │   ├── expansion.rs # ExpansionManager
+         │   ├── search.rs    # SearchManager
+         │   ├── selection.rs # SelectionManager
+         │   └── mod.rs
+         ├── detail_view.rs
+         ├── handlers.rs
+         ├── message.rs
+         ├── state.rs
+         ├── update.rs
+         └── view.rs
 ```
 
 ---

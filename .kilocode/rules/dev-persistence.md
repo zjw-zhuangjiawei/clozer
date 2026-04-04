@@ -161,4 +161,6 @@ pub fn iter_words(&self) -> Result<impl Iterator<Item = WordDto>, DbError> {
 
 - [Dev: Models](./dev-models.md) - Data structures
 - [Dev: Registry](./dev-registry.md) - In-memory storage
+- [Dev: Error Handling](./dev-error-handling.md) - Error handling patterns
+- [Dev: Testing](./dev-testing.md) - Testing patterns
 - [Architecture Layers](./arch-layers.md) - Layer overview

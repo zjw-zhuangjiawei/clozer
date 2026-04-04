@@ -252,6 +252,123 @@ let child_tag = Tag::builder()
 
 ---
 
+## Provider Model
+
+LLM provider configuration for generating cloze sentences.
+
+```rust
+// From src/models/provider.rs
+use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderType {
+    OpenAI,
+    Anthropic,
+    DeepSeek,
+    Gemini,
+    Ollama,
+    Perplexity,
+    XAI,
+}
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct Provider {
+    #[builder(default = ProviderId::new())]
+    pub id: ProviderId,
+    pub name: String,
+    pub provider_type: ProviderType,
+    pub base_url: String,
+    pub api_key: String,
+}
+```
+
+### Usage
+
+```rust
+// Create a provider
+let provider = Provider::builder()
+    .name("OpenAI")
+    .provider_type(ProviderType::OpenAI)
+    .base_url("https://api.openai.com/v1")
+    .api_key("sk-...")
+    .build();
+```
+
+---
+
+## Model Model
+
+LLM model configuration associated with a provider.
+
+```rust
+// From src/models/model.rs
+use typed_builder::TypedBuilder;
+
+use super::{ModelId, ProviderId};
+
+#[derive(Debug, Clone, TypedBuilder)]
+pub struct Model {
+    #[builder(default = ModelId::new())]
+    pub id: ModelId,
+    pub name: String,
+    pub provider_id: ProviderId,
+    pub model_id: String,
+}
+```
+
+### Usage
+
+```rust
+// Create a model
+let model = Model::builder()
+    .name("GPT-4")
+    .provider_id(provider.id)
+    .model_id("gpt-4")
+    .build();
+```
+
+---
+
+## QueueItem
+
+Represents an item in the generation queue.
+
+```rust
+// From src/registry/queue.rs
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueueItemStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct QueueItem {
+    pub id: WordId,
+    pub meaning_id: MeaningId,
+    pub status: QueueItemStatus,
+    pub selected: bool,
+}
+```
+
+### Usage
+
+```rust
+// Create a queue item
+let item = QueueItem::new(meaning_id);
+match item.status {
+    QueueItemStatus::Pending => { /* waiting */ }
+    QueueItemStatus::Processing => { /* generating */ }
+    QueueItemStatus::Completed => { /* done */ }
+    QueueItemStatus::Failed(e) => { /* error: {} */ }
+}
+```
+
+---
+
 ## Newtype ID Types
 
 For enhanced type safety, the codebase uses newtype ID wrappers around UUIDs in `src/models/types.rs`:
@@ -322,4 +439,6 @@ pub enum Message { ... }
 - [Reference: API Design](./ref-api.md) - Builder pattern details
 - [Dev: Registry](./dev-registry.md) - In-memory storage
 - [Dev: Persistence](./dev-persistence.md) - DTO serialization
+- [Dev: Error Handling](./dev-error-handling.md) - Error handling patterns
+- [Dev: Testing](./dev-testing.md) - Testing patterns
 - [Architecture Layers](./arch-layers.md) - Layer overview

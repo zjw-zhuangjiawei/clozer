@@ -150,3 +150,5 @@ impl App {
 - [Dev Registry](./dev-registry.md) - In-memory storage
 - [Dev Persistence](./dev-persistence.md) - Database patterns
 - [Dev UI](./dev-ui.md) - Iced UI patterns
+- [Dev Error Handling](./dev-error-handling.md) - Error handling patterns
+- [Dev Testing](./dev-testing.md) - Testing patterns

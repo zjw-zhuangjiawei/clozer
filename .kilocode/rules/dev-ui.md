@@ -60,6 +60,20 @@ src/ui/
 │   ├── button.rs    # Reusable button component
 │   ├── checkbox.rs
 │   ├── detail.rs    # Detail panel component
+│   ├── dsl/         # Declarative DSL components
+│   │   ├── badge.rs
+│   │   ├── button.rs
+│   │   ├── card.rs
+│   │   ├── input.rs
+│   │   ├── row.rs
+│   │   └── mod.rs
+│   └── mod.rs
+├── layout/          # Adaptive layout system
+│   ├── adaptive.rs
+│   ├── breakpoint.rs
+│   ├── grid.rs
+│   ├── mode.rs
+│   ├── waterfall.rs
 │   └── mod.rs
 ├── queue/        # Queue view sub-module
 │   ├── handlers.rs  # Event handlers
@@ -74,6 +88,13 @@ src/ui/
 │   ├── update.rs
 │   └── view.rs
 └── words/       # Words view sub-module
+    ├── manager/     # State management modules
+    │   ├── detail.rs
+    │   ├── edit.rs
+    │   ├── expansion.rs
+    │   ├── search.rs
+    │   ├── selection.rs
+    │   └── mod.rs
     ├── detail_view.rs
     ├── handlers.rs  # Event handlers
     ├── message.rs
@@ -125,40 +146,46 @@ pub enum MainWindowMessage {
 
 ---
 
-## WordsUiState
+## WordsState (Manager Pattern)
 
-The main UI state struct for the words panel:
+The Words panel uses a Manager pattern for organized state management:
 
 ```rust
 // From src/ui/words/state.rs
+/// Complete state for Words panel using Manager pattern.
 #[derive(Debug, Default)]
-pub struct WordsUiState {
-    // Search & Filter
-    pub search_query: String,
-    pub filter: FilterState,
-
-    // Expansion
-    pub expanded_word_ids: HashSet<Uuid>,
-
-    // Add meaning
-    pub adding_meaning_to_word: Option<Uuid>,
-    pub meaning_input: MeaningInputState,
-
-    // Selection
-    pub selected_meaning_ids: HashSet<Uuid>,
-    pub selected_cloze_ids: HashSet<Uuid>,
-
-    // Tag dropdown
-    pub tag_dropdown: Option<TagDropdownState>,
-
-    // Detail panel selection
-    pub selected_detail: Option<DetailSelection>,
-
-    // Detail panel editing
-    pub detail_edit_mode: DetailEditMode,
-    pub edit_buffer: EditBuffer,
+pub struct WordsState {
+    /// Search and filter manager
+    pub search: SearchManager,
+    /// Selection manager
+    pub selection: SelectionManager,
+    /// Expansion manager
+    pub expansion: ExpansionManager,
+    /// Detail panel manager
+    pub detail: DetailManager,
+    /// Edit session manager
+    pub edit: EditManager,
 }
 ```
+
+### Manager Modules
+
+Each manager handles a specific aspect of UI state:
+
+```rust
+// From src/ui/words/manager/mod.rs
+pub mod detail;      // DetailManager, DetailSelection, TagDropdownState
+pub mod edit;        // EditManager, EditBuffer, EditContext
+pub mod expansion;   // ExpansionManager
+pub mod search;      // SearchManager
+pub mod selection;   // SelectionManager
+```
+
+**SearchManager**: Search query and filter state
+**SelectionManager**: Selection state for meanings and clozes
+**ExpansionManager**: Word expansion state (which words are expanded)
+**DetailManager**: Detail panel selection and tag dropdown state
+**EditManager**: Edit session context and buffers
 
 ---
 
@@ -354,6 +381,176 @@ impl TagDropdownState {
 
 ---
 
+## QueueState
+
+Queue panel state with selection management:
+
+```rust
+// From src/ui/queue/state.rs
+use std::collections::HashSet;
+
+/// Selection state for queue items.
+#[derive(Debug, Clone, Default)]
+pub struct SelectionState {
+    /// Selected queue item IDs
+    pub items: HashSet<Uuid>,
+}
+
+impl SelectionState {
+    pub fn toggle(&mut self, item_id: Uuid) { ... }
+    pub fn is_selected(&self, item_id: Uuid) -> bool { ... }
+    pub fn select_all(&mut self, item_ids: impl IntoIterator<Item = Uuid>) { ... }
+    pub fn clear(&mut self) { ... }
+    pub fn count(&self) -> usize { ... }
+}
+
+/// Queue panel state.
+#[derive(Debug, Default)]
+pub struct QueueState {
+    pub selection: SelectionState,
+}
+```
+
+---
+
+## SettingsState
+
+Settings panel state with provider and model editing:
+
+```rust
+// From src/ui/settings/state.rs
+/// Editing state for providers.
+#[derive(Debug, Clone)]
+pub struct ProviderEditState {
+    pub editing_id: Option<Uuid>,
+    pub data: ProviderConfig,
+    pub is_new: bool,
+}
+
+/// Editing state for models.
+#[derive(Debug, Clone)]
+pub struct ModelEditState {
+    pub editing_id: Option<Uuid>,
+    pub data: ModelConfig,
+    pub is_new: bool,
+}
+
+/// Settings panel state.
+#[derive(Debug, Default)]
+pub struct SettingsState {
+    pub provider_edit: ProviderEditState,
+    pub model_edit: ModelEditState,
+}
+```
+
+---
+
+## Layout System
+
+Adaptive layout system supporting multiple modes:
+
+```rust
+// From src/ui/layout/mod.rs
+pub enum LayoutMode {
+    Adaptive,   // Single column or master-detail based on breakpoint
+    Grid,       // Multi-column evenly distributed
+    Waterfall,  // Staggered arrangement for varying heights
+}
+
+pub struct LayoutConfig {
+    pub mode: LayoutMode,
+    pub columns: usize,
+}
+
+pub fn build_layout<'a, M: 'a>(
+    config: &LayoutConfig,
+    nav_bar: Element<'a, M>,
+    content: Element<'a, M>,
+    breakpoint: ThemeBreakpoint,
+) -> Element<'a, M> { ... }
+```
+
+### Breakpoint System
+
+```rust
+// From src/ui/layout/breakpoint.rs
+pub enum Breakpoint {
+    Mobile,   // < 768px
+    Tablet,   // 768px - 1024px
+    Desktop,  // 1024px - 1440px
+    Wide,     // >= 1440px
+}
+```
+
+---
+
+## DSL Components
+
+Declarative DSL component library for consistent UI construction:
+
+```rust
+// From src/ui/components/dsl/mod.rs
+pub use badge::{Badge, BadgeStyle, badge, cefr_badge, pos_badge};
+pub use button::{
+    ButtonBuilder, ButtonStyle, ButtonVariant, button, danger_btn, primary_btn, secondary_btn,
+};
+pub use card::{Card, CardStyle, card};
+pub use row::{RowBuilder, h_stack, row, v_stack};
+```
+
+### Badge Components
+
+```rust
+// Part of speech badge
+let pos = pos_badge(PartOfSpeech::Noun);
+
+// CEFR level badge
+let cefr = cefr_badge(CefrLevel::A1);
+```
+
+### Button Components
+
+```rust
+// Builder pattern for custom buttons
+let my_btn = button::<Message>("Click me")
+    .style(ButtonStyle::Primary)
+    .on_press(Message::Submit);
+
+// Predefined button variants
+let primary = primary_btn("Save");
+let secondary = secondary_btn("Cancel");
+let danger = danger_btn("Delete");
+```
+
+### Card Components
+
+```rust
+// Fluent card builder
+let my_card = card::<Message>()
+    .padding(16.0)
+    .push(some_element)
+    .build();
+```
+
+### Row/Stack Components
+
+```rust
+// Horizontal stack
+let h = h_stack(vec![element1, element2]);
+
+// Vertical stack
+let v = v_stack(vec![element1, element2]);
+
+// Builder pattern
+let row = row::<Message>()
+    .spacing(8)
+    .push(element1)
+    .push(element2)
+    .build();
+```
+
+---
+
 ## Window Close Handling
 
 Handle window close events to save config before exit:
@@ -453,3 +650,5 @@ pub fn update(&mut self, message: Message) -> Task<Message> {
 - [Architecture Modules](./arch-modules.md) - Module structure
 - [Dev Models](./dev-models.md) - Data structures
 - [Dev Logging](./dev-logging.md) - Tracing patterns
+- [Dev Error Handling](./dev-error-handling.md) - Error handling patterns
+- [Dev Testing](./dev-testing.md) - Testing patterns
