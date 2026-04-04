@@ -1,34 +1,40 @@
 //! Centralized theme definitions and colors.
 //!
 //! Provides consistent styling across all UI components with support
-//! for light and dark themes.
+//! for light and dark themes. The theme system is built on design tokens
+//! that ensure visual consistency and accessibility compliance.
 
+use super::design_tokens::{DesignTokens, SemanticColors};
 use iced::{Color, Length, Theme};
 use std::fmt;
 use strum::{Display, VariantArray};
 
-/// Font size variants for consistent typography.
+pub use super::design_tokens::{
+    CategoryColor as ThemeCategoryColor, DesignTokens as ThemeDesignTokens, RadiusVariant,
+    Severity as ThemeSeverity, SpacingScale, SpacingValue,
+    TypographyVariant as ThemeTypographyVariant,
+};
+
+pub mod prelude {
+    pub use super::{
+        AppTheme, AppThemeColors, Breakpoint, ButtonSize, DesignTokensHelper, FontSize, Spacing,
+        SpacingValue, ThemeColors,
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum FontSize {
-    /// Caption size (11px) - auxiliary text, secondary labels
     #[default]
     Caption,
-    /// Footnote size (12px) - badges, section titles, secondary info
     Footnote,
-    /// Body size (14px) - main text, button labels, most UI text
     Body,
-    /// Subtitle size (16px) - small headings, dialog titles
     Subtitle,
-    /// Title size (18px) - panel titles, detail page titles
     Title,
-    /// Heading size (20px) - page main headings
     Heading,
-    /// Display size (24px) - empty state text
     Display,
 }
 
 impl FontSize {
-    /// Returns the font size in pixels.
     pub const fn px(self) -> f32 {
         match self {
             FontSize::Caption => 11.0,
@@ -41,7 +47,6 @@ impl FontSize {
         }
     }
 
-    /// Returns the line height in pixels.
     pub const fn line_height(self) -> f32 {
         match self {
             FontSize::Caption => 16.0,
@@ -53,24 +58,30 @@ impl FontSize {
             FontSize::Display => 32.0,
         }
     }
+
+    pub fn to_typography_variant(&self) -> ThemeTypographyVariant {
+        match self {
+            FontSize::Caption => ThemeTypographyVariant::Caption,
+            FontSize::Footnote => ThemeTypographyVariant::Footnote,
+            FontSize::Body => ThemeTypographyVariant::Body,
+            FontSize::Subtitle => ThemeTypographyVariant::Subtitle,
+            FontSize::Title => ThemeTypographyVariant::Title,
+            FontSize::Heading => ThemeTypographyVariant::Heading,
+            FontSize::Display => ThemeTypographyVariant::Display,
+        }
+    }
 }
 
-/// Button size variants with consistent padding and text sizing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum ButtonSize {
-    /// Small button (24px height) - inline actions, dense lists
     #[default]
     Small,
-    /// Medium button (30px height) - secondary actions, toolbar
     Medium,
-    /// Standard button (36px height) - default size, most buttons
     Standard,
-    /// Large button (48px height) - primary actions, CTA
     Large,
 }
 
 impl ButtonSize {
-    /// Returns the padding (horizontal, vertical) for this button size.
     pub fn padding(self) -> (f32, f32) {
         match self {
             ButtonSize::Small => (8.0, 3.0),
@@ -80,8 +91,7 @@ impl ButtonSize {
         }
     }
 
-    /// Returns the text size for this button size.
-    pub fn font_size(self) -> FontSize {
+    pub fn font_size(&self) -> FontSize {
         match self {
             ButtonSize::Small => FontSize::Footnote,
             ButtonSize::Medium => FontSize::Body,
@@ -90,49 +100,42 @@ impl ButtonSize {
         }
     }
 
-    /// Returns the recommended height for this button.
-    /// Height = line_height + v_padding * 2
-    /// Example: Small = 18 + 3 * 2 = 24px
-    pub fn height(self) -> f32 {
+    pub fn height(&self) -> f32 {
         let line_height = self.font_size().line_height();
         let (_, v_padding) = self.padding();
         line_height + v_padding * 2.0
     }
 
-    /// Convert to iced::Padding for direct use.
     pub fn to_iced_padding(self) -> iced::Padding {
         let (h, v) = self.padding();
         iced::Padding::from([v, h])
     }
+
+    pub fn touch_target_min(&self) -> f32 {
+        match self {
+            ButtonSize::Small => 32.0,
+            ButtonSize::Medium => 40.0,
+            ButtonSize::Standard => 44.0,
+            ButtonSize::Large => 48.0,
+        }
+    }
 }
 
-/// Spacing constants for consistent layout spacing.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Spacing {
-    /// Extra extra small spacing (2px)
     pub xxs: f32,
-    /// Extra small spacing (4px)
     pub xs: f32,
-    /// Extra small 2 spacing (5px)
     pub xs2: f32,
-    /// Small spacing (8px)
     pub s: f32,
-    /// Small 2 spacing (10px)
     pub s2: f32,
-    /// Medium spacing (12px)
     pub m: f32,
-    /// Large spacing (16px)
     pub l: f32,
-    /// Large 2 spacing (20px)
     pub l2: f32,
-    /// Extra large spacing (24px)
     pub xl: f32,
-    /// Extra extra large spacing (32px)
     pub xxl: f32,
 }
 
 impl Spacing {
-    /// Default spacing constants.
     pub const DEFAULT: Self = Self {
         xxs: 2.0,
         xs: 4.0,
@@ -145,6 +148,33 @@ impl Spacing {
         xl: 24.0,
         xxl: 32.0,
     };
+
+    pub fn new() -> Self {
+        Self::DEFAULT
+    }
+
+    pub fn spacing_tokens(&self) -> SpacingScale {
+        SpacingScale {
+            unit: 4.0,
+            scale: [
+                self.xxs, self.xs, self.xs2, self.s, self.s2, self.m, self.l, self.l2, self.xl,
+            ],
+        }
+    }
+
+    pub fn value(&self, sv: SpacingValue) -> f32 {
+        match sv {
+            SpacingValue::Xxs => self.xxs,
+            SpacingValue::Xs => self.xs,
+            SpacingValue::Sm => self.xs2,
+            SpacingValue::Md => self.s,
+            SpacingValue::Lg => self.s2,
+            SpacingValue::Xl => self.m,
+            SpacingValue::Xxl => self.l,
+            SpacingValue::Xxxl => self.l2,
+            SpacingValue::Huge => self.xl,
+        }
+    }
 }
 
 impl fmt::Display for Spacing {
@@ -166,129 +196,47 @@ impl fmt::Display for Spacing {
     }
 }
 
-/// Dimension constants for UI components.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Dimensions {
-    /// Input field height for single-line inputs (36px).
-    pub input_height: f32,
-    /// Input field height for multi-line text areas (72px).
-    pub textarea_min_height: f32,
-    /// Icon sizes.
-    pub icon: IconSize,
-    /// Border dimensions.
-    pub border: BorderSize,
-    /// Corner radius values.
-    pub radius: RadiusSize,
-}
-
-impl Dimensions {
-    /// Default dimensions.
-    pub const DEFAULT: Self = Self {
-        input_height: 36.0,
-        textarea_min_height: 72.0,
-        icon: IconSize::Small,       // 16px - default icon size
-        border: BorderSize::DEFAULT, // thin=1, medium=2, thick=3
-        radius: RadiusSize::Small,   // 4px - default radius
-    };
-}
-
-/// Icon size variants.
-#[derive(Debug, Clone, Copy, Default)]
-pub enum IconSize {
-    /// Small icon (16px) - inline icons
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
+pub enum Breakpoint {
     #[default]
-    Small,
-    /// Medium icon (20px) - toolbar, navigation
-    Medium,
-    /// Large icon (24px) - primary actions, empty states
-    Large,
-    /// Extra large icon (32px) - special emphasis
-    XLarge,
+    Desktop,
+    Tablet,
+    Mobile,
 }
 
-impl IconSize {
-    /// Returns the icon size in pixels.
-    pub const fn px(self) -> f32 {
+impl Breakpoint {
+    pub fn from_width(width: f32) -> Self {
+        if width < 600.0 {
+            Breakpoint::Mobile
+        } else if width < 1024.0 {
+            Breakpoint::Tablet
+        } else {
+            Breakpoint::Desktop
+        }
+    }
+
+    pub fn column_ratio(&self) -> (f32, f32) {
         match self {
-            IconSize::Small => 16.0,
-            IconSize::Medium => 20.0,
-            IconSize::Large => 24.0,
-            IconSize::XLarge => 32.0,
+            Breakpoint::Mobile => (0.0, 1.0),
+            Breakpoint::Tablet => (0.3, 0.7),
+            Breakpoint::Desktop => (0.4, 0.6),
         }
     }
-}
 
-/// Border size variants.
-#[derive(Debug, Clone, Copy)]
-pub struct BorderSize {
-    /// Thin border width (1px) - standard borders
-    pub thin: f32,
-    /// Medium border width (2px) - emphasis borders
-    pub medium: f32,
-    /// Thick border width (3px) - strong emphasis
-    pub thick: f32,
-}
-
-impl Default for BorderSize {
-    fn default() -> Self {
-        Self {
-            thin: 1.0,
-            medium: 2.0,
-            thick: 3.0,
-        }
-    }
-}
-
-impl BorderSize {
-    /// Returns the default border sizes.
-    pub const DEFAULT: Self = Self {
-        thin: 1.0,
-        medium: 2.0,
-        thick: 3.0,
-    };
-}
-
-/// Radius size variants.
-#[derive(Debug, Clone, Copy, Default)]
-pub enum RadiusSize {
-    /// No radius (0px) - sharp corners
-    None,
-    /// Small radius (4px) - inputs, small buttons
-    #[default]
-    Small,
-    /// Medium radius (8px) - cards, panels
-    Medium,
-    /// Large radius (12px) - modals, large elements
-    Large,
-    /// Full radius - circular elements
-    Full,
-}
-
-impl RadiusSize {
-    /// Returns the radius in pixels.
-    pub const fn px(self) -> f32 {
+    pub fn sidebar_width(&self) -> Length {
         match self {
-            RadiusSize::None => 0.0,
-            RadiusSize::Small => 4.0,
-            RadiusSize::Medium => 8.0,
-            RadiusSize::Large => 12.0,
-            RadiusSize::Full => 999.0,
+            Breakpoint::Mobile => Length::Fill,
+            Breakpoint::Tablet => Length::Fixed(200.0),
+            Breakpoint::Desktop => Length::Fixed(250.0),
         }
     }
-}
 
-/// Application theme variants.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum AppTheme {
-    /// Light theme (default)
-    #[default]
-    Light,
-    /// Dark theme
-    Dark,
+    pub fn is_single_column(&self) -> bool {
+        matches!(self, Breakpoint::Mobile)
+    }
 }
 
 impl AppTheme {
-    /// Returns the Iced theme for this app theme.
     pub fn to_iced_theme(self) -> Theme {
         match self {
             AppTheme::Light => Theme::Light,
@@ -296,58 +244,51 @@ impl AppTheme {
         }
     }
 
-    /// Returns the color palette for this theme.
-    pub fn colors(self) -> ThemeColors {
+    pub fn colors(&self) -> ThemeColors {
         match self {
             AppTheme::Light => ThemeColors::light(),
             AppTheme::Dark => ThemeColors::dark(),
         }
     }
+
+    pub fn design_tokens(&self) -> DesignTokens {
+        match self {
+            AppTheme::Light => DesignTokens::light(),
+            AppTheme::Dark => DesignTokens::dark(),
+        }
+    }
 }
 
-/// Color palette for a theme.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AppTheme {
+    #[default]
+    Light,
+    Dark,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeColors {
-    /// Primary brand color
     pub primary: Color,
-    /// Secondary/muted color
     pub secondary: Color,
-    /// Danger/error color
     pub danger: Color,
-    /// Success color
     pub success: Color,
 
-    // Background colors
-    /// Main background
     pub background: Color,
-    /// Surface background (cards, panels)
     pub surface: Color,
-    /// Elevated surface background
     pub surface_elevated: Color,
-    /// Hover state background
     pub surface_hover: Color,
 
-    // Text colors
-    /// Primary text color
     pub text: Color,
-    /// Secondary/muted text color
     pub text_secondary: Color,
 
-    // Border colors
-    /// Standard border color
     pub border: Color,
-    /// Focused border color
     pub border_focus: Color,
 
-    // Component-specific colors
-    /// POS badge background
     pub pos_badge_bg: Color,
-    /// POS badge text
     pub pos_badge_text: Color,
 }
 
 impl ThemeColors {
-    /// Light theme color palette.
     pub fn light() -> Self {
         Self {
             primary: Color::from_rgb(0.2, 0.4, 0.6),
@@ -371,7 +312,6 @@ impl ThemeColors {
         }
     }
 
-    /// Dark theme color palette.
     pub fn dark() -> Self {
         Self {
             primary: Color::from_rgb(0.4, 0.6, 0.8),
@@ -394,6 +334,29 @@ impl ThemeColors {
             pos_badge_text: Color::from_rgb(0.1, 0.1, 0.12),
         }
     }
+
+    pub fn from_semantic(semantic: &SemanticColors) -> Self {
+        Self {
+            primary: semantic.primary.scale(500),
+            secondary: semantic.secondary.scale(500),
+            danger: semantic.danger.scale(500),
+            success: semantic.success.scale(500),
+
+            background: semantic.background.base,
+            surface: semantic.background.surface,
+            surface_elevated: semantic.background.elevated,
+            surface_hover: semantic.neutral.scale(200),
+
+            text: semantic.text.primary,
+            text_secondary: semantic.text.secondary,
+
+            border: semantic.border.default,
+            border_focus: semantic.focus.primary,
+
+            pos_badge_bg: semantic.primary.scale(500),
+            pos_badge_text: semantic.text.on_primary,
+        }
+    }
 }
 
 impl From<AppTheme> for Option<Theme> {
@@ -402,82 +365,147 @@ impl From<AppTheme> for Option<Theme> {
     }
 }
 
-/// Responsive breakpoint for layout adaptation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum Breakpoint {
-    /// Mobile devices (width < 600px)
-    Mobile,
-    /// Tablet devices (600px <= width < 1024px)
-    Tablet,
-    /// Desktop devices (width >= 1024px)
-    #[default]
-    Desktop,
-}
-
-impl Breakpoint {
-    /// Determine breakpoint from window width.
-    pub fn from_width(width: f32) -> Self {
-        if width < 600.0 {
-            Breakpoint::Mobile
-        } else if width < 1024.0 {
-            Breakpoint::Tablet
-        } else {
-            Breakpoint::Desktop
-        }
-    }
-
-    /// Returns the sidebar-to-content ratio for this breakpoint.
-    /// Returns (sidebar_fraction, content_fraction).
-    ///
-    /// Ratios:
-    /// - Desktop (>1024px): 4:6
-    /// - Tablet (600-1024px): 3:7
-    /// - Mobile (<=600px): single column
-    pub fn column_ratio(self) -> (f32, f32) {
-        match self {
-            Breakpoint::Mobile => (0.0, 1.0),  // Single column, no sidebar
-            Breakpoint::Tablet => (0.3, 0.7),  // 3:7 ratio
-            Breakpoint::Desktop => (0.4, 0.6), // 4:6 ratio
-        }
-    }
-
-    /// Returns the sidebar width as a Length for this breakpoint.
-    pub fn sidebar_width(self) -> Length {
-        match self {
-            Breakpoint::Mobile => Length::Fill,
-            Breakpoint::Tablet => Length::Fixed(200.0),
-            Breakpoint::Desktop => Length::Fixed(250.0),
-        }
-    }
-
-    /// Check if content should be shown in single column.
-    pub fn is_single_column(self) -> bool {
-        matches!(self, Breakpoint::Mobile)
-    }
-}
-
-/// Default application styles for components.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ApplicationStyle {
-    /// Default button size
     pub button_size: ButtonSize,
-    /// Default spacing
     pub spacing: Spacing,
 }
 
 impl ApplicationStyle {
-    /// Create a new application style with defaults.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Returns the default button padding.
     pub fn button_padding(&self) -> (f32, f32) {
         self.button_size.padding()
     }
 
-    /// Returns the default button text size.
     pub fn button_text_size(&self) -> f32 {
         self.button_size.font_size().px()
+    }
+}
+
+pub trait DesignTokensHelper {
+    fn primary(&self) -> Color;
+    fn secondary(&self) -> Color;
+    fn danger(&self) -> Color;
+    fn success(&self) -> Color;
+    fn background(&self) -> Color;
+    fn surface(&self) -> Color;
+    fn surface_elevated(&self) -> Color;
+    fn text(&self) -> Color;
+    fn text_secondary(&self) -> Color;
+    fn border(&self) -> Color;
+    fn border_focus(&self) -> Color;
+    fn pos_badge_bg(&self) -> Color;
+    fn pos_badge_text(&self) -> Color;
+}
+
+impl DesignTokensHelper for AppTheme {
+    fn primary(&self) -> Color {
+        self.colors().primary
+    }
+
+    fn secondary(&self) -> Color {
+        self.colors().secondary
+    }
+
+    fn danger(&self) -> Color {
+        self.colors().danger
+    }
+
+    fn success(&self) -> Color {
+        self.colors().success
+    }
+
+    fn background(&self) -> Color {
+        self.colors().background
+    }
+
+    fn surface(&self) -> Color {
+        self.colors().surface
+    }
+
+    fn surface_elevated(&self) -> Color {
+        self.colors().surface_elevated
+    }
+
+    fn text(&self) -> Color {
+        self.colors().text
+    }
+
+    fn text_secondary(&self) -> Color {
+        self.colors().text_secondary
+    }
+
+    fn border(&self) -> Color {
+        self.colors().border
+    }
+
+    fn border_focus(&self) -> Color {
+        self.colors().border_focus
+    }
+
+    fn pos_badge_bg(&self) -> Color {
+        self.colors().pos_badge_bg
+    }
+
+    fn pos_badge_text(&self) -> Color {
+        self.colors().pos_badge_text
+    }
+}
+
+pub struct AppThemeColors {
+    colors: ThemeColors,
+}
+
+impl AppThemeColors {
+    pub fn from_theme(theme: AppTheme) -> Self {
+        Self {
+            colors: theme.colors(),
+        }
+    }
+
+    pub fn primary(&self) -> Color {
+        self.colors.primary
+    }
+    pub fn secondary(&self) -> Color {
+        self.colors.secondary
+    }
+    pub fn danger(&self) -> Color {
+        self.colors.danger
+    }
+    pub fn success(&self) -> Color {
+        self.colors.success
+    }
+    pub fn background(&self) -> Color {
+        self.colors.background
+    }
+    pub fn surface(&self) -> Color {
+        self.colors.surface
+    }
+    pub fn surface_elevated(&self) -> Color {
+        self.colors.surface_elevated
+    }
+    pub fn surface_hover(&self) -> Color {
+        self.colors.surface_hover
+    }
+    pub fn text(&self) -> Color {
+        self.colors.text
+    }
+    pub fn text_secondary(&self) -> Color {
+        self.colors.text_secondary
+    }
+    pub fn border(&self) -> Color {
+        self.colors.border
+    }
+    pub fn border_focus(&self) -> Color {
+        self.colors.border_focus
+    }
+    pub fn pos_badge_bg(&self) -> Color {
+        self.colors.pos_badge_bg
+    }
+    pub fn pos_badge_text(&self) -> Color {
+        self.colors.pos_badge_text
     }
 }

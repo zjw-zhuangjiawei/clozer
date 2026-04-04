@@ -2,6 +2,7 @@
 
 pub mod app;
 pub mod components;
+pub mod design_tokens;
 pub mod layout;
 pub mod nav;
 pub mod queue;
@@ -10,4 +11,5 @@ pub mod state;
 pub mod theme;
 pub mod words;
 
+pub use design_tokens::DesignTokens;
 pub use theme::{AppTheme, ThemeColors};

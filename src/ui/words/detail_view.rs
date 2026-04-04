@@ -5,11 +5,13 @@ use crate::models::Cloze;
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::state::Model;
 use crate::ui::components::dsl::empty_state;
+use crate::ui::components::dsl::{cefr_badge, count_badge, pos_badge};
 use crate::ui::components::dsl::{primary_btn, secondary_btn};
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::words::manager::{DetailSelection, EditBuffer, EditContext};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
+use iced::widget::Space;
 use iced::widget::{Button, Column, Container, Row, Text, button, text_input};
 
 /// Renders the detail panel based on current selection and edit mode.
@@ -210,7 +212,6 @@ fn word_detail_view<'a>(
                 .iter()
                 .filter_map(|mid| model.meaning_registry.get(*mid))
                 .map(|meaning| {
-                    let pos_text = format!("[{}]", meaning.pos);
                     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
 
                     Row::new()
@@ -220,11 +221,9 @@ fn word_detail_view<'a>(
                                 .padding(ButtonSize::Medium.to_iced_padding())
                                 .on_press(WordsMessage::MeaningSelected(meaning.id)),
                         )
-                        .push(Text::new(pos_text).size(FontSize::Footnote.px()))
-                        .push(
-                            Text::new(format!("{} clozes", cloze_count))
-                                .size(FontSize::Footnote.px()),
-                        )
+                        .push(pos_badge::<WordsMessage>(meaning.pos))
+                        .push(count_badge::<WordsMessage>(cloze_count))
+                        .push(Space::new())
                         .spacing(Spacing::DEFAULT.s)
                         .into()
                 })
@@ -250,7 +249,7 @@ fn word_detail_view<'a>(
         .push(
             Row::new()
                 .push(Text::new(word_content).size(FontSize::Heading.px()))
-                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(Space::new())
                 .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
@@ -372,7 +371,7 @@ fn meaning_detail_view<'a>(
         .push(
             Row::new()
                 .push(Text::new(word_content).size(FontSize::Heading.px()))
-                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(Space::new())
                 .push(edit_btn)
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
@@ -384,13 +383,11 @@ fn meaning_detail_view<'a>(
     // Definition
     column = column.push(Text::new(definition).size(FontSize::Subtitle.px()));
 
-    // POS and CEFR
-    let mut meta_row = Row::new()
-        .push(Text::new(format!("[{}]", pos)).size(FontSize::Body.px()))
-        .spacing(Spacing::DEFAULT.s);
+    // POS and CEFR badges
+    let mut meta_row = Row::new().push(pos_badge::<WordsMessage>(pos));
 
     if let Some(cefr) = cefr_level {
-        meta_row = meta_row.push(Text::new(cefr.to_string()).size(FontSize::Body.px()));
+        meta_row = meta_row.push(cefr_badge::<WordsMessage>(cefr));
     }
     column = column.push(meta_row);
 
@@ -429,7 +426,7 @@ fn meaning_edit_view<'a>(
         .push(
             Row::new()
                 .push(Text::new("Edit Meaning").size(FontSize::Heading.px()))
-                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(Space::new())
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
@@ -488,7 +485,7 @@ fn meaning_edit_view<'a>(
         )
         .push(
             Row::new()
-                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(Space::new())
                 .push(save_btn)
                 .push(cancel_btn)
                 .align_y(iced::Alignment::Center),
@@ -530,7 +527,7 @@ fn cloze_detail_view<'a>(
         .push(
             Row::new()
                 .push(Text::new(word_content).size(FontSize::Heading.px()))
-                .push(Text::new(" ").width(iced::Length::Fill))
+                .push(Space::new())
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )

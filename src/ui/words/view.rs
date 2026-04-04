@@ -2,7 +2,7 @@ use crate::assets;
 use crate::models::types::{MeaningId, WordId};
 use crate::state::Model;
 use crate::ui::AppTheme;
-use crate::ui::components::dsl::{cefr_badge, pos_badge};
+use crate::ui::components::dsl::{cefr_badge, count_badge, pos_badge, tag_badge};
 use crate::ui::components::{CheckboxState, svg_checkbox};
 use crate::ui::state::MainWindowState;
 use crate::ui::theme::{Breakpoint, ButtonSize, FontSize, Spacing};
@@ -10,6 +10,7 @@ use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::{ClozeFilter, WordsState};
 use iced::Element;
+use iced::widget::Space;
 use iced::widget::{
     Button, Column, Container, PickList, Row, Text, TextInput, button, container, svg,
 };
@@ -269,17 +270,16 @@ fn build_word_node<'a>(
             .on_press(WordsMessage::WordSelected(word.id))
             .into();
 
-    // Meaning count
-    let meaning_count =
-        Text::new(format!("{} meanings", word.meaning_ids.len())).size(FontSize::Footnote.px());
+    // Meaning count badge
+    let meaning_count_badge = count_badge::<WordsMessage>(word.meaning_ids.len());
 
     // Word header row
     let word_header = Row::new()
         .push(expand_icon)
         .push(checkbox)
         .push(word_content)
-        .push(Text::new(" ").width(iced::Length::Fill))
-        .push(meaning_count)
+        .push(meaning_count_badge)
+        .push(Space::new())
         .push(build_word_actions(word.id))
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
@@ -307,26 +307,26 @@ fn build_word_node<'a>(
         }
 
         Container::new(content)
-            .padding(Spacing::DEFAULT.s2)
+            .padding(Spacing::DEFAULT.s)
             .style(move |_| container::Style {
                 background: Some(colors.surface_elevated.into()),
                 border: iced::Border {
                     color: colors.border,
                     width: 1.0,
-                    radius: 4.0.into(),
+                    radius: 6.0.into(),
                 },
                 ..Default::default()
             })
             .into()
     } else {
         Container::new(word_header)
-            .padding(Spacing::DEFAULT.s2)
+            .padding(Spacing::DEFAULT.s)
             .style(move |_| container::Style {
                 background: Some(colors.surface.into()),
                 border: iced::Border {
                     color: colors.border,
                     width: 1.0,
-                    radius: 4.0.into(),
+                    radius: 6.0.into(),
                 },
                 ..Default::default()
             })
@@ -383,11 +383,14 @@ fn build_meaning_node<'a>(
             .into();
 
     // Cloze status indicator
-    let cloze_status = if cloze_count > 0 {
-        Text::new(format!("{} clozes ✓", cloze_count)).size(FontSize::Footnote.px())
+    let cloze_status_text = if cloze_count > 0 {
+        format!("{} clozes", cloze_count)
     } else {
-        Text::new("0 clozes ○".to_string()).size(FontSize::Footnote.px())
+        "no clozes".to_string()
     };
+    let cloze_status = Text::new(cloze_status_text)
+        .size(FontSize::Caption.px())
+        .color(AppTheme::default().colors().text_secondary);
 
     // Meaning header
     let meaning_header = Row::new()
@@ -395,10 +398,10 @@ fn build_meaning_node<'a>(
         .push(pos_badge)
         .push(cefr_badge)
         .push(definition)
-        .push(Text::new(" ").width(iced::Length::Fill))
+        .push(Space::new())
         .push(cloze_status)
         .push(build_meaning_actions(meaning.id))
-        .spacing(Spacing::DEFAULT.s)
+        .spacing(Spacing::DEFAULT.xs)
         .align_y(iced::Alignment::Center);
 
     // Tags row
@@ -468,16 +471,7 @@ fn build_tags_row<'a>(
         .tag_ids
         .iter()
         .filter_map(|tag_id| model.tag_registry.get(*tag_id))
-        .map(|tag| {
-            Button::new(Text::new(&tag.name).size(FontSize::Caption.px()))
-                .style(button::secondary)
-                .padding(ButtonSize::Small.to_iced_padding())
-                .on_press(WordsMessage::TagRemovedFromMeaning {
-                    meaning_id: meaning.id,
-                    tag_id: tag.id,
-                })
-                .into()
-        })
+        .map(|tag| tag_badge::<WordsMessage>(&tag.name).into())
         .collect();
 
     // Add tag button
@@ -504,10 +498,7 @@ fn build_tags_row<'a>(
             None
         };
 
-    let mut row = Row::new()
-        .push(Text::new("Tags:").size(FontSize::Caption.px()))
-        .extend(tag_chips)
-        .spacing(Spacing::DEFAULT.xs);
+    let mut row = Row::new().extend(tag_chips).spacing(Spacing::DEFAULT.xxs);
 
     if let Some(dropdown) = tag_dropdown {
         row = row.push(dropdown);
@@ -599,105 +590,11 @@ fn build_tag_dropdown<'a>(
         border: iced::Border {
             color: colors.border,
             width: 1.0,
-            radius: 4.0.into(),
+            radius: 6.0.into(),
         },
         ..Default::default()
     })
     .into()
-}
-
-/// Build the contextual action bar (shows when items selected).
-fn build_action_bar<'a>(
-    words_state: &'a WordsState,
-    model: &'a Model,
-) -> Element<'a, WordsMessage> {
-    let meaning_selected_count = words_state.selection.meaning_count();
-    let cloze_selected_count = words_state.selection.cloze_count();
-
-    // Check for cloze selection first
-    if cloze_selected_count > 0 {
-        let selection_info = Text::new(format!("☑ {} clozes selected", cloze_selected_count));
-
-        // Export button
-        let export_btn = Button::new(Text::new("Export"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::ExportPlaintext);
-
-        let delete_btn = Button::new(Text::new("Delete Clozes"))
-            .style(button::danger)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::ClozesDeleted);
-
-        return Row::new()
-            .push(selection_info)
-            .push(Text::new(" ").width(iced::Length::Fill))
-            .push(export_btn)
-            .push(delete_btn)
-            .spacing(Spacing::DEFAULT.s2)
-            .align_y(iced::Alignment::Center)
-            .into();
-    }
-
-    // No cloze selection - check for meaning selection
-    if meaning_selected_count == 0 {
-        let add_btn = Button::new(Text::new("+ Add"))
-            .style(button::primary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::NewWordStarted);
-
-        return Row::new().push(add_btn).spacing(Spacing::DEFAULT.s2).into();
-    }
-
-    // Selection info for meanings
-    let selection_info = Text::new(format!("☑ {} meanings selected", meaning_selected_count));
-
-    // Batch tag dropdown if active
-    let tag_btn: Element<'a, WordsMessage> =
-        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
-            match dropdown.target {
-                TagDropdownTarget::SelectedMeanings => Row::new()
-                    .push(
-                        Button::new(Text::new("Add Tag ▾"))
-                            .style(button::primary)
-                            .padding(ButtonSize::Standard.to_iced_padding()),
-                    )
-                    .push(build_batch_tag_dropdown(dropdown, model))
-                    .spacing(Spacing::DEFAULT.xxs)
-                    .into(),
-                _ => Button::new(Text::new("Add Tag"))
-                    .style(button::secondary)
-                    .padding(ButtonSize::Standard.to_iced_padding())
-                    .on_press(WordsMessage::TagBatchDropdownOpened)
-                    .into(),
-            }
-        } else {
-            Button::new(Text::new("Add Tag"))
-                .style(button::secondary)
-                .padding(ButtonSize::Standard.to_iced_padding())
-                .on_press(WordsMessage::TagBatchDropdownOpened)
-                .into()
-        };
-
-    let queue_btn = Button::new(Text::new("Queue"))
-        .style(button::primary)
-        .padding(ButtonSize::Standard.to_iced_padding())
-        .on_press(WordsMessage::MeaningsQueuedForGeneration);
-
-    let delete_btn = Button::new(Text::new("Delete"))
-        .style(button::danger)
-        .padding(ButtonSize::Standard.to_iced_padding())
-        .on_press(WordsMessage::MeaningsDeleted);
-
-    Row::new()
-        .push(selection_info)
-        .push(Text::new(" ").width(iced::Length::Fill))
-        .push(tag_btn)
-        .push(queue_btn)
-        .push(delete_btn)
-        .spacing(Spacing::DEFAULT.s2)
-        .align_y(iced::Alignment::Center)
-        .into()
 }
 
 /// Build batch tag dropdown for selected meanings.
@@ -751,9 +648,100 @@ fn build_batch_tag_dropdown<'a>(
         border: iced::Border {
             color: colors.border,
             width: 1.0,
-            radius: 4.0.into(),
+            radius: 6.0.into(),
         },
         ..Default::default()
     })
     .into()
+}
+
+/// Build the contextual action bar (shows when items selected).
+fn build_action_bar<'a>(
+    words_state: &'a WordsState,
+    model: &'a Model,
+) -> Element<'a, WordsMessage> {
+    let meaning_selected_count = words_state.selection.meaning_count();
+    let cloze_selected_count = words_state.selection.cloze_count();
+
+    if cloze_selected_count > 0 {
+        let selection_info = Text::new(format!("{} clozes selected", cloze_selected_count))
+            .size(FontSize::Body.px());
+
+        let export_btn = Button::new(Text::new("Export").size(FontSize::Body.px()))
+            .style(button::secondary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::ExportPlaintext);
+
+        let delete_btn = Button::new(Text::new("Delete Clozes").size(FontSize::Body.px()))
+            .style(button::danger)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::ClozesDeleted);
+
+        return Row::new()
+            .push(selection_info)
+            .push(Space::new())
+            .push(export_btn)
+            .push(delete_btn)
+            .spacing(Spacing::DEFAULT.s2)
+            .align_y(iced::Alignment::Center)
+            .into();
+    }
+
+    if meaning_selected_count == 0 {
+        let add_btn = Button::new(Text::new("+ Add Word").size(FontSize::Body.px()))
+            .style(button::primary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::NewWordStarted);
+
+        return Row::new().push(add_btn).spacing(Spacing::DEFAULT.s2).into();
+    }
+
+    let selection_info = Text::new(format!("{} meanings selected", meaning_selected_count))
+        .size(FontSize::Body.px());
+
+    let tag_btn: Element<'a, WordsMessage> =
+        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
+            match dropdown.target {
+                TagDropdownTarget::SelectedMeanings => Row::new()
+                    .push(
+                        Button::new(Text::new("Add Tag ▾").size(FontSize::Body.px()))
+                            .style(button::primary)
+                            .padding(ButtonSize::Standard.to_iced_padding()),
+                    )
+                    .push(build_batch_tag_dropdown(dropdown, model))
+                    .spacing(Spacing::DEFAULT.xxs)
+                    .into(),
+                _ => Button::new(Text::new("Add Tag").size(FontSize::Body.px()))
+                    .style(button::secondary)
+                    .padding(ButtonSize::Standard.to_iced_padding())
+                    .on_press(WordsMessage::TagBatchDropdownOpened)
+                    .into(),
+            }
+        } else {
+            Button::new(Text::new("Add Tag").size(FontSize::Body.px()))
+                .style(button::secondary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(WordsMessage::TagBatchDropdownOpened)
+                .into()
+        };
+
+    let queue_btn = Button::new(Text::new("Queue").size(FontSize::Body.px()))
+        .style(button::primary)
+        .padding(ButtonSize::Standard.to_iced_padding())
+        .on_press(WordsMessage::MeaningsQueuedForGeneration);
+
+    let delete_btn = Button::new(Text::new("Delete").size(FontSize::Body.px()))
+        .style(button::danger)
+        .padding(ButtonSize::Standard.to_iced_padding())
+        .on_press(WordsMessage::MeaningsDeleted);
+
+    Row::new()
+        .push(selection_info)
+        .push(Space::new())
+        .push(tag_btn)
+        .push(queue_btn)
+        .push(delete_btn)
+        .spacing(Spacing::DEFAULT.s2)
+        .align_y(iced::Alignment::Center)
+        .into()
 }

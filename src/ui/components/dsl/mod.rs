@@ -29,9 +29,10 @@ use crate::ui::words::message::WordsMessage;
 use iced::widget::{Column, Container, Text};
 use iced::{Element, Length};
 
-pub use badge::{Badge, BadgeStyle, badge, cefr_badge, pos_badge};
+pub use badge::{Badge, BadgeStyle, badge, cefr_badge, count_badge, pos_badge, tag_badge};
 pub use button::{
-    ButtonBuilder, ButtonStyle, ButtonVariant, button, danger_btn, primary_btn, secondary_btn,
+    ButtonBuilder, ButtonStyle, ButtonVariant, IconButtonStyle, button, danger_btn, icon_button,
+    primary_btn, secondary_btn, tertiary_btn,
 };
 pub use card::{Card, CardStyle, card};
 pub use row::{RowBuilder, h_stack, row, v_stack};
