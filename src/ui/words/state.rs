@@ -11,24 +11,6 @@ use crate::ui::words::manager::{
     DetailManager, EditManager, ExpansionManager, SearchManager, SelectionManager,
 };
 
-/// Filter state for cloze generation status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display)]
-pub enum ClozeFilter {
-    #[default]
-    All,
-    HasClozes,
-    Pending,
-}
-
-/// Filter state for the words tree.
-#[derive(Debug, Clone, Default)]
-pub struct FilterState {
-    /// Current cloze status filter
-    pub cloze_status: ClozeFilter,
-    /// Current tag filter (None = no tag filter)
-    pub tag_id: Option<TagId>,
-}
-
 /// Complete state for Words panel using Manager pattern.
 #[derive(Debug, Default)]
 pub struct WordsState {
@@ -50,6 +32,3 @@ impl WordsState {
         Self::default()
     }
 }
-
-// Re-export types for convenience
-use crate::models::types::TagId;

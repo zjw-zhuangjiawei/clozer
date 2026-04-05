@@ -4,7 +4,7 @@
 
 use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
 use crate::models::{CefrLevel, PartOfSpeech};
-use crate::ui::words::state::ClozeFilter;
+use crate::query::SortType;
 
 /// Flattened message enum for Words panel.
 ///
@@ -16,10 +16,12 @@ pub enum WordsMessage {
     SearchQueryChanged(String),
     /// Clear search query
     SearchCleared,
+    /// Sort type changed
+    SortTypeChanged(SortType),
+    /// Internal: search results computed
+    SearchResultsReady(Vec<(WordId, i32)>),
 
     // Filter
-    /// Filter by cloze generation status
-    ClozeFilterChanged(ClozeFilter),
     /// Filter by tag
     TagFilterChanged(Option<TagId>),
     /// Clear all filters

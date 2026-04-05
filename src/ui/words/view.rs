@@ -1,5 +1,6 @@
 use crate::assets;
 use crate::models::types::{MeaningId, WordId};
+use crate::query::SortType;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::layout::breakpoint::Breakpoint;
@@ -9,10 +10,11 @@ use crate::ui::widgets::button;
 use crate::ui::widgets::{CheckboxState, svg_checkbox};
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
-use crate::ui::words::state::{ClozeFilter, WordsState};
+use crate::ui::words::state::WordsState;
 use iced::Element;
 use iced::widget::Space;
 use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, container, svg};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 // Renders the words panel.
@@ -87,50 +89,39 @@ fn build_search_bar<'a>(
     _model: &'a Model,
     breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    // Search input
     let search_input = TextInput::new("Search words or definitions...", &words_state.search.query)
         .on_input(WordsMessage::SearchQueryChanged)
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    // Cloze filter dropdown - responsive width based on breakpoint
-    let cloze_filter_width = if breakpoint.is_single_column() {
-        iced::Length::Fixed(80.0)
-    } else if matches!(breakpoint, Breakpoint::Medium) {
-        iced::Length::Fixed(100.0)
+    let sort_width = if breakpoint.is_single_column() {
+        iced::Length::Fixed(90.0)
     } else {
-        iced::Length::Fixed(120.0)
+        iced::Length::Fixed(110.0)
     };
-    let cloze_filter = PickList::new(
-        vec![
-            ClozeFilter::All,
-            ClozeFilter::HasClozes,
-            ClozeFilter::Pending,
-        ],
-        Some(words_state.search.cloze_filter),
-        WordsMessage::ClozeFilterChanged,
+    let sort_picker = PickList::new(
+        SortType::variants(),
+        Some(words_state.search.current_sort),
+        WordsMessage::SortTypeChanged,
     )
-    .width(cloze_filter_width)
-    .placeholder("Filter");
+    .width(sort_width)
+    .placeholder("Sort");
 
-    // Clear filter button
-    let clear_btn = if !words_state.search.query.is_empty()
-        || words_state.search.cloze_filter != ClozeFilter::All
-        || words_state.search.tag_filter.is_some()
-    {
-        Button::new(Text::new("Clear"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::FiltersCleared)
-    } else {
-        Button::new(Text::new("Clear"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-    };
+    let clear_btn =
+        if !words_state.search.query.is_empty() || words_state.search.tag_filter.is_some() {
+            Button::new(Text::new("Clear"))
+                .style(button::secondary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(WordsMessage::FiltersCleared)
+        } else {
+            Button::new(Text::new("Clear"))
+                .style(button::secondary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+        };
 
     Row::new()
         .push(search_input)
-        .push(cloze_filter)
+        .push(sort_picker)
         .push(clear_btn)
         .spacing(Spacing::DEFAULT.s2)
         .align_y(iced::Alignment::Center)
@@ -145,63 +136,75 @@ fn build_word_tree<'a>(
 ) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
 
-    // Filter words based on search and filter state
-    let filtered_word_ids: Vec<WordId> = model
-        .word_registry
-        .iter()
-        .filter(|(_, word)| {
-            // Search filter
-            let matches_search = if words_state.search.query.is_empty() {
-                true
-            } else {
-                let query = words_state.search.query.to_lowercase();
-                // Check word content
-                if word.content.to_lowercase().contains(&query) {
-                    return true;
-                }
-                // Check meanings
-                for mid in &word.meaning_ids {
-                    if let Some(meaning) = model.meaning_registry.get(*mid)
-                        && meaning.definition.to_lowercase().contains(&query)
-                    {
-                        return true;
+    let filtered_word_ids: Vec<WordId> =
+        if words_state.search.query.is_empty() && words_state.search.search_results.is_empty() {
+            model
+                .word_registry
+                .iter()
+                .filter(|(_, word)| {
+                    let matches_tag_filter = match words_state.search.tag_filter {
+                        None => true,
+                        Some(tag_id) => word.meaning_ids.iter().any(|mid| {
+                            model
+                                .meaning_registry
+                                .get(*mid)
+                                .map(|m| m.tag_ids.contains(&tag_id))
+                                .unwrap_or(false)
+                        }),
+                    };
+
+                    matches_tag_filter
+                })
+                .map(|(id, _)| *id)
+                .collect()
+        } else {
+            let search_result_ids: HashSet<WordId> = words_state
+                .search
+                .search_results
+                .iter()
+                .map(|(id, _)| *id)
+                .collect();
+
+            model
+                .word_registry
+                .iter()
+                .filter(|(_, word)| {
+                    if !search_result_ids.contains(&word.id) {
+                        return false;
                     }
-                }
-                false
-            };
 
-            // Cloze status filter
-            let matches_cloze_filter = match words_state.search.cloze_filter {
-                ClozeFilter::All => true,
-                ClozeFilter::HasClozes => word
-                    .meaning_ids
-                    .iter()
-                    .any(|mid| model.cloze_registry.iter_by_meaning_id(*mid).count() > 0),
-                ClozeFilter::Pending => word
-                    .meaning_ids
-                    .iter()
-                    .all(|mid| model.cloze_registry.iter_by_meaning_id(*mid).count() == 0),
-            };
+                    let matches_tag_filter = match words_state.search.tag_filter {
+                        None => true,
+                        Some(tag_id) => word.meaning_ids.iter().any(|mid| {
+                            model
+                                .meaning_registry
+                                .get(*mid)
+                                .map(|m| m.tag_ids.contains(&tag_id))
+                                .unwrap_or(false)
+                        }),
+                    };
 
-            // Tag filter
-            let matches_tag_filter = match words_state.search.tag_filter {
-                None => true,
-                Some(tag_id) => word.meaning_ids.iter().any(|mid| {
-                    model
-                        .meaning_registry
-                        .get(*mid)
-                        .map(|m| m.tag_ids.contains(&tag_id))
-                        .unwrap_or(false)
-                }),
-            };
+                    matches_tag_filter
+                })
+                .map(|(id, _)| *id)
+                .collect()
+        };
 
-            matches_search && matches_cloze_filter && matches_tag_filter
-        })
-        .map(|(id, _)| *id)
-        .collect();
+    let ordered_ids: Vec<WordId> = if words_state.search.search_results.is_empty() {
+        filtered_word_ids
+    } else {
+        let id_to_score: HashMap<WordId, i32> =
+            words_state.search.search_results.iter().copied().collect();
+        let mut ids: Vec<WordId> = filtered_word_ids;
+        ids.sort_by(|a, b| {
+            let score_a = id_to_score.get(a).unwrap_or(&0);
+            let score_b = id_to_score.get(b).unwrap_or(&0);
+            score_b.cmp(score_a)
+        });
+        ids
+    };
 
-    // Build word nodes
-    let word_nodes: Vec<Element<'a, WordsMessage, AppTheme>> = filtered_word_ids
+    let word_nodes: Vec<Element<'a, WordsMessage, AppTheme>> = ordered_ids
         .iter()
         .filter_map(|word_id| model.word_registry.get(*word_id))
         .map(|word| build_word_node(state, model, word, theme))

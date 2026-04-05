@@ -28,9 +28,6 @@ pub fn update(
         }
 
         // Filter
-        WordsMessage::ClozeFilterChanged(status) => {
-            state.search.set_cloze_filter(status);
-        }
         WordsMessage::TagFilterChanged(tag_id) => {
             state.search.set_tag_filter(tag_id);
         }
@@ -83,12 +80,19 @@ pub fn update(
         }
         WordsMessage::EditWordStarted(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
-                state.edit.start_edit_word(word_id, word.content.clone(), word.language.clone());
+                state
+                    .edit
+                    .start_edit_word(word_id, word.content.clone(), word.language.clone());
             }
         }
         WordsMessage::EditMeaningStarted(meaning_id) => {
             if let Some(meaning) = model.meaning_registry.get(meaning_id) {
-                state.edit.start_edit_meaning(meaning_id, meaning.definition.clone(), meaning.pos, meaning.cefr_level);
+                state.edit.start_edit_meaning(
+                    meaning_id,
+                    meaning.definition.clone(),
+                    meaning.pos,
+                    meaning.cefr_level,
+                );
             }
         }
 
@@ -249,10 +253,14 @@ pub fn update(
 
         // Tag operations
         WordsMessage::TagDropdownOpened { for_meaning } => {
-            state.detail.open_tag_dropdown(TagDropdownTarget::SingleMeaning(for_meaning));
+            state
+                .detail
+                .open_tag_dropdown(TagDropdownTarget::SingleMeaning(for_meaning));
         }
         WordsMessage::TagBatchDropdownOpened => {
-            state.detail.open_tag_dropdown(TagDropdownTarget::SelectedMeanings);
+            state
+                .detail
+                .open_tag_dropdown(TagDropdownTarget::SelectedMeanings);
         }
         WordsMessage::TagSearchChanged(query) => {
             if let Some(ref mut dropdown) = state.detail.tag_dropdown_mut() {
@@ -317,7 +325,12 @@ pub fn update(
         }
         WordsMessage::MeaningsDeleted => {
             let count = state.selection.meaning_count();
-            let meaning_ids: Vec<Uuid> = state.selection.selected_meanings().iter().copied().collect();
+            let meaning_ids: Vec<Uuid> = state
+                .selection
+                .selected_meanings()
+                .iter()
+                .copied()
+                .collect();
 
             for meaning_id in &meaning_ids {
                 let word_id = model.meaning_registry.get(*meaning_id).map(|m| m.word_id);

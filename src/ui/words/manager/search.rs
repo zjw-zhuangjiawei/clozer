@@ -2,16 +2,20 @@
 
 use crate::models::Word;
 use crate::models::types::{TagId, WordId};
-use crate::registry::{ClozeRegistry, MeaningRegistry};
-use crate::ui::words::ClozeFilter;
+use crate::query::{QueryAST, SortType};
+use crate::registry::MeaningRegistry;
 
 /// Search and filter state manager.
 #[derive(Debug)]
 pub struct SearchManager {
     /// Current search query
     pub query: String,
-    /// Cloze status filter
-    pub cloze_filter: ClozeFilter,
+    /// Parsed query AST
+    pub ast: QueryAST,
+    /// Current sort type
+    pub current_sort: SortType,
+    /// Search results (word IDs with scores)
+    pub search_results: Vec<(WordId, i32)>,
     /// Tag filter (None = no tag filter)
     pub tag_filter: Option<TagId>,
 }
@@ -21,24 +25,24 @@ impl SearchManager {
     pub fn new() -> Self {
         Self {
             query: String::new(),
-            cloze_filter: ClozeFilter::All,
+            ast: QueryAST::new(),
+            current_sort: SortType::default(),
+            search_results: Vec::new(),
             tag_filter: None,
         }
     }
 
     /// Sets the search query.
     pub fn set_query(&mut self, query: String) {
-        self.query = query;
+        self.query = query.clone();
+        self.ast = crate::query::parse::parse_query(&query);
     }
 
     /// Clears the search query.
     pub fn clear_query(&mut self) {
         self.query.clear();
-    }
-
-    /// Sets the cloze filter.
-    pub fn set_cloze_filter(&mut self, filter: ClozeFilter) {
-        self.cloze_filter = filter;
+        self.ast = QueryAST::new();
+        self.search_results.clear();
     }
 
     /// Sets the tag filter.
@@ -49,13 +53,14 @@ impl SearchManager {
     /// Clears all filters.
     pub fn clear_filters(&mut self) {
         self.query.clear();
-        self.cloze_filter = ClozeFilter::All;
+        self.ast = QueryAST::new();
+        self.search_results.clear();
         self.tag_filter = None;
     }
 
     /// Checks if any filters are active.
     pub fn has_active_filters(&self) -> bool {
-        !self.query.is_empty() || self.cloze_filter != ClozeFilter::All || self.tag_filter.is_some()
+        !self.query.is_empty() || !self.search_results.is_empty() || self.tag_filter.is_some()
     }
 
     /// Filters words based on current search and filter conditions.
@@ -63,13 +68,11 @@ impl SearchManager {
         &self,
         word_iter: impl Iterator<Item = &'a Word>,
         meaning_registry: &MeaningRegistry,
-        cloze_registry: &ClozeRegistry,
     ) -> Vec<WordId> {
         let query_lower = self.query.to_lowercase();
         let mut results: Vec<WordId> = Vec::new();
 
         for word in word_iter {
-            // Text search filter
             if !query_lower.is_empty() {
                 let matches = word.content.to_lowercase().contains(&query_lower)
                     || self.has_matching_meaning(word, &query_lower, meaning_registry);
@@ -78,7 +81,6 @@ impl SearchManager {
                 }
             }
 
-            // Tag filter
             if let Some(tag_id) = self.tag_filter {
                 let has_tag = meaning_registry
                     .iter_by_word(word.id)
@@ -88,34 +90,12 @@ impl SearchManager {
                 }
             }
 
-            // Cloze filter
-            match self.cloze_filter {
-                ClozeFilter::All => {}
-                ClozeFilter::HasClozes => {
-                    let has_clozes = meaning_registry
-                        .iter_by_word(word.id)
-                        .any(|(_, m)| cloze_registry.iter_by_meaning_id(m.id).next().is_some());
-                    if !has_clozes {
-                        continue;
-                    }
-                }
-                ClozeFilter::Pending => {
-                    let has_pending = meaning_registry
-                        .iter_by_word(word.id)
-                        .any(|(_, m)| cloze_registry.iter_by_meaning_id(m.id).next().is_none());
-                    if !has_pending {
-                        continue;
-                    }
-                }
-            }
-
             results.push(word.id);
         }
 
         results
     }
 
-    /// Checks if a word has a meaning that matches the query.
     fn has_matching_meaning(
         &self,
         word: &Word,

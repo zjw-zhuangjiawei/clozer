@@ -2,6 +2,7 @@
 
 use crate::models::types::{ClozeId, MeaningId};
 use crate::models::{Meaning, Tag, Word};
+use crate::query;
 use crate::state::Model;
 use crate::ui::state::MainWindowState;
 use crate::ui::words::manager::{EditContext, TagDropdownTarget};
@@ -17,16 +18,37 @@ pub fn update(
     match message {
         // Search
         WordsMessage::SearchQueryChanged(query) => {
-            state.words.search.set_query(query);
+            state.words.search.set_query(query.clone());
+            let results = query::search(
+                &model.word_registry,
+                &model.meaning_registry,
+                &model.cloze_registry,
+                &model.queue_registry,
+                &state.words.search.ast,
+                state.words.search.current_sort,
+            );
+            state.words.search.search_results = results;
         }
         WordsMessage::SearchCleared => {
             state.words.search.clear_query();
         }
+        WordsMessage::SortTypeChanged(sort) => {
+            state.words.search.current_sort = sort;
+            let results = query::search(
+                &model.word_registry,
+                &model.meaning_registry,
+                &model.cloze_registry,
+                &model.queue_registry,
+                &state.words.search.ast,
+                state.words.search.current_sort,
+            );
+            state.words.search.search_results = results;
+        }
+        WordsMessage::SearchResultsReady(results) => {
+            state.words.search.search_results = results;
+        }
 
         // Filter
-        WordsMessage::ClozeFilterChanged(filter) => {
-            state.words.search.set_cloze_filter(filter);
-        }
         WordsMessage::TagFilterChanged(tag_id) => {
             state.words.search.set_tag_filter(tag_id);
         }

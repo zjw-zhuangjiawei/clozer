@@ -12,6 +12,6 @@ pub use self::manager::{
     NewMeaningForm, SearchManager, SelectionManager, TagDropdownState, TagDropdownTarget,
 };
 pub use self::message::WordsMessage;
-pub use self::state::{ClozeFilter, FilterState, WordsState};
+pub use self::state::WordsState;
 pub use self::update::update;
 pub use self::view::view;

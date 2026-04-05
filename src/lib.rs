@@ -10,6 +10,7 @@ pub mod assets;
 pub mod config;
 pub mod models;
 pub mod persistence;
+pub mod query;
 pub mod registry;
 pub mod state;
 pub mod ui;
