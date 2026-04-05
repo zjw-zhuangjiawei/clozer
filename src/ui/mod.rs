@@ -2,7 +2,6 @@
 
 pub mod app;
 
-pub mod components;
 pub mod design_tokens;
 pub mod layout;
 pub mod nav;

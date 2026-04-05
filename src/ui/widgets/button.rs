@@ -1,5 +1,7 @@
 use crate::ui::theme::AppTheme;
 use iced::Color;
+use iced::theme::Base as ThemeBase;
+use iced::theme::Mode;
 use iced::widget::button::{Catalog, Status, Style, StyleFn};
 
 impl Catalog for AppTheme {
@@ -14,61 +16,87 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn primary(theme: &AppTheme, status: Status) -> Style {
-    let colors = theme.colors();
-    let semantic = &colors.semantic;
-    let (bg, text) = match status {
-        Status::Pressed => (semantic.interactive.primary_hover, semantic.text.inverse),
-        Status::Hovered => (semantic.interactive.primary_hover, semantic.text.inverse),
-        _ => (semantic.interactive.primary, semantic.text.inverse),
-    };
-    Style {
-        background: Some(bg.into()),
-        border: iced::Border {
-            color: bg,
-            width: 1.0,
-            radius: 6.0.into(),
-        },
-        text_color: text,
-        ..Default::default()
-    }
-}
-
-pub fn secondary(theme: &AppTheme, status: Status) -> Style {
-    let colors = theme.colors();
-    let semantic = &colors.semantic;
-    let (bg, border, text) = match status {
-        Status::Pressed => (
-            semantic.interactive.secondary_hover,
-            semantic.interactive.primary,
-            semantic.text.inverse,
-        ),
-        Status::Hovered => (
-            semantic.interactive.secondary_hover,
-            semantic.interactive.primary_hover,
-            semantic.text.inverse,
-        ),
-        _ => (
-            semantic.interactive.secondary,
-            semantic.interactive.primary,
-            semantic.text.inverse,
-        ),
-    };
+fn base_style(bg: Color, text: Color, border: Color) -> Style {
     Style {
         background: Some(bg.into()),
         border: iced::Border {
             color: border,
             width: 1.0,
-            radius: 6.0.into(),
+            radius: 0.0.into(),
         },
         text_color: text,
         ..Default::default()
     }
 }
 
-pub fn tertiary(theme: &AppTheme, _status: Status) -> Style {
+pub fn primary(theme: &AppTheme, status: Status) -> Style {
     let colors = theme.colors();
     let semantic = &colors.semantic;
+
+    let (bg, text, border) = match status {
+        Status::Disabled => (
+            semantic.interactive.primary,
+            semantic.text.disabled,
+            semantic.border.disabled,
+        ),
+        Status::Pressed => (
+            semantic.interactive.primary_hover,
+            semantic.text.inverse,
+            semantic.interactive.primary_hover,
+        ),
+        Status::Hovered => (
+            semantic.interactive.primary_hover,
+            semantic.text.inverse,
+            semantic.interactive.primary_hover,
+        ),
+        _ => (
+            semantic.interactive.primary,
+            semantic.text.inverse,
+            semantic.interactive.primary,
+        ),
+    };
+
+    base_style(bg, text, border)
+}
+
+pub fn secondary(theme: &AppTheme, status: Status) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
+    let mode = theme.mode();
+
+    let text = match status {
+        Status::Disabled => semantic.text.disabled,
+        _ => match mode {
+            Mode::Light => semantic.text.primary,
+            Mode::Dark => semantic.text.inverse,
+            _ => semantic.text.primary,
+        },
+    };
+
+    let (bg, border) = match status {
+        Status::Disabled => (semantic.interactive.secondary, semantic.border.disabled),
+        Status::Pressed => (
+            semantic.interactive.secondary_hover,
+            semantic.interactive.primary,
+        ),
+        Status::Hovered => (
+            semantic.interactive.secondary_hover,
+            semantic.interactive.primary_hover,
+        ),
+        _ => (semantic.interactive.secondary, semantic.interactive.primary),
+    };
+
+    base_style(bg, text, border)
+}
+
+pub fn tertiary(theme: &AppTheme, status: Status) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
+
+    let text = match status {
+        Status::Disabled => semantic.text.disabled,
+        _ => semantic.text.link,
+    };
 
     Style {
         background: Some(Color::TRANSPARENT.into()),
@@ -77,7 +105,7 @@ pub fn tertiary(theme: &AppTheme, _status: Status) -> Style {
             width: 0.0,
             radius: 0.0.into(),
         },
-        text_color: semantic.text.link,
+        text_color: text,
         ..Default::default()
     }
 }
@@ -85,19 +113,29 @@ pub fn tertiary(theme: &AppTheme, _status: Status) -> Style {
 pub fn danger(theme: &AppTheme, status: Status) -> Style {
     let colors = theme.colors();
     let semantic = &colors.semantic;
-    let (bg, text) = match status {
-        Status::Pressed => (semantic.interactive.danger_hover, semantic.text.inverse),
-        Status::Hovered => (semantic.interactive.danger_hover, semantic.text.inverse),
-        _ => (semantic.interactive.danger, semantic.text.inverse),
+
+    let (bg, text, border) = match status {
+        Status::Disabled => (
+            semantic.interactive.danger,
+            semantic.text.disabled,
+            semantic.border.disabled,
+        ),
+        Status::Pressed => (
+            semantic.interactive.danger_hover,
+            semantic.text.inverse,
+            semantic.interactive.danger_hover,
+        ),
+        Status::Hovered => (
+            semantic.interactive.danger_hover,
+            semantic.text.inverse,
+            semantic.interactive.danger_hover,
+        ),
+        _ => (
+            semantic.interactive.danger,
+            semantic.text.inverse,
+            semantic.interactive.danger,
+        ),
     };
-    Style {
-        background: Some(bg.into()),
-        border: iced::Border {
-            color: bg,
-            width: 1.0,
-            radius: 6.0.into(),
-        },
-        text_color: text,
-        ..Default::default()
-    }
+
+    base_style(bg, text, border)
 }

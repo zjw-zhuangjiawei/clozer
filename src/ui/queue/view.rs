@@ -4,8 +4,8 @@ use super::message::{QueueActionMessage, QueueMessage, QueueSelectionMessage};
 use crate::models::types::MeaningId;
 use crate::registry::QueueItemStatus;
 use crate::state::Model;
-use crate::ui::components::svg_checkbox;
 use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
+use crate::ui::widgets::svg_checkbox;
 use iced::Element;
 use iced::widget::{Button, Column, Row, Text};
 
