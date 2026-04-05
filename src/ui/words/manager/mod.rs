@@ -4,17 +4,16 @@
 //! - SearchManager: Search and filter state
 //! - SelectionManager: Selection state for meanings and clozes
 //! - ExpansionManager: Word expansion state
-//! - DetailManager: Detail panel selection and tag dropdown
-//! - EditManager: Edit session context and buffers
+//! - DetailPanelManager: Detail panel state (view/edit) and buffers
 
-pub mod detail;
 pub mod edit;
 pub mod expansion;
+pub mod panel;
 pub mod search;
 pub mod selection;
 
-pub use detail::{DetailManager, DetailSelection, TagDropdownState, TagDropdownTarget};
-pub use edit::{EditBuffer, EditContext, EditManager};
+pub use edit::{MeaningEditBuffer, WordEditBuffer};
 pub use expansion::ExpansionManager;
+pub use panel::{DetailPanelManager, DetailPanelState, TagDropdownState, TagDropdownTarget};
 pub use search::SearchManager;
 pub use selection::SelectionManager;

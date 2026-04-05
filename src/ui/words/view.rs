@@ -60,9 +60,9 @@ pub fn view<'a>(
 
         // Detail panel (right panel)
         let right_panel = Container::new(crate::ui::words::detail_view::view(
-            Some(words_state.detail.get_selection()),
-            words_state.edit.context(),
-            words_state.edit.buffer(),
+            words_state.panel.state(),
+            &words_state.panel.word_buffer,
+            &words_state.panel.meaning_buffer,
             model,
             theme,
         ))
@@ -506,7 +506,7 @@ fn build_tags_row<'a>(
 
     // Tag dropdown if active
     let tag_dropdown: Option<Element<'a, WordsMessage, AppTheme>> =
-        if let Some(ref dropdown) = words_state.detail.tag_dropdown() {
+        if let Some(ref dropdown) = words_state.panel.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SingleMeaning(mid) if mid == meaning.id => {
                     Some(build_tag_dropdown(dropdown, model, theme))
@@ -722,7 +722,7 @@ fn build_action_bar<'a>(
         .size(FontSize::Body.px());
 
     let tag_btn: Element<'a, WordsMessage, AppTheme> =
-        if let Some(dropdown) = words_state.detail.tag_dropdown() {
+        if let Some(dropdown) = words_state.panel.tag_dropdown() {
             match dropdown.target {
                 TagDropdownTarget::SelectedMeanings => Row::new()
                     .push(

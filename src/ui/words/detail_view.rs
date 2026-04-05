@@ -1,146 +1,191 @@
 //! Detail panel views for word/meaning/cloze.
 
 use crate::assets;
-use crate::models::Cloze;
-use crate::models::types::{ClozeId, MeaningId, TagId, WordId};
+use crate::models::types::ClozeId;
+use crate::models::{CefrLevel, Cloze, PartOfSpeech};
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::button;
-use crate::ui::words::manager::{DetailSelection, EditBuffer, EditContext};
+use crate::ui::words::manager::{DetailPanelState, MeaningEditBuffer, WordEditBuffer};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Button, Column, Container, Row, Text, text_input};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, text_input};
+use strum::VariantArray;
 
-/// Renders the detail panel based on current selection and edit mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::VariantArray)]
+pub enum CefrLevelOption {
+    #[default]
+    None,
+    A1,
+    A2,
+    B1,
+    B2,
+    C1,
+    C2,
+}
+
+impl CefrLevelOption {
+    fn to_cefr(self) -> Option<CefrLevel> {
+        match self {
+            CefrLevelOption::None => None,
+            CefrLevelOption::A1 => Some(CefrLevel::A1),
+            CefrLevelOption::A2 => Some(CefrLevel::A2),
+            CefrLevelOption::B1 => Some(CefrLevel::B1),
+            CefrLevelOption::B2 => Some(CefrLevel::B2),
+            CefrLevelOption::C1 => Some(CefrLevel::C1),
+            CefrLevelOption::C2 => Some(CefrLevel::C2),
+        }
+    }
+
+    fn from_cefr(cefr: Option<CefrLevel>) -> Self {
+        match cefr {
+            None => CefrLevelOption::None,
+            Some(CefrLevel::A1) => CefrLevelOption::A1,
+            Some(CefrLevel::A2) => CefrLevelOption::A2,
+            Some(CefrLevel::B1) => CefrLevelOption::B1,
+            Some(CefrLevel::B2) => CefrLevelOption::B2,
+            Some(CefrLevel::C1) => CefrLevelOption::C1,
+            Some(CefrLevel::C2) => CefrLevelOption::C2,
+        }
+    }
+}
+
 pub fn view<'a>(
-    selected_detail: Option<DetailSelection>,
-    edit_mode: EditContext,
-    edit_buffer: &'a EditBuffer,
+    state: &'a DetailPanelState,
+    word_buffer: &'a WordEditBuffer,
+    meaning_buffer: &'a MeaningEditBuffer,
     model: &'a Model,
-    theme: crate::ui::AppTheme,
+    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    // NewWord mode - show form for creating new word
-    if edit_mode == EditContext::NewWord {
-        return new_word_view(edit_buffer);
-    }
+    match state {
+        DetailPanelState::Empty => placeholder_view(),
 
-    // NewMeaning mode - show form for adding new meaning to a word
-    if let EditContext::NewMeaning(word_id) = edit_mode
-        && let Some(word) = model.word_registry.get(word_id)
-    {
-        return new_meaning_view(word.content.clone(), edit_buffer);
-    }
-
-    match selected_detail {
-        Some(DetailSelection::Word(word_id)) => {
-            if let Some(word) = model.word_registry.get(word_id) {
-                if edit_mode == EditContext::Word(word_id) {
-                    word_edit_view(word.id.into(), edit_buffer)
-                } else {
-                    word_detail_view(word.id, word.content.clone(), model, theme)
-                }
+        DetailPanelState::WordView { word_id } => {
+            if let Some(word) = model.word_registry.get(*word_id) {
+                word_detail_view(word, model, theme)
             } else {
-                placeholder_view(theme)
+                placeholder_view()
             }
         }
-        Some(DetailSelection::Meaning(meaning_id)) => {
-            if let Some(meaning) = model.meaning_registry.get(meaning_id) {
+
+        DetailPanelState::MeaningView { meaning_id } => {
+            if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
+                if let Some(word) = model.word_registry.get(meaning.word_id) {
+                    meaning_detail_view(meaning, word, model, theme)
+                } else {
+                    placeholder_view()
+                }
+            } else {
+                placeholder_view()
+            }
+        }
+
+        DetailPanelState::ClozeView { cloze_id } => {
+            if let Some(cloze) = model.cloze_registry.get(*cloze_id) {
+                if let Some(meaning) = model.meaning_registry.get(cloze.meaning_id) {
+                    if let Some(word) = model.word_registry.get(meaning.word_id) {
+                        cloze_detail_view(*cloze_id, cloze, meaning, word)
+                    } else {
+                        placeholder_view()
+                    }
+                } else {
+                    placeholder_view()
+                }
+            } else {
+                placeholder_view()
+            }
+        }
+
+        DetailPanelState::WordCreating { .. } => word_form(
+            "Add New Word".to_string(),
+            word_buffer,
+            meaning_buffer,
+            WordsMessage::NewWordSaved,
+        ),
+
+        DetailPanelState::WordEditing { .. } => word_form(
+            "Edit Word".to_string(),
+            word_buffer,
+            meaning_buffer,
+            WordsMessage::EditSaved,
+        ),
+
+        DetailPanelState::MeaningCreating { word_id, .. } => {
+            let word_content = model
+                .word_registry
+                .get(*word_id)
+                .map(|w| w.content.clone())
+                .unwrap_or_default();
+            let title = format!("Add Meaning to \"{}\"", word_content);
+            meaning_form(
+                title,
+                &word_content,
+                meaning_buffer,
+                WordsMessage::MeaningAddSaved,
+                theme,
+            )
+        }
+
+        DetailPanelState::MeaningEditing { meaning_id, .. } => {
+            if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
                 let word_content = model
                     .word_registry
                     .get(meaning.word_id)
                     .map(|w| w.content.clone())
                     .unwrap_or_default();
-                if edit_mode == EditContext::Meaning(meaning_id) {
-                    meaning_edit_view(meaning.id, word_content, edit_buffer)
-                } else {
-                    meaning_detail_view(
-                        meaning.id,
-                        word_content,
-                        meaning.definition.clone(),
-                        meaning.pos,
-                        meaning.cefr_level,
-                        &meaning.tag_ids,
-                        model,
-                        theme,
-                    )
-                }
+                let title = "Edit Meaning".to_string();
+                meaning_form(
+                    title,
+                    &word_content,
+                    meaning_buffer,
+                    WordsMessage::EditSaved,
+                    theme,
+                )
             } else {
-                placeholder_view(theme)
+                placeholder_view()
             }
         }
-        Some(DetailSelection::Cloze(cloze_id)) => {
-            if let Some(cloze) = model.cloze_registry.get(cloze_id) {
-                cloze_detail_view(cloze_id, cloze, model)
-            } else {
-                placeholder_view(theme)
-            }
-        }
-        None | Some(DetailSelection::None) => placeholder_view(theme),
     }
 }
 
-/// Renders the placeholder when nothing is selected.
-fn placeholder_view<'a>(_theme: crate::ui::AppTheme) -> Element<'a, WordsMessage, AppTheme> {
+fn placeholder_view() -> Element<'static, WordsMessage, AppTheme> {
     Column::new().into()
 }
 
-/// View for creating a new word in the detail panel.
-fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage, AppTheme> {
-    let word_input = text_input("Word *", &buffer.word_content)
+fn word_form<'a>(
+    title: String,
+    word_buffer: &'a WordEditBuffer,
+    _meaning_buffer: &'a MeaningEditBuffer,
+    on_save: WordsMessage,
+) -> Element<'a, WordsMessage, AppTheme> {
+    let word_input = text_input("Word *", &word_buffer.content)
         .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill);
 
-    let lang_string = buffer
-        .word_language
-        .as_ref()
-        .map(|l| l.to_string())
-        .unwrap_or_default();
-    let lang_input = text_input("Language (optional)", &lang_string)
+    let lang_input = text_input("Language (optional)", &word_buffer.language_input)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
-            WordsMessage::EditWordLanguageChanged(parsed)
+            WordsMessage::EditWordLanguageChanged { input: s, parsed }
         })
         .width(iced::Length::Fill);
 
-    let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
-        .on_input(WordsMessage::EditMeaningDefinitionChanged)
-        .width(iced::Length::Fill);
-
-    let pos_text = buffer.meaning_pos.to_string();
-    let pos_display = format!("POS: {}", pos_text);
-    let cefr_text = buffer
-        .meaning_cefr
-        .map(|c| c.to_string())
-        .unwrap_or_else(|| "None".to_string());
-    let cefr_display = format!("CEFR: {}", cefr_text);
-
-    let save_btn = Button::new("Save")
-        .style(button::primary)
-        .on_press(WordsMessage::NewWordSaved);
-    let cancel_btn = Button::new("Cancel")
-        .style(button::secondary)
-        .on_press(WordsMessage::EditCancelled);
-
     Container::new(
         Column::new()
             .spacing(Spacing::DEFAULT.l)
-            .push(Text::new("Add New Word").size(FontSize::Heading.px()))
+            .push(Text::new(title.clone()).size(FontSize::Heading.px()))
             .push(word_input)
             .push(lang_input)
-            .push(def_input)
-            .push(
-                Row::new()
-                    .push(Text::new(pos_display))
-                    .push(Text::new(" | "))
-                    .push(Text::new(cefr_display)),
-            )
             .push(
                 Row::new()
                     .spacing(Spacing::DEFAULT.s)
-                    .push(save_btn)
-                    .push(cancel_btn),
+                    .push(Button::new("Save").style(button::primary).on_press(on_save))
+                    .push(
+                        Button::new("Cancel")
+                            .style(button::secondary)
+                            .on_press(WordsMessage::EditCancelled),
+                    ),
             ),
     )
     .padding(Spacing::DEFAULT.l)
@@ -151,49 +196,57 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage, AppThe
     .into()
 }
 
-/// View for adding a new meaning in the detail panel.
-fn new_meaning_view<'a>(
-    word_content: String,
-    buffer: &'a EditBuffer,
+fn meaning_form<'a>(
+    title: String,
+    word_content: &str,
+    buffer: &'a MeaningEditBuffer,
+    on_save: WordsMessage,
+    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let def_input = text_input("Definition *", &buffer.meaning_definition)
+    let def_input = text_input("Definition *", &buffer.definition)
         .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill);
 
-    let pos_text = buffer.meaning_pos.to_string();
-    let pos_display = format!("POS: {}", pos_text);
-    let cefr_text = buffer
-        .meaning_cefr
-        .map(|c| c.to_string())
-        .unwrap_or_else(|| "None".to_string());
-    let cefr_display = format!("CEFR: {}", cefr_text);
+    let pos_picker = PickList::new(
+        PartOfSpeech::VARIANTS,
+        Some(buffer.pos),
+        WordsMessage::EditMeaningPosChanged,
+    )
+    .width(iced::Length::Fixed(140.0))
+    .placeholder("POS");
 
-    let save_btn = Button::new("Save Meaning")
-        .style(button::primary)
-        .on_press(WordsMessage::MeaningAddSaved);
-    let cancel_btn = Button::new("Cancel")
-        .style(button::secondary)
-        .on_press(WordsMessage::EditCancelled);
+    let cefr_picker = PickList::new(
+        CefrLevelOption::VARIANTS,
+        Some(CefrLevelOption::from_cefr(buffer.cefr)),
+        |option| WordsMessage::EditMeaningCefrChanged(option.to_cefr()),
+    )
+    .width(iced::Length::Fixed(100.0))
+    .placeholder("CEFR");
 
     Container::new(
         Column::new()
             .spacing(Spacing::DEFAULT.l)
-            .push(
-                Text::new(format!("Add Meaning to \"{}\"", word_content))
-                    .size(FontSize::Heading.px()),
-            )
+            .push(Text::new(title.clone()).size(FontSize::Heading.px()))
+            .push(Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px()))
             .push(def_input)
             .push(
                 Row::new()
-                    .push(Text::new(pos_display))
-                    .push(Text::new(" | "))
-                    .push(Text::new(cefr_display)),
+                    .spacing(Spacing::DEFAULT.m)
+                    .push(Text::new("POS:"))
+                    .push(pos_picker)
+                    .push(Space::new())
+                    .push(Text::new("CEFR:"))
+                    .push(cefr_picker),
             )
             .push(
                 Row::new()
                     .spacing(Spacing::DEFAULT.s)
-                    .push(save_btn)
-                    .push(cancel_btn),
+                    .push(Button::new("Save").style(button::primary).on_press(on_save))
+                    .push(
+                        Button::new("Cancel")
+                            .style(button::secondary)
+                            .on_press(WordsMessage::EditCancelled),
+                    ),
             ),
     )
     .padding(Spacing::DEFAULT.l)
@@ -204,25 +257,20 @@ fn new_meaning_view<'a>(
     .into()
 }
 
-/// Renders word details in the detail panel.
 fn word_detail_view<'a>(
-    word_id: WordId,
-    word_content: String,
+    word: &'a crate::models::Word,
     model: &'a Model,
-    _theme: crate::ui::AppTheme,
+    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    // Get all meanings for this word
     let meaning_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .word_registry
         .iter()
-        .find(|(_, w)| w.id == word_id)
+        .find(|(_, w)| w.id == word.id)
         .map(|(_, word)| {
             word.meaning_ids
                 .iter()
                 .filter_map(|mid| model.meaning_registry.get(*mid))
                 .map(|meaning| {
-                    let _cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
-
                     Row::new()
                         .push(
                             Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
@@ -230,8 +278,6 @@ fn word_detail_view<'a>(
                                 .padding(ButtonSize::Medium.to_iced_padding())
                                 .on_press(WordsMessage::MeaningSelected(meaning.id)),
                         )
-                        // .push(pos_badge::<WordsMessage>(meaning.pos, theme))
-                        // .push(count_badge::<WordsMessage>(cloze_count, theme))
                         .push(Space::new())
                         .spacing(Spacing::DEFAULT.s)
                         .into()
@@ -253,9 +299,9 @@ fn word_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::EditWordStarted(word_id));
+        .on_press(WordsMessage::EditWordStarted(word.id));
 
-    let word_content = word_content.clone();
+    let word_content = word.content.clone();
     Column::new()
         .push(
             Row::new()
@@ -273,95 +319,21 @@ fn word_detail_view<'a>(
         .into()
 }
 
-/// Renders word edit form in the detail panel.
-fn word_edit_view<'a>(
-    _word_id: uuid::Uuid,
-    buffer: &'a EditBuffer,
-) -> Element<'a, WordsMessage, AppTheme> {
-    let word_input = text_input("Word *", &buffer.word_content)
-        .on_input(WordsMessage::EditWordContentChanged)
-        .width(iced::Length::Fill);
-
-    let lang_string = buffer
-        .word_language
-        .as_ref()
-        .map(|l| l.to_string())
-        .unwrap_or_default();
-    let lang_input = text_input("Language (optional)", &lang_string)
-        .on_input(|s| {
-            let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
-            WordsMessage::EditWordLanguageChanged(parsed)
-        })
-        .width(iced::Length::Fill);
-
-    let def_input = text_input("Definition (optional)", &buffer.meaning_definition)
-        .on_input(WordsMessage::EditMeaningDefinitionChanged)
-        .width(iced::Length::Fill);
-
-    let pos_text = buffer.meaning_pos.to_string();
-    let pos_display = format!("POS: {}", pos_text);
-    let cefr_text = buffer
-        .meaning_cefr
-        .map(|c| c.to_string())
-        .unwrap_or_else(|| "None".to_string());
-    let cefr_display = format!("CEFR: {}", cefr_text);
-
-    let save_btn = Button::new("Save")
-        .style(button::primary)
-        .on_press(WordsMessage::EditSaved);
-    let cancel_btn = Button::new("Cancel")
-        .style(button::secondary)
-        .on_press(WordsMessage::EditCancelled);
-
-    Container::new(
-        Column::new()
-            .spacing(Spacing::DEFAULT.l)
-            .push(Text::new("Edit Word").size(FontSize::Heading.px()))
-            .push(word_input)
-            .push(lang_input)
-            .push(def_input)
-            .push(
-                Row::new()
-                    .push(Text::new(pos_display))
-                    .push(Text::new(" | "))
-                    .push(Text::new(cefr_display)),
-            )
-            .push(
-                Row::new()
-                    .spacing(Spacing::DEFAULT.s)
-                    .push(save_btn)
-                    .push(cancel_btn),
-            ),
-    )
-    .padding(Spacing::DEFAULT.l)
-    .width(iced::Length::Fill)
-    .height(iced::Length::Fill)
-    .center_x(iced::Length::Fill)
-    .center_y(iced::Length::Fill)
-    .into()
-}
-
-/// Renders meaning details in the detail panel.
 fn meaning_detail_view<'a>(
-    meaning_id: MeaningId,
-    word_content: String,
-    definition: String,
-    _pos: crate::models::PartOfSpeech,
-    _cefr_level: Option<crate::models::CefrLevel>,
-    tag_ids: &std::collections::BTreeSet<TagId>,
+    meaning: &'a crate::models::Meaning,
+    word: &'a crate::models::Word,
     model: &'a Model,
-    _theme: crate::ui::AppTheme,
+    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    // Get tag names
-    let tag_names: Vec<String> = tag_ids
+    let tag_names: Vec<String> = meaning
+        .tag_ids
         .iter()
         .filter_map(|tid| model.tag_registry.get(*tid).map(|t| t.name.clone()))
         .collect();
 
-    // Get all clozes for this meaning
     let cloze_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .cloze_registry
-        .iter_by_meaning_id(meaning_id)
+        .iter_by_meaning_id(meaning.id)
         .map(|(cloze_id, cloze)| {
             let text = cloze.render_blanks();
             Button::new(Text::new(text).size(FontSize::Body.px()))
@@ -386,12 +358,12 @@ fn meaning_detail_view<'a>(
     let edit_btn = Button::new(edit_icon)
         .style(button::secondary)
         .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::EditMeaningStarted(meaning_id));
+        .on_press(WordsMessage::EditMeaningStarted(meaning.id));
 
     let mut column = Column::new()
         .push(
             Row::new()
-                .push(Text::new(word_content).size(FontSize::Heading.px()))
+                .push(Text::new(word.content.clone()).size(FontSize::Heading.px()))
                 .push(Space::new())
                 .push(edit_btn)
                 .push(close_btn)
@@ -401,26 +373,17 @@ fn meaning_detail_view<'a>(
         .spacing(Spacing::DEFAULT.s)
         .padding(Spacing::DEFAULT.m);
 
-    // Definition
-    column = column.push(Text::new(definition).size(FontSize::Subtitle.px()));
+    column = column.push(Text::new(meaning.definition.clone()).size(FontSize::Subtitle.px()));
 
-    // POS and CEFR badges
     let meta_row = Row::new();
-    // .push(pos_badge::<WordsMessage>(pos, theme));
-
-    // if let Some(cefr) = cefr_level {
-    //     meta_row = meta_row.push(cefr_badge::<WordsMessage>(cefr, theme));
-    // }
     column = column.push(meta_row);
 
-    // Tags
     if !tag_names.is_empty() {
         let tags_text = tag_names.join(", ");
         column =
             column.push(Text::new(format!("Tags: {}", tags_text)).size(FontSize::Footnote.px()));
     }
 
-    // Clozes section
     if !cloze_items.is_empty() {
         column = column
             .push(iced::widget::rule::horizontal(1))
@@ -431,117 +394,12 @@ fn meaning_detail_view<'a>(
     column.into()
 }
 
-/// Renders meaning edit form in the detail panel.
-fn meaning_edit_view<'a>(
-    _meaning_id: MeaningId,
-    word_content: String,
-    buffer: &'a EditBuffer,
-) -> Element<'a, WordsMessage, AppTheme> {
-    let close_btn = Button::new("×")
-        .style(button::primary)
-        .on_press(WordsMessage::DetailClosed);
-    let save_btn = Button::new("Save")
-        .style(button::primary)
-        .on_press(WordsMessage::EditSaved);
-    let cancel_btn = Button::new("Cancel")
-        .style(button::secondary)
-        .on_press(WordsMessage::EditCancelled);
-
-    let pos_selected = buffer.meaning_pos;
-    let cefr_selected = buffer.meaning_cefr;
-
-    Column::new()
-        .push(
-            Row::new()
-                .push(Text::new("Edit Meaning").size(FontSize::Heading.px()))
-                .push(Space::new())
-                .push(close_btn)
-                .align_y(iced::Alignment::Center),
-        )
-        .push(iced::widget::rule::horizontal(1))
-        .push(
-            Column::new()
-                .push(Text::new("Word").size(FontSize::Body.px()))
-                .push(Text::new(word_content).size(FontSize::Subtitle.px()))
-                .spacing(Spacing::DEFAULT.xs),
-        )
-        .push(
-            Column::new()
-                .push(Text::new("Definition").size(FontSize::Body.px()))
-                .push(
-                    text_input("Definition", &buffer.meaning_definition)
-                        .on_input(WordsMessage::EditMeaningDefinitionChanged),
-                )
-                .spacing(Spacing::DEFAULT.s),
-        )
-        .push(
-            Column::new()
-                .push(Text::new("Part of Speech").size(FontSize::Body.px()))
-                .push(
-                    Row::new()
-                        .push(
-                            Button::new(
-                                Text::new(pos_selected.to_string()).size(FontSize::Body.px()),
-                            )
-                            .style(button::secondary)
-                            .padding(ButtonSize::Medium.to_iced_padding()),
-                        )
-                        .spacing(Spacing::DEFAULT.xs),
-                )
-                .spacing(Spacing::DEFAULT.xs),
-        )
-        .push(
-            Column::new()
-                .push(Text::new("CEFR Level").size(FontSize::Body.px()))
-                .push(
-                    Row::new()
-                        .push(
-                            Button::new(
-                                Text::new(
-                                    cefr_selected
-                                        .map(|c| c.to_string())
-                                        .unwrap_or_else(|| "None".to_string()),
-                                )
-                                .size(FontSize::Body.px()),
-                            )
-                            .style(button::secondary)
-                            .padding(ButtonSize::Medium.to_iced_padding()),
-                        )
-                        .spacing(Spacing::DEFAULT.xs),
-                )
-                .spacing(Spacing::DEFAULT.xs),
-        )
-        .push(
-            Row::new()
-                .push(Space::new())
-                .push(save_btn)
-                .push(cancel_btn)
-                .align_y(iced::Alignment::Center),
-        )
-        .spacing(Spacing::DEFAULT.s)
-        .padding(Spacing::DEFAULT.m)
-        .into()
-}
-
-/// Renders cloze details in the detail panel.
 fn cloze_detail_view<'a>(
     cloze_id: ClozeId,
-    cloze: &Cloze,
-    model: &'a Model,
+    cloze: &'a Cloze,
+    meaning: &'a crate::models::Meaning,
+    word: &'a crate::models::Word,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    // Get the source meaning and word
-    let (word_content, definition) = model
-        .meaning_registry
-        .get(cloze.meaning_id)
-        .map(|m| {
-            let word = model.word_registry.get(m.word_id);
-            (
-                word.map(|w| w.content.clone()).unwrap_or_default(),
-                m.definition.clone(),
-            )
-        })
-        .unwrap_or_default();
-
     let close_btn = Button::new("×")
         .style(button::secondary)
         .on_press(WordsMessage::DetailClosed);
@@ -556,13 +414,13 @@ fn cloze_detail_view<'a>(
     Column::new()
         .push(
             Row::new()
-                .push(Text::new(word_content).size(FontSize::Heading.px()))
+                .push(Text::new(word.content.clone()).size(FontSize::Heading.px()))
                 .push(Space::new())
                 .push(close_btn)
                 .align_y(iced::Alignment::Center),
         )
         .push(iced::widget::rule::horizontal(1))
-        .push(Text::new(definition).size(FontSize::Body.px()))
+        .push(Text::new(meaning.definition.clone()).size(FontSize::Body.px()))
         .push(iced::widget::rule::horizontal(1))
         .push(Text::new("Cloze Sentence").size(FontSize::Body.px()))
         .push(Text::new(cloze.render_blanks()).size(FontSize::Subtitle.px()))

@@ -8,8 +8,8 @@ pub mod update;
 pub mod view;
 
 pub use self::manager::{
-    DetailManager, DetailSelection, EditBuffer, EditContext, EditManager, ExpansionManager,
-    SearchManager, SelectionManager, TagDropdownState, TagDropdownTarget,
+    DetailPanelManager, DetailPanelState, ExpansionManager, MeaningEditBuffer, SearchManager,
+    SelectionManager, TagDropdownState, TagDropdownTarget, WordEditBuffer,
 };
 pub use self::message::WordsMessage;
 pub use self::state::WordsState;

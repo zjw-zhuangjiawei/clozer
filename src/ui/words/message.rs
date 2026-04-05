@@ -62,8 +62,11 @@ pub enum WordsMessage {
     // Detail panel editing - field updates
     /// Edit word content input
     EditWordContentChanged(String),
-    /// Edit word language
-    EditWordLanguageChanged(Option<langtag::LangTagBuf>),
+    /// Edit word language (input: raw string, parsed: optional LangTagBuf if valid)
+    EditWordLanguageChanged {
+        input: String,
+        parsed: Option<langtag::LangTagBuf>,
+    },
     /// Edit meaning definition input
     EditMeaningDefinitionChanged(String),
     /// Edit meaning part of speech

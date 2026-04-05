@@ -4,11 +4,10 @@
 //! - SearchManager: Search and filter management
 //! - SelectionManager: Selection state management
 //! - ExpansionManager: Expansion state management
-//! - DetailManager: Detail panel management
-//! - EditManager: Edit session management
+//! - DetailPanelManager: Detail panel state (view/edit unified)
 
 use crate::ui::words::manager::{
-    DetailManager, EditManager, ExpansionManager, SearchManager, SelectionManager,
+    DetailPanelManager, ExpansionManager, SearchManager, SelectionManager,
 };
 
 /// Complete state for Words panel using Manager pattern.
@@ -20,10 +19,8 @@ pub struct WordsState {
     pub selection: SelectionManager,
     /// Expansion manager
     pub expansion: ExpansionManager,
-    /// Detail panel manager
-    pub detail: DetailManager,
-    /// Edit session manager
-    pub edit: EditManager,
+    /// Detail panel manager (unified view/edit state)
+    pub panel: DetailPanelManager,
 }
 
 impl WordsState {
