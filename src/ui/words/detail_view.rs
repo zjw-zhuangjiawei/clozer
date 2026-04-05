@@ -89,7 +89,7 @@ fn placeholder_view<'a>(_theme: crate::ui::AppTheme) -> Element<'a, WordsMessage
 /// View for creating a new word in the detail panel.
 fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage, AppTheme> {
     let word_input = text_input("Word *", &buffer.word_content)
-        .on_input(WordsMessage::EditNewWordContentChanged)
+        .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill);
 
     let lang_string = buffer
@@ -100,7 +100,7 @@ fn new_word_view<'a>(buffer: &'a EditBuffer) -> Element<'a, WordsMessage, AppThe
     let lang_input = text_input("Language (optional)", &lang_string)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
-            WordsMessage::EditNewWordLanguageChanged(parsed)
+            WordsMessage::EditWordLanguageChanged(parsed)
         })
         .width(iced::Length::Fill);
 
@@ -170,7 +170,7 @@ fn new_meaning_view<'a>(
 
     let save_btn = Button::new("Save Meaning")
         .style(button::primary)
-        .on_press(WordsMessage::NewMeaningSaved);
+        .on_press(WordsMessage::MeaningAddSaved);
     let cancel_btn = Button::new("Cancel")
         .style(button::secondary)
         .on_press(WordsMessage::EditCancelled);

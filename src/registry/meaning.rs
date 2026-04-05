@@ -1,4 +1,4 @@
-use crate::models::{Meaning, MeaningId, TagId, WordId};
+use crate::models::{CefrLevel, Meaning, MeaningId, PartOfSpeech, TagId, WordId};
 use crate::persistence::DbError;
 use either::Either;
 use std::collections::{BTreeMap, BTreeSet};
@@ -133,6 +133,32 @@ impl MeaningRegistry {
 
     pub fn exists(&self, id: MeaningId) -> bool {
         self.meanings.contains_key(&id)
+    }
+
+    /// Create a new meaning for a word.
+    /// Returns the MeaningId if successful, None if definition is empty.
+    pub fn create_meaning(
+        &mut self,
+        word_id: WordId,
+        definition: &str,
+        pos: PartOfSpeech,
+        cefr_level: Option<CefrLevel>,
+    ) -> Option<MeaningId> {
+        let trimmed = definition.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        let mut meaning = Meaning::builder()
+            .word_id(word_id)
+            .definition(trimmed.to_string())
+            .pos(pos)
+            .build();
+        meaning.cefr_level = cefr_level;
+
+        let id = meaning.id;
+        self.add(meaning);
+        Some(id)
     }
 
     // Tag management

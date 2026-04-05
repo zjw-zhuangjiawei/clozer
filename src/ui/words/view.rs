@@ -310,7 +310,7 @@ fn build_word_node<'a>(
             Button::new(Text::new("+ Add Meaning"))
                 .style(button::primary)
                 .padding(ButtonSize::Medium.to_iced_padding())
-                .on_press(WordsMessage::AddMeaningStarted(word.id)),
+                .on_press(WordsMessage::MeaningAddStarted { word_id: word.id }),
         );
 
         // Meaning nodes

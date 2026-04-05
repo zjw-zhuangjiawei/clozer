@@ -116,7 +116,7 @@ pub fn update(
             state.words.detail.clear_selection();
             state.words.edit.start_new_word();
         }
-        WordsMessage::AddMeaningStarted(word_id) => {
+        WordsMessage::MeaningAddStarted { word_id } => {
             state.words.detail.clear_selection();
             state.words.edit.start_add_meaning(word_id);
         }
@@ -145,12 +145,6 @@ pub fn update(
             state.words.edit.update_word_content(content);
         }
         WordsMessage::EditWordLanguageChanged(lang) => {
-            state.words.edit.update_word_language(lang);
-        }
-        WordsMessage::EditNewWordContentChanged(content) => {
-            state.words.edit.update_word_content(content);
-        }
-        WordsMessage::EditNewWordLanguageChanged(lang) => {
             state.words.edit.update_word_language(lang);
         }
         WordsMessage::EditMeaningDefinitionChanged(definition) => {
@@ -188,7 +182,7 @@ pub fn update(
                 }
                 // NewWord is handled by NewWordSaved, not EditSaved
                 EditContext::NewWord => {}
-                // NewMeaning is handled by NewMeaningSaved, not EditSaved
+                // NewMeaning is handled by MeaningAddSaved, not EditSaved
                 EditContext::NewMeaning(_) => {}
                 EditContext::None => {}
             }
@@ -258,7 +252,7 @@ pub fn update(
             state.words.edit.clear_context();
             state.words.detail.select_word(word_id);
         }
-        WordsMessage::NewMeaningSaved => {
+        WordsMessage::MeaningAddSaved => {
             let buffer = state.words.edit.buffer();
             let definition = buffer.meaning_definition.trim();
 
@@ -346,45 +340,6 @@ pub fn update(
             state.words.expansion.collapse_all();
         }
 
-        // Meaning CRUD (inline form)
-        WordsMessage::MeaningAddStarted { word_id } => {
-            state.words.edit.start_new_meaning(word_id);
-        }
-        WordsMessage::MeaningAddInput { definition } => {
-            state.words.edit.update_new_meaning_definition(definition);
-        }
-        WordsMessage::MeaningAddPos { pos } => {
-            state.words.edit.update_new_meaning_pos(pos);
-        }
-        WordsMessage::MeaningAddCefr { level } => {
-            state.words.edit.update_new_meaning_cefr(level);
-        }
-        WordsMessage::MeaningAddSaved => {
-            if let Some(word_id) = state.words.edit.new_meaning_form().word_id {
-                let trimmed = state.words.edit.new_meaning_form().definition.trim();
-                if !trimmed.is_empty() {
-                    let mut meaning = Meaning::builder()
-                        .word_id(word_id)
-                        .definition(trimmed.to_string())
-                        .pos(state.words.edit.new_meaning_form().pos)
-                        .build();
-                    meaning.cefr_level = state.words.edit.new_meaning_form().cefr_level;
-
-                    tracing::debug!(
-                        "Creating meaning: {} (id={}, word_id={})",
-                        meaning.definition,
-                        meaning.id,
-                        word_id
-                    );
-                    model.meaning_registry.add(meaning.clone());
-                    model.word_registry.add_meaning(word_id, meaning.id);
-                }
-            }
-            state.words.edit.clear_new_meaning();
-        }
-        WordsMessage::MeaningAddCancelled => {
-            state.words.edit.clear_new_meaning();
-        }
         WordsMessage::MeaningDeleted(meaning_id) => {
             let word_id = model.meaning_registry.get(meaning_id).map(|m| m.word_id);
 

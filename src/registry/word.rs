@@ -1,3 +1,5 @@
+use langtag::LangTagBuf;
+
 use crate::models::{MeaningId, Word, WordId};
 use crate::persistence::DbError;
 use std::collections::{BTreeMap, BTreeSet};
@@ -51,6 +53,38 @@ impl WordRegistry {
 
     pub fn exists(&self, id: WordId) -> bool {
         self.words.contains_key(&id)
+    }
+
+    pub fn exists_with_content(&self, content: &str) -> bool {
+        self.words
+            .iter()
+            .any(|(_, w)| w.content.to_lowercase() == content.to_lowercase())
+    }
+
+    /// Create a new word with the given content and optional language.
+    /// Returns the WordId if successful, None if content is empty or duplicate.
+    pub fn create_word(&mut self, content: &str, language: Option<LangTagBuf>) -> Option<WordId> {
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        if self.exists_with_content(trimmed) {
+            return None;
+        }
+
+        let word = if let Some(ref lang) = language {
+            Word::builder()
+                .content(trimmed.to_string())
+                .language(lang.clone())
+                .build()
+        } else {
+            Word::builder().content(trimmed.to_string()).build()
+        };
+
+        let id = word.id;
+        self.add(word);
+        Some(id)
     }
 
     // Meaning ID management (syncs with MeaningRegistry)

@@ -53,7 +53,7 @@ pub enum WordsMessage {
     /// Start creating a new word
     NewWordStarted,
     /// Start adding a meaning to a word
-    AddMeaningStarted(WordId),
+    MeaningAddStarted { word_id: WordId },
     /// Start editing a word
     EditWordStarted(WordId),
     /// Start editing a meaning
@@ -62,12 +62,8 @@ pub enum WordsMessage {
     // Detail panel editing - field updates
     /// Edit word content input
     EditWordContentChanged(String),
-    /// Edit word language (for editing existing word)
+    /// Edit word language
     EditWordLanguageChanged(Option<langtag::LangTagBuf>),
-    /// Edit new word content (for NewWord context)
-    EditNewWordContentChanged(String),
-    /// Edit new word language (for NewWord context)
-    EditNewWordLanguageChanged(Option<langtag::LangTagBuf>),
     /// Edit meaning definition input
     EditMeaningDefinitionChanged(String),
     /// Edit meaning part of speech
@@ -80,8 +76,6 @@ pub enum WordsMessage {
     EditSaved,
     /// Save new word (for NewWord context)
     NewWordSaved,
-    /// Save new meaning (for NewMeaning context)
-    NewMeaningSaved,
     /// Cancel current edit
     EditCancelled,
 
@@ -100,18 +94,8 @@ pub enum WordsMessage {
     WordsCollapsedAll,
 
     // Meaning CRUD
-    /// Start adding meaning to a word (inline form)
-    MeaningAddStarted { word_id: WordId },
-    /// Input meaning definition (inline form)
-    MeaningAddInput { definition: String },
-    /// Select meaning part of speech (inline form)
-    MeaningAddPos { pos: PartOfSpeech },
-    /// Select meaning CEFR level (inline form)
-    MeaningAddCefr { level: Option<CefrLevel> },
-    /// Save new meaning (inline form)
+    /// Save new meaning (for NewMeaning context)
     MeaningAddSaved,
-    /// Cancel adding meaning (inline form)
-    MeaningAddCancelled,
     /// Delete a meaning
     MeaningDeleted(MeaningId),
 

@@ -14,7 +14,7 @@ pub mod search;
 pub mod selection;
 
 pub use detail::{DetailManager, DetailSelection, TagDropdownState, TagDropdownTarget};
-pub use edit::{EditBuffer, EditContext, EditManager, NewMeaningForm};
+pub use edit::{EditBuffer, EditContext, EditManager};
 pub use expansion::ExpansionManager;
 pub use search::SearchManager;
 pub use selection::SelectionManager;

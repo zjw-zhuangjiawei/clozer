@@ -9,7 +9,7 @@ pub mod view;
 
 pub use self::manager::{
     DetailManager, DetailSelection, EditBuffer, EditContext, EditManager, ExpansionManager,
-    NewMeaningForm, SearchManager, SelectionManager, TagDropdownState, TagDropdownTarget,
+    SearchManager, SelectionManager, TagDropdownState, TagDropdownTarget,
 };
 pub use self::message::WordsMessage;
 pub use self::state::WordsState;

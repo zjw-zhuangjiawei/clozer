@@ -61,42 +61,6 @@ impl EditBuffer {
     }
 }
 
-/// Form for adding new meaning.
-#[derive(Debug, Clone, Default)]
-pub struct NewMeaningForm {
-    /// Word ID to add meaning to (None if not adding)
-    pub word_id: Option<WordId>,
-    /// Meaning definition input
-    pub definition: String,
-    /// Meaning part of speech
-    pub pos: PartOfSpeech,
-    /// Meaning CEFR level
-    pub cefr_level: Option<CefrLevel>,
-}
-
-impl NewMeaningForm {
-    /// Check if currently adding a meaning.
-    pub fn is_active(&self) -> bool {
-        self.word_id.is_some()
-    }
-
-    /// Start adding meaning to a word.
-    pub fn start(&mut self, word_id: WordId) {
-        self.word_id = Some(word_id);
-        self.definition.clear();
-        self.pos = PartOfSpeech::default();
-        self.cefr_level = None;
-    }
-
-    /// Cancel adding meaning.
-    pub fn cancel(&mut self) {
-        self.word_id = None;
-        self.definition.clear();
-        self.pos = PartOfSpeech::default();
-        self.cefr_level = None;
-    }
-}
-
 /// Edit session state manager.
 #[derive(Debug)]
 pub struct EditManager {
@@ -104,8 +68,6 @@ pub struct EditManager {
     context: EditContext,
     /// Edit buffer
     buffer: EditBuffer,
-    /// New meaning form
-    new_meaning_form: NewMeaningForm,
 }
 
 impl EditManager {
@@ -114,7 +76,6 @@ impl EditManager {
         Self {
             context: EditContext::None,
             buffer: EditBuffer::default(),
-            new_meaning_form: NewMeaningForm::default(),
         }
     }
 
@@ -194,36 +155,6 @@ impl EditManager {
     /// Get edit buffer.
     pub fn buffer(&self) -> &EditBuffer {
         &self.buffer
-    }
-
-    /// Get new meaning form.
-    pub fn new_meaning_form(&self) -> &NewMeaningForm {
-        &self.new_meaning_form
-    }
-
-    /// Update new meaning definition.
-    pub fn update_new_meaning_definition(&mut self, definition: String) {
-        self.new_meaning_form.definition = definition;
-    }
-
-    /// Update new meaning part of speech.
-    pub fn update_new_meaning_pos(&mut self, pos: PartOfSpeech) {
-        self.new_meaning_form.pos = pos;
-    }
-
-    /// Update new meaning CEFR level.
-    pub fn update_new_meaning_cefr(&mut self, cefr: Option<CefrLevel>) {
-        self.new_meaning_form.cefr_level = cefr;
-    }
-
-    /// Start new meaning form.
-    pub fn start_new_meaning(&mut self, word_id: WordId) {
-        self.new_meaning_form.start(word_id);
-    }
-
-    /// Clear new meaning form.
-    pub fn clear_new_meaning(&mut self) {
-        self.new_meaning_form.cancel();
     }
 }
 
