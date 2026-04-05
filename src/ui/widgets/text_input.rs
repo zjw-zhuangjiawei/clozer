@@ -14,45 +14,59 @@ impl Catalog for AppTheme {
 }
 
 /// The default style of a [`TextInput`].
-pub fn default(_theme: &AppTheme, status: Status) -> Style {
-    // let colors = theme.colors();
+pub fn default(theme: &AppTheme, status: Status) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
+    let border_radius = iced::border::radius(6.0);
 
-    // let active = Style {
-    //     background: Background::Color(colors.background),
-    //     border: Border {
-    //         radius: 2.0.into(),
-    //         width: 1.0,
-    //         color: colors.background,
-    //     },
-    //     icon: colors.background,
-    //     placeholder: colors.background,
-    //     value: colors.background,
-    //     selection: colors.background,
-    // };
-
-    // match status {
-    //     Status::Active => active,
-    //     Status::Hovered => Style {
-    //         border: Border {
-    //             color: colors.background,
-    //             ..active.border
-    //         },
-    //         ..active
-    //     },
-    //     Status::Focused { .. } => Style {
-    //         border: Border {
-    //             color: colors.background,
-    //             ..active.border
-    //         },
-    //         ..active
-    //     },
-    //     Status::Disabled => Style {
-    //         background: Background::Color(colors.background),
-    //         value: active.placeholder,
-    //         placeholder: colors.background,
-    //         ..active
-    //     },
-    // }
-
-    iced::widget::text_input::default(&iced::Theme::Light, status)
+    match status {
+        Status::Disabled => Style {
+            background: semantic.surface.base.into(),
+            border: iced::Border {
+                color: semantic.border.disabled,
+                width: 1.0,
+                radius: border_radius,
+            },
+            icon: semantic.text.disabled,
+            placeholder: semantic.text.disabled,
+            value: semantic.text.disabled,
+            selection: semantic.interactive.primary,
+        },
+        Status::Focused { is_hovered: _ } => Style {
+            background: semantic.surface.raised.into(),
+            border: iced::Border {
+                color: semantic.interactive.primary,
+                width: 2.0,
+                radius: border_radius,
+            },
+            icon: semantic.text.tertiary,
+            placeholder: semantic.text.tertiary,
+            value: semantic.text.primary,
+            selection: semantic.interactive.primary,
+        },
+        Status::Hovered => Style {
+            background: semantic.surface.raised.into(),
+            border: iced::Border {
+                color: semantic.border.hover,
+                width: 1.0,
+                radius: border_radius,
+            },
+            icon: semantic.text.tertiary,
+            placeholder: semantic.text.tertiary,
+            value: semantic.text.primary,
+            selection: semantic.interactive.primary,
+        },
+        Status::Active => Style {
+            background: semantic.surface.raised.into(),
+            border: iced::Border {
+                color: semantic.border.default,
+                width: 1.0,
+                radius: border_radius,
+            },
+            icon: semantic.text.tertiary,
+            placeholder: semantic.text.tertiary,
+            value: semantic.text.primary,
+            selection: semantic.interactive.primary,
+        },
+    }
 }
