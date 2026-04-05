@@ -11,7 +11,7 @@ use crate::ui::words::manager::{DetailPanelState, MeaningEditBuffer, WordEditBuf
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Button, Column, Container, PickList, Row, Text, text_input};
+use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, container};
 use strum::VariantArray;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::VariantArray)]
@@ -154,46 +154,147 @@ fn placeholder_view() -> Element<'static, WordsMessage, AppTheme> {
     Column::new().into()
 }
 
+// === Helper Functions ===
+
+fn detail_panel<'a>(
+    content: Column<'a, WordsMessage, AppTheme>,
+) -> Element<'a, WordsMessage, AppTheme> {
+    Container::new(content)
+        .padding(Spacing::DEFAULT.l)
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fill)
+        .style(|_| container::Style {
+            ..Default::default()
+        })
+        .into()
+}
+
+fn build_edit_icon() -> Element<'static, WordsMessage, AppTheme> {
+    let handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(iced::widget::svg::Handle::from_memory)
+        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
+    iced::widget::svg(handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0))
+        .into()
+}
+
+fn build_delete_icon() -> Element<'static, WordsMessage, AppTheme> {
+    let handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(iced::widget::svg::Handle::from_memory)
+        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
+    iced::widget::svg(handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0))
+        .into()
+}
+
+fn build_close_icon() -> Element<'static, WordsMessage, AppTheme> {
+    let handle = assets::get_svg("close_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+        .map(iced::widget::svg::Handle::from_memory)
+        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
+    iced::widget::svg(handle)
+        .width(iced::Length::Fixed(16.0))
+        .height(iced::Length::Fixed(16.0))
+        .into()
+}
+
+fn build_header_row<'a>(
+    title: String,
+    edit_action: Option<WordsMessage>,
+    close_action: WordsMessage,
+) -> Row<'a, WordsMessage, AppTheme> {
+    let title_text = Text::new(title).size(FontSize::Heading.px());
+
+    let close_btn = Button::new(build_close_icon())
+        .style(button::secondary)
+        .padding(ButtonSize::Small.to_iced_padding())
+        .on_press(close_action);
+
+    let mut row = Row::new()
+        .push(title_text)
+        .push(Space::new().width(iced::Length::Fill))
+        .spacing(Spacing::DEFAULT.s);
+
+    if let Some(msg) = edit_action {
+        let edit_btn = Button::new(build_edit_icon())
+            .style(button::secondary)
+            .padding(ButtonSize::Small.to_iced_padding())
+            .on_press(msg);
+        row = row.push(edit_btn);
+    }
+
+    row.push(close_btn).align_y(iced::Alignment::Center)
+}
+
+fn build_footer_row<'a>(
+    primary_label: &'a str,
+    on_primary: WordsMessage,
+    on_cancel: WordsMessage,
+) -> Row<'a, WordsMessage, AppTheme> {
+    Row::new()
+        .spacing(Spacing::DEFAULT.s)
+        .push(
+            Button::new(Text::new(primary_label).size(FontSize::Body.px()))
+                .style(button::primary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(on_primary),
+        )
+        .push(
+            Button::new(Text::new("Cancel").size(FontSize::Body.px()))
+                .style(button::secondary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(on_cancel),
+        )
+}
+
+fn build_icon_button<'a>(
+    icon: Element<'a, WordsMessage, AppTheme>,
+    style: fn(&AppTheme, iced::widget::button::Status) -> iced::widget::button::Style,
+    on_press: WordsMessage,
+) -> Button<'a, WordsMessage, AppTheme> {
+    Button::new(icon)
+        .style(style)
+        .padding(ButtonSize::Small.to_iced_padding())
+        .on_press(on_press)
+}
+
+// === Form Views ===
+
 fn word_form<'a>(
     title: String,
     word_buffer: &'a WordEditBuffer,
     _meaning_buffer: &'a MeaningEditBuffer,
     on_save: WordsMessage,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let word_input = text_input("Word *", &word_buffer.content)
-        .on_input(WordsMessage::EditWordContentChanged)
-        .width(iced::Length::Fill);
+    let header = Row::new()
+        .push(Text::new(title).size(FontSize::Heading.px()))
+        .spacing(Spacing::DEFAULT.s);
 
-    let lang_input = text_input("Language (optional)", &word_buffer.language_input)
+    let word_input = TextInput::new("Word *", &word_buffer.content)
+        .on_input(WordsMessage::EditWordContentChanged)
+        .width(iced::Length::Fill)
+        .padding(Spacing::DEFAULT.s);
+
+    let lang_input = TextInput::new("Language (optional)", &word_buffer.language_input)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
             WordsMessage::EditWordLanguageChanged { input: s, parsed }
         })
-        .width(iced::Length::Fill);
+        .width(iced::Length::Fill)
+        .padding(Spacing::DEFAULT.s);
 
-    Container::new(
-        Column::new()
-            .spacing(Spacing::DEFAULT.l)
-            .push(Text::new(title.clone()).size(FontSize::Heading.px()))
-            .push(word_input)
-            .push(lang_input)
-            .push(
-                Row::new()
-                    .spacing(Spacing::DEFAULT.s)
-                    .push(Button::new("Save").style(button::primary).on_press(on_save))
-                    .push(
-                        Button::new("Cancel")
-                            .style(button::secondary)
-                            .on_press(WordsMessage::EditCancelled),
-                    ),
-            ),
-    )
-    .padding(Spacing::DEFAULT.l)
-    .width(iced::Length::Fill)
-    .height(iced::Length::Fill)
-    .center_x(iced::Length::Fill)
-    .center_y(iced::Length::Fill)
-    .into()
+    let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
+
+    let content = Column::new()
+        .spacing(Spacing::DEFAULT.l)
+        .push(header)
+        .push(word_input)
+        .push(lang_input)
+        .push(Space::new())
+        .push(footer);
+
+    detail_panel(content)
 }
 
 fn meaning_form<'a>(
@@ -203,9 +304,16 @@ fn meaning_form<'a>(
     on_save: WordsMessage,
     _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let def_input = text_input("Definition *", &buffer.definition)
+    let header = Row::new()
+        .push(Text::new(title).size(FontSize::Heading.px()))
+        .spacing(Spacing::DEFAULT.s);
+
+    let word_label = Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px());
+
+    let def_input = TextInput::new("Definition *", &buffer.definition)
         .on_input(WordsMessage::EditMeaningDefinitionChanged)
-        .width(iced::Length::Fill);
+        .width(iced::Length::Fill)
+        .padding(Spacing::DEFAULT.s);
 
     let pos_picker = PickList::new(
         PartOfSpeech::VARIANTS,
@@ -223,45 +331,42 @@ fn meaning_form<'a>(
     .width(iced::Length::Fixed(100.0))
     .placeholder("CEFR");
 
-    Container::new(
-        Column::new()
-            .spacing(Spacing::DEFAULT.l)
-            .push(Text::new(title.clone()).size(FontSize::Heading.px()))
-            .push(Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px()))
-            .push(def_input)
-            .push(
-                Row::new()
-                    .spacing(Spacing::DEFAULT.m)
-                    .push(Text::new("POS:"))
-                    .push(pos_picker)
-                    .push(Space::new())
-                    .push(Text::new("CEFR:"))
-                    .push(cefr_picker),
-            )
-            .push(
-                Row::new()
-                    .spacing(Spacing::DEFAULT.s)
-                    .push(Button::new("Save").style(button::primary).on_press(on_save))
-                    .push(
-                        Button::new("Cancel")
-                            .style(button::secondary)
-                            .on_press(WordsMessage::EditCancelled),
-                    ),
-            ),
-    )
-    .padding(Spacing::DEFAULT.l)
-    .width(iced::Length::Fill)
-    .height(iced::Length::Fill)
-    .center_x(iced::Length::Fill)
-    .center_y(iced::Length::Fill)
-    .into()
+    let meta_row = Row::new()
+        .spacing(Spacing::DEFAULT.s)
+        .push(Text::new("POS:").size(FontSize::Body.px()))
+        .push(pos_picker)
+        .push(Space::new().width(iced::Length::Fill))
+        .push(Text::new("CEFR:").size(FontSize::Body.px()))
+        .push(cefr_picker)
+        .align_y(iced::Alignment::Center);
+
+    let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
+
+    let content = Column::new()
+        .spacing(Spacing::DEFAULT.l)
+        .push(header)
+        .push(word_label)
+        .push(def_input)
+        .push(meta_row)
+        .push(Space::new())
+        .push(footer);
+
+    detail_panel(content)
 }
+
+// === Detail Views ===
 
 fn word_detail_view<'a>(
     word: &'a crate::models::Word,
     model: &'a Model,
-    theme: AppTheme,
+    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
+    let header = build_header_row(
+        word.content.clone(),
+        Some(WordsMessage::EditWordStarted(word.id)),
+        WordsMessage::DetailClosed,
+    );
+
     let meaning_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .word_registry
         .iter()
@@ -271,52 +376,25 @@ fn word_detail_view<'a>(
                 .iter()
                 .filter_map(|mid| model.meaning_registry.get(*mid))
                 .map(|meaning| {
-                    Row::new()
-                        .push(
-                            Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
-                                .style(button::secondary)
-                                .padding(ButtonSize::Medium.to_iced_padding())
-                                .on_press(WordsMessage::MeaningSelected(meaning.id)),
-                        )
-                        .push(Space::new())
-                        .spacing(Spacing::DEFAULT.s)
+                    Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
+                        .style(button::secondary)
+                        .padding(ButtonSize::Medium.to_iced_padding())
+                        .width(iced::Length::Fill)
+                        .on_press(WordsMessage::MeaningSelected(meaning.id))
                         .into()
                 })
                 .collect()
         })
         .unwrap_or_default();
 
-    let close_btn = Button::new("×")
-        .style(button::secondary)
-        .on_press(WordsMessage::DetailClosed);
-
-    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(iced::widget::svg::Handle::from_memory)
-        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
-    let edit_icon = iced::widget::svg(edit_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
-    let edit_btn = Button::new(edit_icon)
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::EditWordStarted(word.id));
-
-    let word_content = word.content.clone();
-    Column::new()
-        .push(
-            Row::new()
-                .push(Text::new(word_content).size(FontSize::Heading.px()))
-                .push(Space::new())
-                .push(edit_btn)
-                .push(close_btn)
-                .align_y(iced::Alignment::Center),
-        )
+    let content = Column::new()
+        .spacing(Spacing::DEFAULT.l)
+        .push(header)
         .push(iced::widget::rule::horizontal(1))
         .push(Text::new("Meanings").size(FontSize::Body.px()))
-        .extend(meaning_items)
-        .spacing(Spacing::DEFAULT.s)
-        .padding(Spacing::DEFAULT.m)
-        .into()
+        .extend(meaning_items);
+
+    detail_panel(content)
 }
 
 fn meaning_detail_view<'a>(
@@ -345,53 +423,32 @@ fn meaning_detail_view<'a>(
         })
         .collect();
 
-    let close_btn = Button::new("×")
-        .style(button::secondary)
-        .on_press(WordsMessage::DetailClosed);
+    let header = build_header_row(
+        word.content.clone(),
+        Some(WordsMessage::EditMeaningStarted(meaning.id)),
+        WordsMessage::DetailClosed,
+    );
 
-    let edit_icon_handle = assets::get_svg("edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(iced::widget::svg::Handle::from_memory)
-        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
-    let edit_icon = iced::widget::svg(edit_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
-    let edit_btn = Button::new(edit_icon)
-        .style(button::secondary)
-        .padding(ButtonSize::Small.to_iced_padding())
-        .on_press(WordsMessage::EditMeaningStarted(meaning.id));
-
-    let mut column = Column::new()
-        .push(
-            Row::new()
-                .push(Text::new(word.content.clone()).size(FontSize::Heading.px()))
-                .push(Space::new())
-                .push(edit_btn)
-                .push(close_btn)
-                .align_y(iced::Alignment::Center),
-        )
+    let mut content = Column::new()
+        .spacing(Spacing::DEFAULT.l)
+        .push(header)
         .push(iced::widget::rule::horizontal(1))
-        .spacing(Spacing::DEFAULT.s)
-        .padding(Spacing::DEFAULT.m);
-
-    column = column.push(Text::new(meaning.definition.clone()).size(FontSize::Subtitle.px()));
-
-    let meta_row = Row::new();
-    column = column.push(meta_row);
+        .push(Text::new(meaning.definition.clone()).size(FontSize::Subtitle.px()));
 
     if !tag_names.is_empty() {
         let tags_text = tag_names.join(", ");
-        column =
-            column.push(Text::new(format!("Tags: {}", tags_text)).size(FontSize::Footnote.px()));
+        content =
+            content.push(Text::new(format!("Tags: {}", tags_text)).size(FontSize::Footnote.px()));
     }
 
     if !cloze_items.is_empty() {
-        column = column
+        content = content
             .push(iced::widget::rule::horizontal(1))
             .push(Text::new("Clozes").size(FontSize::Body.px()))
             .extend(cloze_items);
     }
 
-    column.into()
+    detail_panel(content)
 }
 
 fn cloze_detail_view<'a>(
@@ -400,25 +457,17 @@ fn cloze_detail_view<'a>(
     meaning: &'a crate::models::Meaning,
     word: &'a crate::models::Word,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let close_btn = Button::new("×")
-        .style(button::secondary)
-        .on_press(WordsMessage::DetailClosed);
+    let header = build_header_row(word.content.clone(), None, WordsMessage::DetailClosed);
 
-    let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(iced::widget::svg::Handle::from_memory)
-        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
-    let delete_icon = iced::widget::svg(delete_icon_handle)
-        .width(iced::Length::Fixed(16.0))
-        .height(iced::Length::Fixed(16.0));
+    let delete_btn = build_icon_button(
+        build_delete_icon(),
+        button::danger,
+        WordsMessage::ClozeDeleted(cloze_id),
+    );
 
-    Column::new()
-        .push(
-            Row::new()
-                .push(Text::new(word.content.clone()).size(FontSize::Heading.px()))
-                .push(Space::new())
-                .push(close_btn)
-                .align_y(iced::Alignment::Center),
-        )
+    let content = Column::new()
+        .spacing(Spacing::DEFAULT.l)
+        .push(header)
         .push(iced::widget::rule::horizontal(1))
         .push(Text::new(meaning.definition.clone()).size(FontSize::Body.px()))
         .push(iced::widget::rule::horizontal(1))
@@ -428,13 +477,7 @@ fn cloze_detail_view<'a>(
         .push(Text::new("Answer").size(FontSize::Body.px()))
         .push(Text::new(cloze.render_answers()).size(FontSize::Subtitle.px()))
         .push(iced::widget::rule::horizontal(1))
-        .push(
-            Button::new(delete_icon)
-                .style(button::danger)
-                .padding(ButtonSize::Small.to_iced_padding())
-                .on_press(WordsMessage::ClozeDeleted(cloze_id)),
-        )
-        .spacing(Spacing::DEFAULT.s)
-        .padding(Spacing::DEFAULT.m)
-        .into()
+        .push(delete_btn);
+
+    detail_panel(content)
 }

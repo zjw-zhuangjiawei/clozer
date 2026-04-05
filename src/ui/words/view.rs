@@ -265,7 +265,19 @@ fn build_word_node<'a>(
 
     // Checkbox state
     let checkbox: Element<'a, WordsMessage, AppTheme> = if word.meaning_ids.is_empty() {
-        Text::new("○").into()
+        let radio_handle =
+            assets::get_svg("radio_button_unchecked_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
+                .map(svg::Handle::from_memory)
+                .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+        Button::new(
+            svg(radio_handle)
+                .width(iced::Length::Fixed(20.0))
+                .height(iced::Length::Fixed(20.0)),
+        )
+        .style(button::tertiary)
+        .padding([2, 6])
+        .width(iced::Length::Fixed(30.0))
+        .into()
     } else if is_partial {
         svg_checkbox(
             CheckboxState::Indeterminate,
