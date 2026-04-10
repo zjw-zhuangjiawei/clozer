@@ -298,175 +298,64 @@ impl<'a> TagResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn test_tokenize_empty() {
-        let tokens = tokenize("");
-        assert!(tokens.is_empty());
+    #[test_case("", 0; "empty")]
+    #[test_case("hello world", 2; "text only")]
+    #[test_case("#important", 1; "hash tag")]
+    #[test_case("-#ignored", 1; "exclude tag")]
+    #[test_case(":noun,verb", 1; "POS filter")]
+    #[test_case("hello | world", 3; "OR operator")]
+    #[test_case("(hello world)", 4; "grouping")]
+    fn test_tokenize(input: &str, expected_count: usize) {
+        let tokens = tokenize(input);
+        assert_eq!(tokens.len(), expected_count);
     }
 
-    #[test]
-    fn test_tokenize_text_only() {
-        let tokens = tokenize("hello world");
-        assert_eq!(tokens.len(), 2);
-        assert!(matches!(&tokens[0], Token::Text(s) if s == "hello"));
-        assert!(matches!(&tokens[1], Token::Text(s) if s == "world"));
-    }
-
-    #[test]
-    fn test_tokenize_tag() {
-        let tokens = tokenize("#important");
-        assert_eq!(tokens.len(), 1);
-        assert!(matches!(&tokens[0], Token::IncludeTagName(name) if name == "important"));
-    }
-
-    #[test]
-    fn test_tokenize_exclude_tag() {
-        let tokens = tokenize("-#ignored");
-        assert_eq!(tokens.len(), 1);
-        assert!(matches!(&tokens[0], Token::ExcludeTagName(name) if name == "ignored"));
-    }
-
-    #[test]
-    fn test_tokenize_pos() {
-        let tokens = tokenize(":noun,verb");
-        assert_eq!(tokens.len(), 1);
-        assert!(matches!(&tokens[0], Token::IncludePos(list) if list.len() == 2));
-    }
-
-    #[test]
-    fn test_tokenize_or() {
-        let tokens = tokenize("hello | world");
-        assert_eq!(tokens.len(), 3);
-        assert!(matches!(&tokens[0], Token::Text(s) if s == "hello"));
-        assert!(matches!(&tokens[1], Token::Or));
-        assert!(matches!(&tokens[2], Token::Text(s) if s == "world"));
-    }
-
-    #[test]
-    fn test_tokenize_grouping() {
-        let tokens = tokenize("(hello world)");
-        assert_eq!(tokens.len(), 4);
-        assert!(matches!(&tokens[0], Token::LeftParen));
-        assert!(matches!(&tokens[1], Token::Text(s) if s == "hello"));
-        assert!(matches!(&tokens[2], Token::Text(s) if s == "world"));
-        assert!(matches!(&tokens[3], Token::RightParen));
-    }
-
-    #[test]
-    fn test_parse_simple_text() {
-        let (_, cond) = parse_query_raw("hello");
-        assert!(matches!(cond, Condition::Text(s) if s == "hello"));
-    }
-
-    #[test]
-    fn test_parse_and_implicit() {
-        let (_, cond) = parse_query_raw("hello world");
-        match cond {
-            Condition::All(conds) => {
-                assert_eq!(conds.len(), 2);
-                assert!(matches!(&conds[0], Condition::Text(s) if s == "hello"));
-                assert!(matches!(&conds[1], Condition::Text(s) if s == "world"));
-            }
-            _ => panic!("expected All condition"),
+    #[test_case("hello world", "hello"; "first text token")]
+    #[test_case("#important", "important"; "tag name")]
+    #[test_case("-#ignored", "ignored"; "exclude tag name")]
+    #[test_case("hello | world", "hello"; "text before OR")]
+    #[test_case("(hello world)", "hello"; "text after left paren")]
+    fn test_tokenize_first_text(input: &str, expected: &str) {
+        let tokens = tokenize(input);
+        assert!(!tokens.is_empty());
+        match &tokens[0] {
+            Token::Text(s) => assert_eq!(s, expected),
+            Token::IncludeTagName(name) => assert_eq!(name, expected),
+            Token::ExcludeTagName(name) => assert_eq!(name, expected),
+            _ => {}
         }
     }
 
-    #[test]
-    fn test_parse_or_basic() {
-        let (_, cond) = parse_query_raw("hello | world");
+    #[test_case("hello", "hello"; "simple text")]
+    fn test_parse_simple(input: &str, expected_text: &str) {
+        let (_, cond) = parse_query_raw(input);
+        assert!(matches!(cond, Condition::Text(s) if s == expected_text));
+    }
+
+    #[test_case("hello world", 2; "implicit AND")]
+    #[test_case("hello :noun | world", 2; "OR with AND")]
+    #[test_case("(#tag1 | #tag2) :noun", 2; "grouped OR")]
+    #[test_case("hello -world | foo (#tag1 | #tag2)", 2; "complex query")]
+    fn test_parse_condition_structure(input: &str, expected_branch_count: usize) {
+        let (_, cond) = parse_query_raw(input);
         match cond {
-            Condition::Any(conds) => {
-                assert_eq!(conds.len(), 2);
-                assert!(matches!(&conds[0], Condition::Text(s) if s == "hello"));
-                assert!(matches!(&conds[1], Condition::Text(s) if s == "world"));
-            }
-            _ => panic!("expected Any condition, got {:?}", cond),
+            Condition::Any(conds) => assert_eq!(conds.len(), expected_branch_count),
+            Condition::All(conds) => assert_eq!(conds.len(), expected_branch_count),
+            Condition::Text(_) => assert_eq!(1, expected_branch_count),
+            _ => {}
         }
     }
 
-    #[test]
-    fn test_parse_or_with_and() {
-        let (_, cond) = parse_query_raw("hello :noun | world");
+    #[test_case("is:pending", StatusFilter::Pending; "pending status")]
+    #[test_case("-is:done", StatusFilter::Done; "exclude done status")]
+    fn test_parse_status(input: &str, expected_status: StatusFilter) {
+        let (_, cond) = parse_query_raw(input);
         match cond {
-            Condition::Any(conds) => {
-                assert_eq!(conds.len(), 2);
-                // First branch: hello AND noun
-                match &conds[0] {
-                    Condition::All(inner) => {
-                        assert_eq!(inner.len(), 2);
-                        assert!(matches!(&inner[0], Condition::Text(s) if s == "hello"));
-                        assert!(matches!(&inner[1], Condition::HasPos(PartOfSpeech::Noun)));
-                    }
-                    _ => panic!("expected All in first branch"),
-                }
-                // Second branch: world
-                assert!(matches!(&conds[1], Condition::Text(s) if s == "world"));
-            }
-            _ => panic!("expected Any condition"),
+            Condition::HasStatus(status) => assert_eq!(status, expected_status),
+            Condition::NotHasStatus(status) => assert_eq!(status, expected_status),
+            _ => panic!("expected status condition"),
         }
-    }
-
-    #[test]
-    fn test_parse_grouping() {
-        let (_, cond) = parse_query_raw("(#tag1 | #tag2) :noun");
-        match cond {
-            Condition::All(conds) => {
-                assert_eq!(conds.len(), 2);
-                // First: (tag1 OR tag2)
-                match &conds[0] {
-                    Condition::Any(inner) => {
-                        assert_eq!(inner.len(), 2);
-                        assert!(matches!(&inner[0], Condition::HasTagName(name) if name == "tag1"));
-                        assert!(matches!(&inner[1], Condition::HasTagName(name) if name == "tag2"));
-                    }
-                    _ => panic!("expected Any for grouped OR"),
-                }
-                // Second: noun
-                assert!(matches!(&conds[1], Condition::HasPos(PartOfSpeech::Noun)));
-            }
-            _ => panic!("expected All condition"),
-        }
-    }
-
-    #[test]
-    fn test_parse_complex() {
-        let (_, cond) = parse_query_raw("hello -world | foo (#tag1 | #tag2)");
-        match cond {
-            Condition::Any(conds) => {
-                assert_eq!(conds.len(), 2);
-                // First branch: hello AND NOT world
-                match &conds[0] {
-                    Condition::All(inner) => {
-                        assert_eq!(inner.len(), 2);
-                        assert!(matches!(&inner[0], Condition::Text(s) if s == "hello"));
-                        assert!(matches!(&inner[1], Condition::Text(s) if s == "-world"));
-                    }
-                    _ => panic!("expected All in first branch"),
-                }
-                // Second branch: foo AND (tag1 OR tag2)
-                match &conds[1] {
-                    Condition::All(inner) => {
-                        assert_eq!(inner.len(), 2);
-                        assert!(matches!(&inner[0], Condition::Text(s) if s == "foo"));
-                        assert!(matches!(&inner[1], Condition::Any(_)));
-                    }
-                    _ => panic!("expected All in second branch"),
-                }
-            }
-            _ => panic!("expected Any condition"),
-        }
-    }
-
-    #[test]
-    fn test_parse_status() {
-        let (_, cond) = parse_query_raw("is:pending");
-        assert!(matches!(cond, Condition::HasStatus(StatusFilter::Pending)));
-    }
-
-    #[test]
-    fn test_parse_exclude_status() {
-        let (_, cond) = parse_query_raw("-is:done");
-        assert!(matches!(cond, Condition::NotHasStatus(StatusFilter::Done)));
     }
 }

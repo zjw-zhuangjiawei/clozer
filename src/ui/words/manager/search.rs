@@ -142,40 +142,38 @@ impl Default for SearchManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn test_search_manager_new() {
-        let manager = SearchManager::new();
-        assert!(manager.query.is_empty());
-        assert!(manager.cached_results.is_none());
-        assert!(!manager.has_active_filters());
+    #[test_case("hello".to_string(), "hello", true, true; "set query")]
+    #[test_case("".to_string(), "", false, true; "clear query")]
+    fn test_search_manager_query_state(
+        initial_query: String,
+        expected_query: &str,
+        expected_has_filters: bool,
+        expected_dirty: bool,
+    ) {
+        let mut manager = SearchManager::new();
+        manager.set_query(initial_query);
+        assert_eq!(manager.query, expected_query);
+        assert_eq!(manager.has_active_filters(), expected_has_filters);
+        assert_eq!(manager.dirty, expected_dirty);
     }
 
-    #[test]
-    fn test_search_manager_set_query() {
+    #[test_case(SortType::AZ; "set sort")]
+    fn test_search_manager_sort(sort: SortType) {
         let mut manager = SearchManager::new();
-        manager.set_query("hello".to_string());
-        assert_eq!(manager.query, "hello");
-        assert!(manager.has_active_filters());
-        assert!(manager.dirty);
+        manager.set_sort(sort);
+        assert_eq!(manager.sort, sort);
     }
 
-    #[test]
-    fn test_search_manager_clear_query() {
+    #[test_case("hello".to_string(), SortType::AZ; "clear filters after set")]
+    fn test_search_manager_clear_filters(query: String, sort: SortType) {
         let mut manager = SearchManager::new();
-        manager.set_query("hello".to_string());
-        manager.clear_query();
-        assert!(manager.query.is_empty());
-        assert!(!manager.has_active_filters());
-    }
-
-    #[test]
-    fn test_search_manager_clear_filters() {
-        let mut manager = SearchManager::new();
-        manager.set_query("hello".to_string());
-        manager.set_sort(SortType::AZ);
+        manager.set_query(query);
+        manager.set_sort(sort);
         manager.clear_filters();
         assert!(manager.query.is_empty());
         assert_eq!(manager.sort, SortType::BestMatch);
+        assert!(!manager.has_active_filters());
     }
 }

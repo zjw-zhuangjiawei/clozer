@@ -86,249 +86,79 @@ impl Cloze {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn test_cloze_segment_display_text() {
-        let segment = ClozeSegment::Text("hello".to_string());
-        assert_eq!(segment.to_string(), "hello");
+    #[test_case(ClozeSegment::Text("hello".to_string()), "hello"; "text segment")]
+    #[test_case(ClozeSegment::Blank("answer".to_string()), "[answer]"; "blank segment")]
+    fn test_cloze_segment_display(segment: ClozeSegment, expected: &str) {
+        assert_eq!(segment.to_string(), expected);
     }
 
-    #[test]
-    fn test_cloze_segment_display_blank() {
-        let segment = ClozeSegment::Blank("answer".to_string());
-        assert_eq!(segment.to_string(), "[answer]");
+    #[test_case(ClozeSegment::Text("hello".to_string()), ClozeSegment::Text("hello".to_string()), true; "text equals text")]
+    #[test_case(ClozeSegment::Blank("answer".to_string()), ClozeSegment::Blank("answer".to_string()), true; "blank equals blank")]
+    #[test_case(ClozeSegment::Text("hello".to_string()), ClozeSegment::Text("world".to_string()), false; "text not equals different text")]
+    #[test_case(ClozeSegment::Text("hello".to_string()), ClozeSegment::Blank("hello".to_string()), false; "text not equals blank")]
+    fn test_cloze_segment_equality(a: ClozeSegment, b: ClozeSegment, should_equal: bool) {
+        assert_eq!(a == b, should_equal);
     }
 
-    #[test]
-    fn test_cloze_segment_eq() {
-        assert_eq!(
-            ClozeSegment::Text("hello".to_string()),
-            ClozeSegment::Text("hello".to_string())
-        );
-        assert_eq!(
-            ClozeSegment::Blank("answer".to_string()),
-            ClozeSegment::Blank("answer".to_string())
-        );
-    }
-
-    #[test]
-    fn test_cloze_segment_ne() {
-        assert_ne!(
-            ClozeSegment::Text("hello".to_string()),
-            ClozeSegment::Text("world".to_string())
-        );
-        assert_ne!(
-            ClozeSegment::Text("hello".to_string()),
-            ClozeSegment::Blank("hello".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_single_blank() {
-        let segments = Cloze::parse_from_sentence("The [cat] sat");
-        assert_eq!(segments.len(), 3);
-        assert_eq!(segments[0], ClozeSegment::Text("The ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("cat".to_string()));
-        assert_eq!(segments[2], ClozeSegment::Text(" sat".to_string()));
-    }
-
-    #[test]
-    fn test_parse_multiple_blanks() {
-        let segments = Cloze::parse_from_sentence("[a] [b] [c]");
-        assert_eq!(segments.len(), 5);
-        assert_eq!(segments[0], ClozeSegment::Blank("a".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Text(" ".to_string()));
-        assert_eq!(segments[2], ClozeSegment::Blank("b".to_string()));
-        assert_eq!(segments[3], ClozeSegment::Text(" ".to_string()));
-        assert_eq!(segments[4], ClozeSegment::Blank("c".to_string()));
-    }
-
-    #[test]
-    fn test_parse_blank_at_start() {
-        let segments = Cloze::parse_from_sentence("[hello] world");
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0], ClozeSegment::Blank("hello".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Text(" world".to_string()));
-    }
-
-    #[test]
-    fn test_parse_blank_at_end() {
-        let segments = Cloze::parse_from_sentence("hello [world]");
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0], ClozeSegment::Text("hello ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("world".to_string()));
-    }
-
-    #[test]
-    fn test_parse_no_blank() {
-        let segments = Cloze::parse_from_sentence("plain text without blanks");
-        assert_eq!(segments.len(), 1);
-        assert_eq!(
-            segments[0],
-            ClozeSegment::Text("plain text without blanks".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_empty_string() {
-        let segments = Cloze::parse_from_sentence("");
-        assert!(segments.is_empty());
-    }
-
-    #[test]
-    fn test_parse_consecutive_blanks() {
-        let segments = Cloze::parse_from_sentence("start [a][b] end");
-        assert_eq!(segments.len(), 4);
-        assert_eq!(segments[0], ClozeSegment::Text("start ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("a".to_string()));
-        assert_eq!(segments[2], ClozeSegment::Blank("b".to_string()));
-        assert_eq!(segments[3], ClozeSegment::Text(" end".to_string()));
-    }
-
-    #[test]
-    fn test_parse_only_blank() {
-        let segments = Cloze::parse_from_sentence("[only]");
-        assert_eq!(segments.len(), 1);
-        assert_eq!(segments[0], ClozeSegment::Blank("only".to_string()));
-    }
-
-    #[test]
-    fn test_parse_blank_with_special_chars() {
-        let segments = Cloze::parse_from_sentence("Hello [world!]");
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0], ClozeSegment::Text("Hello ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("world!".to_string()));
-    }
-
-    #[test]
-    fn test_parse_blank_with_numbers() {
-        let segments = Cloze::parse_from_sentence("2 + 2 = [4]");
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0], ClozeSegment::Text("2 + 2 = ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("4".to_string()));
-    }
-
-    #[test]
-    fn test_parse_multiple_blanks_together() {
-        let segments = Cloze::parse_from_sentence("The [quick] [brown] [fox]");
-        assert_eq!(segments.len(), 6);
-        assert_eq!(segments[0], ClozeSegment::Text("The ".to_string()));
-        assert_eq!(segments[1], ClozeSegment::Blank("quick".to_string()));
-        assert_eq!(segments[2], ClozeSegment::Text(" ".to_string()));
-        assert_eq!(segments[3], ClozeSegment::Blank("brown".to_string()));
-        assert_eq!(segments[4], ClozeSegment::Text(" ".to_string()));
-        assert_eq!(segments[5], ClozeSegment::Blank("fox".to_string()));
-    }
-
-    #[test]
-    fn test_render_blanks_single_blank() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![
-                ClozeSegment::Text("Hello ".to_string()),
-                ClozeSegment::Blank("world".to_string()),
-            ])
-            .build();
-        assert_eq!(cloze.render_blanks(), "Hello ___");
-    }
-
-    #[test]
-    fn test_render_blanks_multiple_blanks() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![
-                ClozeSegment::Text("The ".to_string()),
-                ClozeSegment::Blank("cat".to_string()),
-                ClozeSegment::Text(" sat on the ".to_string()),
-                ClozeSegment::Blank("mat".to_string()),
-            ])
-            .build();
-        assert_eq!(cloze.render_blanks(), "The ___ sat on the ___");
-    }
-
-    #[test]
-    fn test_render_blanks_no_blanks() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![ClozeSegment::Text("plain text".to_string())])
-            .build();
-        assert_eq!(cloze.render_blanks(), "plain text");
-    }
-
-    #[test]
-    fn test_render_blanks_empty_segments() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![])
-            .build();
-        assert_eq!(cloze.render_blanks(), "");
-    }
-
-    #[test]
-    fn test_render_answers_single_blank() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![
-                ClozeSegment::Text("Hello ".to_string()),
-                ClozeSegment::Blank("world".to_string()),
-            ])
-            .build();
-        assert_eq!(cloze.render_answers(), "Hello world");
-    }
-
-    #[test]
-    fn test_render_answers_multiple_blanks() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![
-                ClozeSegment::Text("The ".to_string()),
-                ClozeSegment::Blank("cat".to_string()),
-                ClozeSegment::Text(" sat on the ".to_string()),
-                ClozeSegment::Blank("mat".to_string()),
-            ])
-            .build();
-        assert_eq!(cloze.render_answers(), "The cat sat on the mat");
-    }
-
-    #[test]
-    fn test_render_answers_no_blanks() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![ClozeSegment::Text("plain text".to_string())])
-            .build();
-        assert_eq!(cloze.render_answers(), "plain text");
-    }
-
-    #[test]
-    fn test_render_answers_empty_segments() {
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(vec![])
-            .build();
-        assert_eq!(cloze.render_answers(), "");
-    }
-
-    #[test]
-    fn test_parse_render_roundtrip() {
-        let original = "The [cat] sat on the [mat]";
-        let segments = Cloze::parse_from_sentence(original);
-        let cloze = Cloze::builder()
+    fn cloze_with_segments(segments: Vec<ClozeSegment>) -> Cloze {
+        Cloze::builder()
             .meaning_id(MeaningId::new())
             .segments(segments)
-            .build();
-        assert_eq!(cloze.render_blanks(), "The ___ sat on the ___");
-        assert_eq!(cloze.render_answers(), "The cat sat on the mat");
+            .build()
     }
 
-    #[test]
-    fn test_parse_render_roundtrip_empty() {
-        let original = "";
-        let segments = Cloze::parse_from_sentence(original);
-        let cloze = Cloze::builder()
-            .meaning_id(MeaningId::new())
-            .segments(segments)
-            .build();
-        assert_eq!(cloze.render_blanks(), "");
-        assert_eq!(cloze.render_answers(), "");
+    #[test_case("The [cat] sat", 3; "single blank in middle")]
+    #[test_case("[a] [b] [c]", 5; "multiple blanks with spaces")]
+    #[test_case("[hello] world", 2; "blank at start")]
+    #[test_case("hello [world]", 2; "blank at end")]
+    #[test_case("plain text without blanks", 1; "no blanks")]
+    #[test_case("", 0; "empty string")]
+    #[test_case("start [a][b] end", 4; "consecutive blanks")]
+    #[test_case("[only]", 1; "only blank")]
+    #[test_case("Hello [world!]", 2; "blank with special chars")]
+    #[test_case("2 + 2 = [4]", 2; "blank with numbers")]
+    #[test_case("The [quick] [brown] [fox]", 6; "multiple separate blanks")]
+    fn test_parse_from_sentence(input: &str, expected_len: usize) {
+        let segments = Cloze::parse_from_sentence(input);
+        assert_eq!(segments.len(), expected_len);
+    }
+
+    #[test_case("The [cat] sat", 1, "cat"; "blank in middle")]
+    #[test_case("[a] [b] [c]", 0, "a"; "first blank")]
+    #[test_case("hello [world]", 1, "world"; "blank at end")]
+    fn test_parse_from_sentence_first_blank(input: &str, idx: usize, expected_answer: &str) {
+        let segments = Cloze::parse_from_sentence(input);
+        assert!(idx < segments.len());
+        match &segments[idx] {
+            ClozeSegment::Blank(answer) => assert_eq!(answer, expected_answer),
+            _ => panic!("Expected Blank at index {}", idx),
+        }
+    }
+
+    #[test_case(vec![ClozeSegment::Text("Hello ".to_string()), ClozeSegment::Blank("world".to_string())], "Hello ___"; "single blank")]
+    #[test_case(vec![ClozeSegment::Text("The ".to_string()), ClozeSegment::Blank("cat".to_string()), ClozeSegment::Text(" sat on the ".to_string()), ClozeSegment::Blank("mat".to_string())], "The ___ sat on the ___"; "multiple blanks")]
+    #[test_case(vec![ClozeSegment::Text("plain text".to_string())], "plain text"; "no blanks")]
+    #[test_case(vec![], ""; "empty segments")]
+    fn test_render_blanks(segments: Vec<ClozeSegment>, expected: &str) {
+        assert_eq!(cloze_with_segments(segments).render_blanks(), expected);
+    }
+
+    #[test_case(vec![ClozeSegment::Text("Hello ".to_string()), ClozeSegment::Blank("world".to_string())], "Hello world"; "single blank")]
+    #[test_case(vec![ClozeSegment::Text("The ".to_string()), ClozeSegment::Blank("cat".to_string()), ClozeSegment::Text(" sat on the ".to_string()), ClozeSegment::Blank("mat".to_string())], "The cat sat on the mat"; "multiple blanks")]
+    #[test_case(vec![ClozeSegment::Text("plain text".to_string())], "plain text"; "no blanks")]
+    #[test_case(vec![], ""; "empty segments")]
+    fn test_render_answers(segments: Vec<ClozeSegment>, expected: &str) {
+        assert_eq!(cloze_with_segments(segments).render_answers(), expected);
+    }
+
+    #[test_case("The [cat] sat on the [mat]", "The ___ sat on the ___", "The cat sat on the mat"; "multiple blanks roundtrip")]
+    #[test_case("", "", ""; "empty roundtrip")]
+    fn test_parse_render_roundtrip(input: &str, expected_blanks: &str, expected_answers: &str) {
+        let segments = Cloze::parse_from_sentence(input);
+        let cloze = cloze_with_segments(segments);
+        assert_eq!(cloze.render_blanks(), expected_blanks);
+        assert_eq!(cloze.render_answers(), expected_answers);
     }
 }

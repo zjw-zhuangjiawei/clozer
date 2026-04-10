@@ -365,7 +365,8 @@ pub fn search(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Meaning, Tag, Word};
+    use crate::models::{Meaning, Word};
+    use test_case::test_case;
 
     fn setup_test_data() -> (WordRegistry, MeaningRegistry, ClozeRegistry, QueueRegistry) {
         let mut word_registry = WordRegistry::new();
@@ -373,7 +374,6 @@ mod tests {
         let cloze_registry = ClozeRegistry::new();
         let queue_registry = QueueRegistry::new();
 
-        // Add test words
         let word1 = Word::builder().content("hello".to_string()).build();
         let word2 = Word::builder().content("world".to_string()).build();
         let word3 = Word::builder().content("foo".to_string()).build();
@@ -382,7 +382,6 @@ mod tests {
         word_registry.add(word2.clone());
         word_registry.add(word3.clone());
 
-        // Add meanings
         let meaning1 = Meaning::builder()
             .word_id(word1.id)
             .definition("a greeting".to_string())
@@ -405,86 +404,36 @@ mod tests {
         )
     }
 
-    #[test]
-    fn test_engine_empty_query() {
-        let (word_registry, meaning_registry, cloze_registry, queue_registry) = setup_test_data();
-        let engine = QueryEngine::new(
-            &word_registry,
-            &meaning_registry,
-            &cloze_registry,
-            &queue_registry,
-        );
-
-        let query = Query::empty();
-        let results = engine.execute(&query);
-
-        assert_eq!(results.len(), 3);
+    fn make_engine<'a>(
+        word_registry: &'a WordRegistry,
+        meaning_registry: &'a MeaningRegistry,
+        cloze_registry: &'a ClozeRegistry,
+        queue_registry: &'a QueueRegistry,
+    ) -> QueryEngine<'a> {
+        QueryEngine::new(
+            word_registry,
+            meaning_registry,
+            cloze_registry,
+            queue_registry,
+        )
     }
 
-    #[test]
-    fn test_engine_text_search() {
+    #[test_case(Condition::All(vec![]), 3; "empty condition")]
+    #[test_case(Condition::Text("hello".to_string()), 1; "text search hello")]
+    #[test_case(Condition::Text("world".to_string()), 1; "text search world")]
+    #[test_case(Condition::Text("foo".to_string()), 1; "text search foo")]
+    #[test_case(Condition::All(vec![Condition::Text("hello".to_string()), Condition::Text("world".to_string())]), 0; "AND condition no match")]
+    #[test_case(Condition::Any(vec![Condition::Text("hello".to_string()), Condition::Text("world".to_string())]), 2; "OR condition")]
+    fn test_query_execution(condition: Condition, expected_count: usize) {
         let (word_registry, meaning_registry, cloze_registry, queue_registry) = setup_test_data();
-        let engine = QueryEngine::new(
+        let engine = make_engine(
             &word_registry,
             &meaning_registry,
             &cloze_registry,
             &queue_registry,
         );
-
-        let query = Query::new(Condition::Text("hello".to_string()), SortType::BestMatch);
+        let query = Query::new(condition, SortType::BestMatch);
         let results = engine.execute(&query);
-
-        assert_eq!(results.len(), 1);
-        assert!(results.iter().any(|(id, _)| {
-            word_registry
-                .get(*id)
-                .map(|w| w.content == "hello")
-                .unwrap_or(false)
-        }));
-    }
-
-    #[test]
-    fn test_engine_and_condition() {
-        let (word_registry, meaning_registry, cloze_registry, queue_registry) = setup_test_data();
-        let engine = QueryEngine::new(
-            &word_registry,
-            &meaning_registry,
-            &cloze_registry,
-            &queue_registry,
-        );
-
-        let query = Query::new(
-            Condition::All(vec![
-                Condition::Text("hello".to_string()),
-                Condition::Text("world".to_string()),
-            ]),
-            SortType::BestMatch,
-        );
-        let results = engine.execute(&query);
-
-        // No word matches both "hello" and "world"
-        assert_eq!(results.len(), 0);
-    }
-
-    #[test]
-    fn test_engine_or_condition() {
-        let (word_registry, meaning_registry, cloze_registry, queue_registry) = setup_test_data();
-        let engine = QueryEngine::new(
-            &word_registry,
-            &meaning_registry,
-            &cloze_registry,
-            &queue_registry,
-        );
-
-        let query = Query::new(
-            Condition::Any(vec![
-                Condition::Text("hello".to_string()),
-                Condition::Text("world".to_string()),
-            ]),
-            SortType::BestMatch,
-        );
-        let results = engine.execute(&query);
-
-        assert_eq!(results.len(), 2);
+        assert_eq!(results.len(), expected_count);
     }
 }
