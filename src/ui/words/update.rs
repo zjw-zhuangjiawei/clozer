@@ -2,7 +2,6 @@
 
 use crate::models::types::{ClozeId, MeaningId};
 use crate::models::{Meaning, Tag, Word};
-use crate::query;
 use crate::state::Model;
 use crate::ui::state::MainWindowState;
 use crate::ui::words::manager::{DetailPanelState, TagDropdownTarget};
@@ -17,42 +16,50 @@ pub fn update(
     match message {
         // Search
         WordsMessage::SearchQueryChanged(query) => {
-            state.words.search.set_query(query.clone());
-            let results = query::search(
+            state.words.search.set_query(query);
+            // Execute the query immediately
+            state.words.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
                 &model.queue_registry,
-                &state.words.search.ast,
-                state.words.search.current_sort,
+                &model.tag_registry,
             );
-            state.words.search.search_results = results;
         }
         WordsMessage::SearchCleared => {
             state.words.search.clear_query();
-        }
-        WordsMessage::SortTypeChanged(sort) => {
-            state.words.search.current_sort = sort;
-            let results = query::search(
+            // Re-execute to show all words
+            state.words.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
                 &model.queue_registry,
-                &state.words.search.ast,
-                state.words.search.current_sort,
+                &model.tag_registry,
             );
-            state.words.search.search_results = results;
         }
-        WordsMessage::SearchResultsReady(results) => {
-            state.words.search.search_results = results;
+        WordsMessage::SortTypeChanged(sort) => {
+            state.words.search.set_sort(sort);
+            // Re-execute with new sort
+            state.words.search.execute(
+                &model.word_registry,
+                &model.meaning_registry,
+                &model.cloze_registry,
+                &model.queue_registry,
+                &model.tag_registry,
+            );
         }
 
-        // Filter
-        WordsMessage::TagFilterChanged(tag_id) => {
-            state.words.search.set_tag_filter(tag_id);
-        }
+        // Filter (now integrated into search query)
         WordsMessage::FiltersCleared => {
             state.words.search.clear_filters();
+            // Re-execute to show all words
+            state.words.search.execute(
+                &model.word_registry,
+                &model.meaning_registry,
+                &model.cloze_registry,
+                &model.queue_registry,
+                &model.tag_registry,
+            );
         }
 
         // Selection
@@ -475,6 +482,10 @@ pub fn update(
                     tracing::info!(count = sentences.len(), path = ?path, "Exported clozes to plaintext");
                 }
             }
+        }
+        // Ignore deprecated messages
+        WordsMessage::SearchResultsReady(_) | WordsMessage::TagFilterChanged(_) => {
+            tracing::warn!("Received deprecated message: {:?}", message);
         }
     }
 

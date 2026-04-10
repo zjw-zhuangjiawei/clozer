@@ -18,11 +18,13 @@ pub enum WordsMessage {
     SearchCleared,
     /// Sort type changed
     SortTypeChanged(SortType),
-    /// Internal: search results computed
+    /// DEPRECATED: Search results are now cached internally
+    #[deprecated(note = "Search results are now cached internally in SearchManager")]
     SearchResultsReady(Vec<(WordId, i32)>),
 
     // Filter
-    /// Filter by tag
+    /// DEPRECATED: Use query syntax (#tag) instead
+    #[deprecated(note = "Use query syntax (#tag) instead")]
     TagFilterChanged(Option<TagId>),
     /// Clear all filters
     FiltersCleared,

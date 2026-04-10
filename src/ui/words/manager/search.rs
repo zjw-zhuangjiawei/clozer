@@ -1,23 +1,26 @@
 //! Search and filter state management.
 
-use crate::models::Word;
-use crate::models::types::{TagId, WordId};
-use crate::query::{QueryAST, SortType};
-use crate::registry::MeaningRegistry;
+use crate::models::types::WordId;
+use crate::query::{Query, QueryEngine, SortType, TagResolver};
+use crate::registry::{ClozeRegistry, MeaningRegistry, QueueRegistry, TagRegistry, WordRegistry};
 
 /// Search and filter state manager.
+///
+/// This struct manages the search query and provides a unified interface
+/// for executing queries using the QueryEngine.
 #[derive(Debug)]
 pub struct SearchManager {
-    /// Current search query
+    /// Current search query string
     pub query: String,
-    /// Parsed query AST
-    pub ast: QueryAST,
+
     /// Current sort type
-    pub current_sort: SortType,
-    /// Search results (word IDs with scores)
-    pub search_results: Vec<(WordId, i32)>,
-    /// Tag filter (None = no tag filter)
-    pub tag_filter: Option<TagId>,
+    pub sort: SortType,
+
+    /// Whether the query has changed and needs re-execution
+    dirty: bool,
+
+    /// Cached search results
+    cached_results: Option<Vec<(WordId, i32)>>,
 }
 
 impl SearchManager {
@@ -25,91 +28,154 @@ impl SearchManager {
     pub fn new() -> Self {
         Self {
             query: String::new(),
-            ast: QueryAST::new(),
-            current_sort: SortType::default(),
-            search_results: Vec::new(),
-            tag_filter: None,
+            sort: SortType::default(),
+            dirty: true,
+            cached_results: None,
         }
     }
 
     /// Sets the search query.
+    ///
+    /// Marks the manager as dirty so the query will be re-executed
+    /// on the next call to `execute()`.
     pub fn set_query(&mut self, query: String) {
-        self.query = query.clone();
-        self.ast = crate::query::parse::parse_query(&query);
+        self.query = query;
+        self.dirty = true;
+        self.cached_results = None;
     }
 
     /// Clears the search query.
     pub fn clear_query(&mut self) {
         self.query.clear();
-        self.ast = QueryAST::new();
-        self.search_results.clear();
+        self.dirty = true;
+        self.cached_results = None;
     }
 
-    /// Sets the tag filter.
-    pub fn set_tag_filter(&mut self, tag_id: Option<TagId>) {
-        self.tag_filter = tag_id;
+    /// Sets the sort type.
+    pub fn set_sort(&mut self, sort: SortType) {
+        self.sort = sort;
+        self.dirty = true;
+        // Don't clear cached results, just mark as dirty
     }
 
     /// Clears all filters.
     pub fn clear_filters(&mut self) {
         self.query.clear();
-        self.ast = QueryAST::new();
-        self.search_results.clear();
-        self.tag_filter = None;
+        self.sort = SortType::default();
+        self.dirty = true;
+        self.cached_results = None;
     }
 
     /// Checks if any filters are active.
     pub fn has_active_filters(&self) -> bool {
-        !self.query.is_empty() || !self.search_results.is_empty() || self.tag_filter.is_some()
+        !self.query.is_empty()
     }
 
-    /// Filters words based on current search and filter conditions.
-    pub fn filter_words<'a>(
-        &self,
-        word_iter: impl Iterator<Item = &'a Word>,
+    /// Executes the query and returns the results.
+    ///
+    /// This method uses lazy evaluation - the query is only executed
+    /// when the query string or sort type has changed.
+    pub fn execute(
+        &mut self,
+        word_registry: &WordRegistry,
         meaning_registry: &MeaningRegistry,
-    ) -> Vec<WordId> {
-        let query_lower = self.query.to_lowercase();
-        let mut results: Vec<WordId> = Vec::new();
+        cloze_registry: &ClozeRegistry,
+        queue_registry: &QueueRegistry,
+        tag_registry: &TagRegistry,
+    ) -> &[(WordId, i32)] {
+        if self.dirty || self.cached_results.is_none() {
+            let mut resolver = TagResolver::new(tag_registry);
+            let query = if self.query.trim().is_empty() {
+                // Empty query matches everything
+                Query::empty()
+            } else {
+                crate::query::parse::parse_query(&self.query, &mut resolver)
+            };
 
-        for word in word_iter {
-            if !query_lower.is_empty() {
-                let matches = word.content.to_lowercase().contains(&query_lower)
-                    || self.has_matching_meaning(word, &query_lower, meaning_registry);
-                if !matches {
-                    continue;
-                }
-            }
+            let engine = QueryEngine::new(
+                word_registry,
+                meaning_registry,
+                cloze_registry,
+                queue_registry,
+            );
 
-            if let Some(tag_id) = self.tag_filter {
-                let has_tag = meaning_registry
-                    .iter_by_word(word.id)
-                    .any(|(_, m)| m.tag_ids.contains(&tag_id));
-                if !has_tag {
-                    continue;
-                }
-            }
-
-            results.push(word.id);
+            self.cached_results = Some(engine.execute(&query));
+            self.dirty = false;
         }
 
-        results
+        self.cached_results
+            .as_ref()
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
     }
 
-    fn has_matching_meaning(
-        &self,
-        word: &Word,
-        query: &str,
-        meaning_registry: &MeaningRegistry,
-    ) -> bool {
-        meaning_registry
-            .iter_by_word(word.id)
-            .any(|(_, m)| m.definition.to_lowercase().contains(query))
+    /// Gets the cached results without executing.
+    ///
+    /// Returns `None` if the query hasn't been executed yet.
+    pub fn get_results(&self) -> Option<&[(WordId, i32)]> {
+        self.cached_results.as_ref().map(|v| v.as_slice())
+    }
+
+    /// Returns the IDs of matching words (without scores).
+    pub fn matching_ids(&self) -> Vec<WordId> {
+        self.cached_results
+            .as_ref()
+            .map(|results| results.iter().map(|(id, _)| *id).collect())
+            .unwrap_or_default()
+    }
+
+    /// Returns true if the query has results.
+    pub fn has_results(&self) -> bool {
+        self.cached_results
+            .as_ref()
+            .map(|r| !r.is_empty())
+            .unwrap_or(false)
     }
 }
 
 impl Default for SearchManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_search_manager_new() {
+        let manager = SearchManager::new();
+        assert!(manager.query.is_empty());
+        assert!(manager.cached_results.is_none());
+        assert!(!manager.has_active_filters());
+    }
+
+    #[test]
+    fn test_search_manager_set_query() {
+        let mut manager = SearchManager::new();
+        manager.set_query("hello".to_string());
+        assert_eq!(manager.query, "hello");
+        assert!(manager.has_active_filters());
+        assert!(manager.dirty);
+    }
+
+    #[test]
+    fn test_search_manager_clear_query() {
+        let mut manager = SearchManager::new();
+        manager.set_query("hello".to_string());
+        manager.clear_query();
+        assert!(manager.query.is_empty());
+        assert!(!manager.has_active_filters());
+    }
+
+    #[test]
+    fn test_search_manager_clear_filters() {
+        let mut manager = SearchManager::new();
+        manager.set_query("hello".to_string());
+        manager.set_sort(SortType::AZ);
+        manager.clear_filters();
+        assert!(manager.query.is_empty());
+        assert_eq!(manager.sort, SortType::BestMatch);
     }
 }

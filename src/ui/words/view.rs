@@ -14,7 +14,7 @@ use crate::ui::words::state::WordsState;
 use iced::Element;
 use iced::widget::Space;
 use iced::widget::{Button, Column, Container, PickList, Row, Text, TextInput, container, svg};
-use std::collections::{HashMap, HashSet};
+
 use uuid::Uuid;
 
 // Renders the words panel.
@@ -101,23 +101,22 @@ fn build_search_bar<'a>(
     };
     let sort_picker = PickList::new(
         SortType::variants(),
-        Some(words_state.search.current_sort),
+        Some(words_state.search.sort),
         WordsMessage::SortTypeChanged,
     )
     .width(sort_width)
     .placeholder("Sort");
 
-    let clear_btn =
-        if !words_state.search.query.is_empty() || words_state.search.tag_filter.is_some() {
-            Button::new(Text::new("Clear"))
-                .style(button::secondary)
-                .padding(ButtonSize::Standard.to_iced_padding())
-                .on_press(WordsMessage::FiltersCleared)
-        } else {
-            Button::new(Text::new("Clear"))
-                .style(button::secondary)
-                .padding(ButtonSize::Standard.to_iced_padding())
-        };
+    let clear_btn = if words_state.search.has_active_filters() {
+        Button::new(Text::new("Clear"))
+            .style(button::secondary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::FiltersCleared)
+    } else {
+        Button::new(Text::new("Clear"))
+            .style(button::secondary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+    };
 
     Row::new()
         .push(search_input)
@@ -136,79 +135,26 @@ fn build_word_tree<'a>(
 ) -> Element<'a, WordsMessage, AppTheme> {
     let words_state = &state.words;
 
-    let filtered_word_ids: Vec<WordId> =
-        if words_state.search.query.is_empty() && words_state.search.search_results.is_empty() {
+    // Execute the query using the new SearchManager
+    // Note: We need to clone the search state because we can't borrow mutably in a view function
+    // The actual caching happens in the update loop
+    let results = words_state.search.get_results();
+
+    let word_nodes: Vec<Element<'a, WordsMessage, AppTheme>> = match results {
+        Some(results) => results
+            .iter()
+            .filter_map(|(word_id, _)| model.word_registry.get(*word_id))
+            .map(|word| build_word_node(state, model, word, theme))
+            .collect(),
+        None => {
+            // No results cached yet, show all words
             model
                 .word_registry
                 .iter()
-                .filter(|(_, word)| {
-                    let matches_tag_filter = match words_state.search.tag_filter {
-                        None => true,
-                        Some(tag_id) => word.meaning_ids.iter().any(|mid| {
-                            model
-                                .meaning_registry
-                                .get(*mid)
-                                .map(|m| m.tag_ids.contains(&tag_id))
-                                .unwrap_or(false)
-                        }),
-                    };
-
-                    matches_tag_filter
-                })
-                .map(|(id, _)| *id)
+                .map(|(_, word)| build_word_node(state, model, word, theme))
                 .collect()
-        } else {
-            let search_result_ids: HashSet<WordId> = words_state
-                .search
-                .search_results
-                .iter()
-                .map(|(id, _)| *id)
-                .collect();
-
-            model
-                .word_registry
-                .iter()
-                .filter(|(_, word)| {
-                    if !search_result_ids.contains(&word.id) {
-                        return false;
-                    }
-
-                    let matches_tag_filter = match words_state.search.tag_filter {
-                        None => true,
-                        Some(tag_id) => word.meaning_ids.iter().any(|mid| {
-                            model
-                                .meaning_registry
-                                .get(*mid)
-                                .map(|m| m.tag_ids.contains(&tag_id))
-                                .unwrap_or(false)
-                        }),
-                    };
-
-                    matches_tag_filter
-                })
-                .map(|(id, _)| *id)
-                .collect()
-        };
-
-    let ordered_ids: Vec<WordId> = if words_state.search.search_results.is_empty() {
-        filtered_word_ids
-    } else {
-        let id_to_score: HashMap<WordId, i32> =
-            words_state.search.search_results.iter().copied().collect();
-        let mut ids: Vec<WordId> = filtered_word_ids;
-        ids.sort_by(|a, b| {
-            let score_a = id_to_score.get(a).unwrap_or(&0);
-            let score_b = id_to_score.get(b).unwrap_or(&0);
-            score_b.cmp(score_a)
-        });
-        ids
+        }
     };
-
-    let word_nodes: Vec<Element<'a, WordsMessage, AppTheme>> = ordered_ids
-        .iter()
-        .filter_map(|word_id| model.word_registry.get(*word_id))
-        .map(|word| build_word_node(state, model, word, theme))
-        .collect();
 
     if word_nodes.is_empty() {
         Column::new()
