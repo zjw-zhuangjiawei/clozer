@@ -10,6 +10,7 @@ use crate::message::Message;
 use crate::persistence::Db;
 use crate::state::AppState;
 use crate::ui::AppTheme;
+use crate::ui::words::WordsMessage;
 use crate::ui::{self, state::MainWindowState};
 
 /// Main application struct with single-window support.
@@ -116,6 +117,20 @@ impl App {
                 tracing::info!("Theme changed to: {:?}", theme);
                 Task::none()
             }
+
+            // Tab pressed - forward to words panel for suggestion acceptance
+            Message::TabPressed => {
+                use crate::ui::nav::NavItem;
+                if self.window_state.current_view == NavItem::Words {
+                    ui::app::update_words(
+                        &mut self.window_state,
+                        WordsMessage::SuggestionAccepted,
+                        &mut self.app_state.model,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
         }
     }
 
@@ -132,6 +147,7 @@ impl App {
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
         // Listen for window close request and resize events
+        // Also listen for Tab key to handle search suggestion acceptance
         iced::event::listen_with(|event, _status, _id| match event {
             iced::Event::Window(iced::window::Event::CloseRequested) => {
                 Some(Message::CloseRequested)
@@ -139,6 +155,10 @@ impl App {
             iced::Event::Window(iced::window::Event::Resized(size)) => {
                 Some(Message::WindowResized(size.width as u16))
             }
+            iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab),
+                ..
+            }) => Some(Message::TabPressed),
             _ => None,
         })
     }

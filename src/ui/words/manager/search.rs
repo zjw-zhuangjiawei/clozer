@@ -131,6 +131,14 @@ impl SearchManager {
             .map(|r| !r.is_empty())
             .unwrap_or(false)
     }
+
+    /// Returns the best matching word content as a suggestion for autocomplete.
+    pub fn get_suggestion(&self, word_registry: &WordRegistry) -> Option<String> {
+        self.cached_results
+            .as_ref()
+            .and_then(|results| results.first())
+            .and_then(|(word_id, _)| word_registry.get(*word_id).map(|w| w.content.clone()))
+    }
 }
 
 impl Default for SearchManager {

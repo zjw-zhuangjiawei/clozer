@@ -19,6 +19,7 @@ pub fn primary(_theme: &AppTheme) -> Style {
     iced::widget::progress_bar::primary(&iced::Theme::Light)
 }
 
+#[allow(dead_code)]
 fn styled(background: impl Into<Background>, bar: impl Into<Background>) -> Style {
     Style {
         background: background.into(),

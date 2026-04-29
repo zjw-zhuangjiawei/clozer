@@ -8,6 +8,7 @@ use crate::ui::words::manager::{DetailPanelState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use iced::Task;
 
+#[allow(deprecated)]
 pub fn update(
     state: &mut MainWindowState,
     message: WordsMessage,
@@ -47,6 +48,18 @@ pub fn update(
                 &model.queue_registry,
                 &model.tag_registry,
             );
+        }
+        WordsMessage::SuggestionAccepted => {
+            if let Some(suggestion) = state.words.search.get_suggestion(&model.word_registry) {
+                state.words.search.set_query(suggestion);
+                state.words.search.execute(
+                    &model.word_registry,
+                    &model.meaning_registry,
+                    &model.cloze_registry,
+                    &model.queue_registry,
+                    &model.tag_registry,
+                );
+            }
         }
 
         // Filter (now integrated into search query)

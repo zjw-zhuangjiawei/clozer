@@ -1,8 +1,5 @@
 use crate::ui::theme::AppTheme;
-use iced::border;
-use iced::widget::container;
-use iced::widget::scrollable::{AutoScroll, Catalog, Rail, Scroller, Status, Style, StyleFn};
-use iced::{Color, Shadow, Vector};
+use iced::widget::scrollable::{Catalog, Status, Style, StyleFn};
 
 impl Catalog for AppTheme {
     type Class<'a> = StyleFn<'a, Self>;

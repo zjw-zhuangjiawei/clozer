@@ -18,6 +18,8 @@ pub enum WordsMessage {
     SearchCleared,
     /// Sort type changed
     SortTypeChanged(SortType),
+    /// Accept the current search suggestion (Tab pressed)
+    SuggestionAccepted,
     /// DEPRECATED: Search results are now cached internally
     #[deprecated(note = "Search results are now cached internally in SearchManager")]
     SearchResultsReady(Vec<(WordId, i32)>),

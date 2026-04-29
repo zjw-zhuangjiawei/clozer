@@ -39,4 +39,7 @@ pub enum Message {
 
     // Theme change request
     ThemeChanged(AppTheme),
+
+    // Tab key pressed (for search suggestion acceptance)
+    TabPressed,
 }

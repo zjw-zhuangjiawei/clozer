@@ -86,13 +86,29 @@ pub fn view<'a>(
 /// Build the search and filter bar.
 fn build_search_bar<'a>(
     words_state: &'a WordsState,
-    _model: &'a Model,
+    model: &'a Model,
     breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let search_input = TextInput::new("Search words or definitions...", &words_state.search.query)
-        .on_input(WordsMessage::SearchQueryChanged)
-        .width(iced::Length::Fill)
-        .padding(Spacing::DEFAULT.s);
+    let query = &words_state.search.query;
+    let suggestion = if !query.is_empty() {
+        words_state.search.get_suggestion(&model.word_registry)
+    } else {
+        None
+    };
+
+    let mut search_input =
+        crate::ui::widgets::rich_text_input::RichTextInput::new("Search words or definitions...")
+            .value(query)
+            .on_input(WordsMessage::SearchQueryChanged)
+            .on_submit(WordsMessage::SuggestionAccepted)
+            .width(iced::Length::Fill)
+            .padding(Spacing::DEFAULT.s);
+
+    if let Some(sug) = suggestion {
+        search_input = search_input.ghost_text(sug);
+    }
+
+    let search_with_ghost: Element<'a, WordsMessage, AppTheme> = Element::new(search_input);
 
     let sort_width = if breakpoint.is_single_column() {
         iced::Length::Fixed(90.0)
@@ -119,7 +135,7 @@ fn build_search_bar<'a>(
     };
 
     Row::new()
-        .push(search_input)
+        .push(search_with_ghost)
         .push(sort_picker)
         .push(clear_btn)
         .spacing(Spacing::DEFAULT.s2)
