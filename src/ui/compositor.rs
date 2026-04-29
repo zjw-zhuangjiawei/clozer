@@ -114,8 +114,9 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
 
     let content: Element<'a, Message, AppTheme> = match state.current_view {
         NavItem::Words => {
-            let left_panel = crate::ui::words::view(&state.words, model, state.theme, breakpoint)
-                .map(Message::Words);
+            let left_panel =
+                crate::ui::words::explorer::view(&state.words, model, state.theme, breakpoint)
+                    .map(Message::Words);
             if breakpoint.is_single_column() {
                 iced::widget::column![left_panel]
                     .spacing(Spacing::DEFAULT.l2)
