@@ -1,11 +1,13 @@
 use crate::models::{Cloze, ClozeId, MeaningId};
-use crate::persistence::DbError;
+use crate::persistence::db::CLOZES_TABLE;
+use crate::persistence::{ClozeDto, DbError};
+use crate::registry::dirty::{DirtyTracker, flush_registry};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, Default)]
 pub struct ClozeRegistry {
     pub(crate) clozes: BTreeMap<ClozeId, Cloze>,
-    pub(crate) dirty_ids: BTreeSet<ClozeId>,
+    pub(crate) dirty: DirtyTracker<ClozeId>,
     pub(crate) by_meaning: BTreeMap<MeaningId, BTreeSet<ClozeId>>,
 }
 
@@ -13,7 +15,7 @@ impl ClozeRegistry {
     pub fn new() -> Self {
         Self {
             clozes: BTreeMap::new(),
-            dirty_ids: BTreeSet::new(),
+            dirty: DirtyTracker::new(),
             by_meaning: BTreeMap::new(),
         }
     }
@@ -25,7 +27,7 @@ impl ClozeRegistry {
             segments: _,
         } = cloze.clone();
         self.clozes.insert(id, cloze);
-        self.dirty_ids.insert(id);
+        self.dirty.mark(id);
         self.by_meaning.entry(meaning_id).or_default().insert(id);
     }
 
@@ -55,7 +57,7 @@ impl ClozeRegistry {
 
     pub fn delete(&mut self, id: ClozeId) -> bool {
         if let Some(cloze) = self.clozes.remove(&id) {
-            self.dirty_ids.insert(id);
+            self.dirty.mark(id);
             if let Some(ids) = self.by_meaning.get_mut(&cloze.meaning_id) {
                 ids.remove(&id);
                 if ids.is_empty() {
@@ -71,7 +73,7 @@ impl ClozeRegistry {
     pub fn delete_by_meaning(&mut self, meaning_id: MeaningId) {
         if let Some(cloze_ids) = self.by_meaning.remove(&meaning_id) {
             for cloze_id in cloze_ids {
-                self.dirty_ids.insert(cloze_id);
+                self.dirty.mark(cloze_id);
                 self.clozes.remove(&cloze_id);
             }
         }
@@ -96,9 +98,10 @@ impl ClozeRegistry {
     /// Load all clozes from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
         let count = self.clozes.len();
-        match db.iter_clozes() {
+        match db.iter_entities::<ClozeDto>(CLOZES_TABLE) {
             Ok(items) => {
-                for dto in items {
+                for (id, mut dto) in items {
+                    dto.id = id;
                     let cloze = Cloze::from(dto);
                     self.clozes.insert(cloze.id, cloze.clone());
                     self.by_meaning
@@ -117,51 +120,18 @@ impl ClozeRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        let dirty_count = self.dirty_ids.len();
-        if dirty_count == 0 {
-            return Ok(());
-        }
-
-        tracing::info!("Flushing {} dirty clozes", dirty_count);
-
-        let mut errors = 0;
-        let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
-        for id in dirty_ids {
-            if let Some(cloze) = self.clozes.get(&id) {
-                let dto = crate::persistence::ClozeDto::from(cloze);
-                match db.save_cloze(id, &dto) {
-                    Ok(_) => {
-                        tracing::debug!(cloze_id = %id, "Saved cloze");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(cloze_id = %id, error = %e, "Failed to save cloze");
-                    }
-                }
-            } else {
-                match db.delete_cloze(id) {
-                    Ok(_) => {
-                        tracing::debug!(cloze_id = %id, "Deleted cloze");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(cloze_id = %id, error = %e, "Failed to delete cloze");
-                    }
-                }
-            }
-        }
-        if errors > 0 {
-            tracing::warn!(errors = errors, "Some clozes failed to persist");
-        } else {
-            tracing::info!("Flushed {} clozes successfully", dirty_count);
-        }
-        Ok(())
+        flush_registry(
+            &self.clozes,
+            &mut self.dirty,
+            db,
+            CLOZES_TABLE,
+            |c| ClozeDto::from(c),
+            "cloze",
+        )
     }
 
     /// Check if there are any dirty entities
     pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
+        self.dirty.has_dirty()
     }
 }

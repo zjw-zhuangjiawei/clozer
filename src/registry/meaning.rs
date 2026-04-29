@@ -1,12 +1,14 @@
 use crate::models::{CefrLevel, Meaning, MeaningId, PartOfSpeech, TagId, WordId};
-use crate::persistence::DbError;
+use crate::persistence::db::MEANINGS_TABLE;
+use crate::persistence::{DbError, MeaningDto};
+use crate::registry::dirty::{DirtyTracker, flush_registry};
 use either::Either;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Default, Clone)]
 pub struct MeaningRegistry {
     pub(crate) meanings: BTreeMap<MeaningId, Meaning>,
-    pub(crate) dirty_ids: BTreeSet<MeaningId>,
+    pub(crate) dirty: DirtyTracker<MeaningId>,
     pub(crate) by_word: BTreeMap<WordId, BTreeSet<MeaningId>>,
     pub(crate) by_tag: BTreeMap<TagId, BTreeSet<MeaningId>>,
 }
@@ -15,7 +17,7 @@ impl MeaningRegistry {
     pub fn new() -> Self {
         Self {
             meanings: BTreeMap::new(),
-            dirty_ids: BTreeSet::new(),
+            dirty: DirtyTracker::new(),
             by_word: BTreeMap::new(),
             by_tag: BTreeMap::new(),
         }
@@ -27,12 +29,10 @@ impl MeaningRegistry {
         let word_id = meaning.word_id;
 
         self.meanings.insert(meaning_id, meaning);
-        self.dirty_ids.insert(meaning_id);
+        self.dirty.mark(meaning_id);
 
-        // Update by_word index
         self.by_word.entry(word_id).or_default().insert(meaning_id);
 
-        // Update by_tag index - borrow from inserted meaning
         if let Some(meaning) = self.meanings.get(&meaning_id) {
             for tag_id in &meaning.tag_ids {
                 self.by_tag.entry(*tag_id).or_default().insert(meaning_id);
@@ -50,9 +50,8 @@ impl MeaningRegistry {
 
     pub fn delete(&mut self, id: MeaningId) -> bool {
         if let Some(meaning) = self.meanings.remove(&id) {
-            self.dirty_ids.insert(id);
+            self.dirty.mark(id);
 
-            // Remove from by_word
             if let Some(meaning_ids) = self.by_word.get_mut(&meaning.word_id) {
                 meaning_ids.remove(&id);
                 if meaning_ids.is_empty() {
@@ -60,7 +59,6 @@ impl MeaningRegistry {
                 }
             }
 
-            // Remove from by_tag
             for tag_id in meaning.tag_ids {
                 if let Some(meaning_ids) = self.by_tag.get_mut(&tag_id) {
                     meaning_ids.remove(&id);
@@ -78,7 +76,7 @@ impl MeaningRegistry {
     pub fn delete_by_word(&mut self, word_id: WordId) {
         if let Some(meaning_ids) = self.by_word.remove(&word_id) {
             for meaning_id in meaning_ids {
-                self.dirty_ids.insert(meaning_id);
+                self.dirty.mark(meaning_id);
                 if let Some(meaning) = self.meanings.remove(&meaning_id) {
                     for tag_id in meaning.tag_ids {
                         if let Some(ids) = self.by_tag.get_mut(&tag_id) {
@@ -166,7 +164,7 @@ impl MeaningRegistry {
         if let Some(meaning) = self.meanings.get_mut(&meaning_id) {
             meaning.tag_ids.insert(tag_id);
             self.by_tag.entry(tag_id).or_default().insert(meaning_id);
-            self.dirty_ids.insert(meaning_id);
+            self.dirty.mark(meaning_id);
             true
         } else {
             false
@@ -179,7 +177,7 @@ impl MeaningRegistry {
             removed = meaning.tag_ids.remove(&tag_id);
         }
         if removed {
-            self.dirty_ids.insert(meaning_id);
+            self.dirty.mark(meaning_id);
             if let Some(ids) = self.by_tag.get_mut(&tag_id) {
                 ids.remove(&meaning_id);
                 if ids.is_empty() {
@@ -194,9 +192,10 @@ impl MeaningRegistry {
     /// Load all meanings from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
         let count = self.meanings.len();
-        match db.iter_meanings() {
+        match db.iter_entities::<MeaningDto>(MEANINGS_TABLE) {
             Ok(items) => {
-                for dto in items {
+                for (id, mut dto) in items {
+                    dto.id = id;
                     let meaning = Meaning::from(dto);
                     self.meanings.insert(meaning.id, meaning.clone());
                     self.by_word
@@ -218,51 +217,18 @@ impl MeaningRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        let dirty_count = self.dirty_ids.len();
-        if dirty_count == 0 {
-            return Ok(());
-        }
-
-        tracing::info!("Flushing {} dirty meanings", dirty_count);
-
-        let mut errors = 0;
-        let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
-        for id in dirty_ids {
-            if let Some(meaning) = self.meanings.get(&id) {
-                let dto = crate::persistence::MeaningDto::from(meaning);
-                match db.save_meaning(id, &dto) {
-                    Ok(_) => {
-                        tracing::debug!(meaning_id = %id, "Saved meaning");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(meaning_id = %id, error = %e, "Failed to save meaning");
-                    }
-                }
-            } else {
-                match db.delete_meaning(id) {
-                    Ok(_) => {
-                        tracing::debug!(meaning_id = %id, "Deleted meaning");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(meaning_id = %id, error = %e, "Failed to delete meaning");
-                    }
-                }
-            }
-        }
-        if errors > 0 {
-            tracing::warn!(errors = errors, "Some meanings failed to persist");
-        } else {
-            tracing::info!("Flushed {} meanings successfully", dirty_count);
-        }
-        Ok(())
+        flush_registry(
+            &self.meanings,
+            &mut self.dirty,
+            db,
+            MEANINGS_TABLE,
+            |m| MeaningDto::from(m),
+            "meaning",
+        )
     }
 
     /// Check if there are any dirty entities
     pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
+        self.dirty.has_dirty()
     }
 }

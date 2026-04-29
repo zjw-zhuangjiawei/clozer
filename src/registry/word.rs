@@ -1,27 +1,29 @@
 use langtag::LangTagBuf;
 
 use crate::models::{MeaningId, Word, WordId};
-use crate::persistence::DbError;
-use std::collections::{BTreeMap, BTreeSet};
+use crate::persistence::db::WORDS_TABLE;
+use crate::persistence::{DbError, WordDto};
+use crate::registry::dirty::{DirtyTracker, flush_registry};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct WordRegistry {
     pub(crate) words: BTreeMap<WordId, Word>,
-    pub(crate) dirty_ids: BTreeSet<WordId>,
+    pub(crate) dirty: DirtyTracker<WordId>,
 }
 
 impl WordRegistry {
     pub fn new() -> Self {
         Self {
             words: BTreeMap::new(),
-            dirty_ids: BTreeSet::new(),
+            dirty: DirtyTracker::new(),
         }
     }
 
     // CRUD
     pub fn add(&mut self, word: Word) {
         self.words.insert(word.id, word.clone());
-        self.dirty_ids.insert(word.id);
+        self.dirty.mark(word.id);
     }
 
     pub fn get(&self, id: WordId) -> Option<&Word> {
@@ -34,7 +36,7 @@ impl WordRegistry {
 
     pub fn delete(&mut self, id: WordId) -> bool {
         if self.words.remove(&id).is_some() {
-            self.dirty_ids.insert(id);
+            self.dirty.mark(id);
             true
         } else {
             false
@@ -91,7 +93,7 @@ impl WordRegistry {
     pub fn add_meaning(&mut self, word_id: WordId, meaning_id: MeaningId) -> bool {
         if let Some(word) = self.words.get_mut(&word_id) {
             word.meaning_ids.insert(meaning_id);
-            self.dirty_ids.insert(word_id);
+            self.dirty.mark(word_id);
             true
         } else {
             false
@@ -102,7 +104,7 @@ impl WordRegistry {
         if let Some(word) = self.words.get_mut(&word_id) {
             let removed = word.meaning_ids.remove(&meaning_id);
             if removed {
-                self.dirty_ids.insert(word_id);
+                self.dirty.mark(word_id);
             }
             removed
         } else {
@@ -114,9 +116,10 @@ impl WordRegistry {
     /// Load all words from database
     pub fn load_all(&mut self, db: &crate::persistence::Db) {
         let count = self.words.len();
-        match db.iter_words() {
+        match db.iter_entities::<WordDto>(WORDS_TABLE) {
             Ok(items) => {
-                for dto in items {
+                for (id, mut dto) in items {
+                    dto.id = id;
                     let word = Word::from(dto);
                     self.words.insert(word.id, word);
                 }
@@ -131,51 +134,18 @@ impl WordRegistry {
 
     /// Flush all dirty entities to the database
     pub fn flush_dirty(&mut self, db: &crate::persistence::Db) -> Result<(), DbError> {
-        let dirty_count = self.dirty_ids.len();
-        if dirty_count == 0 {
-            return Ok(());
-        }
-
-        tracing::info!("Flushing {} dirty words", dirty_count);
-
-        let mut errors = 0;
-        let dirty_ids: Vec<_> = self.dirty_ids.iter().copied().collect();
-        for id in dirty_ids {
-            if let Some(word) = self.words.get(&id) {
-                let dto = crate::persistence::WordDto::from(word);
-                match db.save_word(id, &dto) {
-                    Ok(_) => {
-                        tracing::debug!(word_id = %id, "Saved word");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(word_id = %id, error = %e, "Failed to save word");
-                    }
-                }
-            } else {
-                match db.delete_word(id) {
-                    Ok(_) => {
-                        tracing::debug!(word_id = %id, "Deleted word");
-                        self.dirty_ids.remove(&id);
-                    }
-                    Err(e) => {
-                        errors += 1;
-                        tracing::error!(word_id = %id, error = %e, "Failed to delete word");
-                    }
-                }
-            }
-        }
-        if errors > 0 {
-            tracing::warn!(errors = errors, "Some words failed to persist");
-        } else {
-            tracing::info!("Flushed {} words successfully", dirty_count);
-        }
-        Ok(())
+        flush_registry(
+            &self.words,
+            &mut self.dirty,
+            db,
+            WORDS_TABLE,
+            |w| WordDto::from(w),
+            "word",
+        )
     }
 
     /// Check if there are any dirty entities
     pub fn has_dirty(&self) -> bool {
-        !self.dirty_ids.is_empty()
+        self.dirty.has_dirty()
     }
 }
