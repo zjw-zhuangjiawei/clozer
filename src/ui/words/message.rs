@@ -145,4 +145,6 @@ pub enum WordsMessage {
     // Export operations
     /// Export to plaintext
     ExportPlaintext,
+    /// Export failed with error message
+    ExportFailed(String),
 }

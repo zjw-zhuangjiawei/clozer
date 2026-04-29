@@ -38,8 +38,10 @@ impl Cloze {
         let mut last_end = 0;
 
         for result in BLANK_RE.find_iter(sentence) {
-            let cap =
-                result.expect("fancy-regex: failed to find [answer] pattern in cloze sentence");
+            let Ok(cap) = result else {
+                tracing::error!("fancy-regex: failed to find [answer] pattern in cloze sentence");
+                continue;
+            };
 
             // Text before the blank
             if cap.start() > last_end {

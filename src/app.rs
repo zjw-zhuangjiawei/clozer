@@ -86,9 +86,38 @@ impl App {
             }
 
             // Global messages
-            Message::QueueGenerationResult(result) => {
-                self.model.queue_registry.set_completed(result.item_id);
-                self.model.cloze_registry.add(result.cloze);
+            Message::QueueGenerationResult(result) => match result {
+                crate::state::QueueGenerationResult::Success { item_id, cloze } => {
+                    self.model.queue_registry.set_completed(item_id);
+                    self.model.cloze_registry.add(cloze);
+                    self.ui.push_notification(
+                        crate::ui::notification::NotificationLevel::Info,
+                        "Cloze generated successfully",
+                    );
+                    Task::none()
+                }
+                crate::state::QueueGenerationResult::Failed { item_id, error } => {
+                    self.model.queue_registry.set_failed(item_id, error.clone());
+                    self.ui.push_notification(
+                        crate::ui::notification::NotificationLevel::Error,
+                        format!("Generation failed: {}", error),
+                    );
+                    Task::none()
+                }
+            },
+
+            // Notification management
+            Message::PushNotification(notification) => {
+                self.ui
+                    .push_notification(notification.level, notification.message);
+                Task::none()
+            }
+            Message::DismissNotification(id) => {
+                self.ui.dismiss_notification(id);
+                Task::none()
+            }
+            Message::NotificationTick => {
+                self.ui.clean_expired();
                 Task::none()
             }
 
@@ -143,7 +172,7 @@ impl App {
 
     /// Returns the application subscription.
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::event::listen_with(|event, _status, _id| match event {
+        let event_sub = iced::event::listen_with(|event, _status, _id| match event {
             iced::Event::Window(iced::window::Event::CloseRequested) => {
                 Some(Message::CloseRequested)
             }
@@ -155,7 +184,12 @@ impl App {
                 ..
             }) => Some(Message::TabPressed),
             _ => None,
-        })
+        });
+
+        let tick =
+            iced::time::every(std::time::Duration::from_secs(2)).map(|_| Message::NotificationTick);
+
+        Subscription::batch(vec![event_sub, tick])
     }
 
     /// Called when the application is closing.

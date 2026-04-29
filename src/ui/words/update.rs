@@ -477,11 +477,14 @@ pub fn update(
 
                 if let Err(e) = std::fs::write(&path, sentences.join("\n")) {
                     tracing::error!(error = %e, "Failed to write plaintext export");
+                    return Task::done(WordsMessage::ExportFailed(e.to_string()));
                 } else {
                     tracing::info!(count = sentences.len(), path = ?path, "Exported clozes to plaintext");
                 }
             }
         }
+        // Export failure — converted to PushNotification in compositor layer
+        WordsMessage::ExportFailed(_) => {}
         // Ignore deprecated messages
         WordsMessage::SearchResultsReady(_) | WordsMessage::TagFilterChanged(_) => {
             tracing::warn!("Received deprecated message: {:?}", message);

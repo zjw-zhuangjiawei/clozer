@@ -12,7 +12,17 @@ use rig::providers::openai;
 use rig::providers::perplexity;
 use rig::providers::xai;
 use std::sync::Arc;
+use thiserror::Error;
 use tracing::instrument;
+
+#[derive(Debug, Error)]
+pub enum GenerateError {
+    #[error("LLM provider error: {0}")]
+    Provider(String),
+
+    #[error("No prompt response from LLM")]
+    NoResponse,
+}
 
 #[derive(Clone)]
 pub enum AgentWrapper {
@@ -88,14 +98,11 @@ impl GeneratorState {
             .and_then(|id| self.model_registry.get(id))
     }
 
-    pub fn generator(&self) -> Arc<Generator> {
-        let model_id = self.selected_model_id.expect("No model selected");
-        let model = self.model_registry.get(model_id).expect("Model not found");
-        let provider = self
-            .provider_registry
-            .get(model.provider_id)
-            .expect("Provider not found");
-        Arc::new(Generator::new(provider, model))
+    pub fn generator(&self) -> Option<Arc<Generator>> {
+        let model_id = self.selected_model_id?;
+        let model = self.model_registry.get(model_id)?;
+        let provider = self.provider_registry.get(model.provider_id)?;
+        Some(Arc::new(Generator::new(provider, model)))
     }
 }
 
@@ -185,7 +192,7 @@ impl Generator {
             cefr_level = ?meaning.cefr_level
         )
     )]
-    pub async fn generate(&self, word: &Word, meaning: &Meaning) -> Cloze {
+    pub async fn generate(&self, word: &Word, meaning: &Meaning) -> Result<Cloze, GenerateError> {
         // Build CEFR level info if available
         let cefr_info = match meaning.cefr_level {
             Some(level) => format!(" (CEFR level: {})", level),
@@ -205,21 +212,42 @@ Return ONLY the sentence."#,
 
         let start = std::time::Instant::now();
         let sentence = match &self.agent {
-            AgentWrapper::OpenAI(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::Anthropic(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::DeepSeek(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::Gemini(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::Ollama(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::Perplexity(a) => a.prompt(&prompt).await.unwrap(),
-            AgentWrapper::XAI(a) => a.prompt(&prompt).await.unwrap(),
+            AgentWrapper::OpenAI(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::Anthropic(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::DeepSeek(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::Gemini(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::Ollama(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::Perplexity(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
+            AgentWrapper::XAI(a) => a
+                .prompt(&prompt)
+                .await
+                .map_err(|e| GenerateError::Provider(e.to_string()))?,
         };
         let elapsed = start.elapsed().as_millis();
         tracing::debug!(elapsed_ms = elapsed, "LLM request completed");
 
         let segments = Cloze::parse_from_sentence(&sentence);
-        Cloze::builder()
+        Ok(Cloze::builder()
             .meaning_id(meaning.id)
             .segments(segments)
-            .build()
+            .build())
     }
 }

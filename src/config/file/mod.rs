@@ -29,7 +29,7 @@ impl FileConfig {
     }
 
     /// Serializes configuration to a TOML string.
-    pub fn dump(&self) -> String {
-        toml::to_string_pretty(self).expect("Failed to serialize config")
+    pub fn dump(&self) -> Result<String, toml::ser::Error> {
+        toml::to_string_pretty(self)
     }
 }

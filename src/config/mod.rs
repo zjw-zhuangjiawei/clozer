@@ -8,6 +8,7 @@
 pub mod cli;
 pub mod constants;
 pub mod env;
+pub mod error;
 pub mod file;
 
 use crate::ui::theme::AppTheme;
@@ -15,6 +16,7 @@ use clap::ValueEnum;
 pub use cli::CliConfig;
 pub use constants::paths;
 pub use env::EnvConfig;
+pub use error::ConfigError;
 pub use file::{AiConfig, FileConfig, GeneralConfig, ModelConfig, ProviderConfig};
 use serde::{Deserialize, Serialize};
 
@@ -96,7 +98,10 @@ impl AppConfig {
         }
 
         let file_config = self.construct_file_config();
-        let content = file_config.dump();
+        let Ok(content) = file_config.dump() else {
+            tracing::error!("Failed to serialize config");
+            return;
+        };
 
         if let Err(e) = std::fs::write(&self.config_file, content) {
             tracing::error!("Failed to write config file: {}", e);
@@ -140,7 +145,7 @@ impl AppConfig {
     ///
     /// - `cli`: CLI arguments (highest priority)
     /// - `env`: Environment variables
-    pub fn load(cli: CliConfig, env: EnvConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load(cli: CliConfig, env: EnvConfig) -> Self {
         tracing::debug!("Loading configuration...");
 
         // Resolve config file path
@@ -201,12 +206,12 @@ impl AppConfig {
             theme
         );
 
-        Ok(Self {
+        Self {
             data_dir,
             config_file,
             log_level,
             theme,
             ai: file_config.ai,
-        })
+        }
     }
 }

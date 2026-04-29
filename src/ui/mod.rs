@@ -1,6 +1,7 @@
 //! UI module with single-window sub-modules and shared components.
 
 pub mod compositor;
+pub mod notification;
 
 pub mod design_tokens;
 pub mod layout;

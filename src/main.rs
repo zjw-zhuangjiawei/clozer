@@ -10,7 +10,7 @@ fn main() {
     let env = EnvConfig::load(std::env::vars()).unwrap_or_default();
 
     // Load app config with log level
-    let app_config = AppConfig::load(cli, env).unwrap_or_default();
+    let app_config = AppConfig::load(cli, env);
 
     // Initialize tracing with structured logging
     // Use target-based filtering and compact format for cleaner output

@@ -17,7 +17,16 @@ pub async fn lookup(word: &str) -> Result<DictionaryEntry, DictionaryError> {
         });
     }
 
+    if !response.status().is_success() {
+        return Err(DictionaryError::HttpStatus {
+            status: response.status().as_u16(),
+        });
+    }
+
     let mut api_response: Vec<ApiResponse> = response.json().await?;
+    if api_response.is_empty() {
+        return Err(DictionaryError::UnexpectedFormat);
+    }
     let entry = api_response.remove(0);
 
     Ok(DictionaryEntry { word: entry.word })

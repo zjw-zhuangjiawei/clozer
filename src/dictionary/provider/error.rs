@@ -7,4 +7,10 @@ pub enum DictionaryError {
 
     #[error("Network error: {0}")]
     Network(#[from] reqwest::Error),
+
+    #[error("Unexpected API response format")]
+    UnexpectedFormat,
+
+    #[error("API returned status code {status}")]
+    HttpStatus { status: u16 },
 }

@@ -6,6 +6,7 @@
 use crate::state::QueueGenerationResult;
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
+use crate::ui::notification::Notification;
 use crate::ui::queue::QueueMessage;
 use crate::ui::settings::SettingsMessage;
 use crate::ui::words::WordsMessage;
@@ -42,4 +43,13 @@ pub enum Message {
 
     // Tab key pressed (for search suggestion acceptance)
     TabPressed,
+
+    // Push a notification banner to the UI
+    PushNotification(Notification),
+
+    // Dismiss a notification by ID
+    DismissNotification(usize),
+
+    // Periodic tick for auto-dismissing expired notifications
+    NotificationTick,
 }
