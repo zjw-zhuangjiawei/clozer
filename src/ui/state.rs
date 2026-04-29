@@ -1,20 +1,18 @@
-//! Main window state.
+//! Application UI state.
 
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
-use crate::ui::queue::state::QueueState;
 use crate::ui::settings::state::SettingsState;
 use crate::ui::words::state::WordsState;
 
-/// State for the main application window.
+/// UI presentation state for the single-window application.
 ///
-/// Contains all UI state: selection, expansion, inputs, and dropdowns.
+/// Contains sub-panel states, navigation, window dimensions, and theme.
+/// Queue panel has no local state — selection is managed in QueueRegistry.
 #[derive(Debug)]
-pub struct MainWindowState {
+pub struct UiState {
     /// Words panel state
     pub words: WordsState,
-    /// Queue panel state
-    pub queue: QueueState,
     /// Settings panel state
     pub settings: SettingsState,
     /// Current navigation view
@@ -25,11 +23,10 @@ pub struct MainWindowState {
     pub theme: AppTheme,
 }
 
-impl Default for MainWindowState {
+impl Default for UiState {
     fn default() -> Self {
         Self {
             words: WordsState::new(),
-            queue: QueueState::new(),
             settings: SettingsState::new(),
             current_view: NavItem::default(),
             window_width: 1024,
@@ -38,8 +35,8 @@ impl Default for MainWindowState {
     }
 }
 
-impl MainWindowState {
-    /// Creates a new MainWindowState.
+impl UiState {
+    /// Creates a new UiState.
     pub fn new() -> Self {
         Self::default()
     }

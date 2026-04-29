@@ -1,18 +1,19 @@
-//! Application UI view and update functions.
+//! UI compositor — composes words, queue, and settings panels into a single view.
 //!
-//! Contains the view() and update functions that compose words, queue,
-//! and settings panels into the single main window.
-
-use crate::ui::AppTheme;
-pub use crate::ui::nav::NavItem;
-pub use crate::ui::state::MainWindowState;
+//! Acts as a thin coordination layer: builds nav bar, routes to active panel,
+//! and applies adaptive layout. Panel-specific state lives in each panel's module.
 
 use crate::message::Message;
 use crate::state::Model;
+use crate::ui::AppTheme;
 use crate::ui::layout::{LayoutConfig, LayoutMode, adaptive_layout, breakpoint::Breakpoint};
+use crate::ui::nav::NavItem;
+use crate::ui::settings::state::SettingsState;
+use crate::ui::state::UiState;
 use crate::ui::theme::Spacing;
 use crate::ui::widgets::button;
 use crate::ui::words::message::WordsMessage;
+use crate::ui::words::state::WordsState;
 use iced::{Element, FillPortion, Task};
 
 static LAYOUT_CONFIG: std::sync::OnceLock<LayoutConfig> = std::sync::OnceLock::new();
@@ -21,7 +22,7 @@ fn get_layout_config() -> &'static LayoutConfig {
     LAYOUT_CONFIG.get_or_init(LayoutConfig::adaptive)
 }
 
-pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Message, AppTheme> {
+pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, AppTheme> {
     let breakpoint = Breakpoint::from_width(state.window_width as f32);
 
     let nav_spacing = if breakpoint.is_single_column() {
@@ -52,16 +53,14 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
     // Content based on current navigation view
     let content: Element<'a, Message, AppTheme> = match state.current_view {
         NavItem::Words => {
-            let left_panel = crate::ui::words::view(state, model, breakpoint).map(Message::Words);
-            // Show words panel, hide queue panel
+            let left_panel = crate::ui::words::view(&state.words, model, state.theme, breakpoint)
+                .map(Message::Words);
             if breakpoint.is_single_column() {
-                // Mobile: single column, full width
                 iced::widget::column![left_panel]
                     .spacing(Spacing::DEFAULT.l2)
                     .padding(Spacing::DEFAULT.l2)
                     .into()
             } else {
-                // Tablet/Desktop: words panel takes left portion
                 iced::widget::row![
                     iced::widget::container(left_panel)
                         .width(FillPortion((left_ratio * 100.0) as u16))
@@ -110,29 +109,23 @@ pub fn view<'a>(state: &'a MainWindowState, model: &'a Model) -> Element<'a, Mes
     // Use layout system based on configuration
     let layout_config = get_layout_config();
     match layout_config.mode {
-        LayoutMode::Adaptive => {
-            // Use adaptive layout with nav bar and content
-            adaptive_layout(nav_bar.into(), content, breakpoint)
-        }
-        _ => {
-            // Fallback to existing behavior for other modes
-            iced::widget::column![nav_bar, content].into()
-        }
+        LayoutMode::Adaptive => adaptive_layout(nav_bar.into(), content, breakpoint),
+        _ => iced::widget::column![nav_bar, content].into(),
     }
 }
 
-/// Handles words panel update - returns Task<Message> for async operations.
+/// Handles words panel update — takes only WordsState, not full UiState.
 pub fn update_words(
-    state: &mut MainWindowState,
+    state: &mut WordsState,
     message: WordsMessage,
     model: &mut Model,
 ) -> Task<Message> {
     crate::ui::words::update(state, message, model).map(Message::Words)
 }
 
-/// Handles settings panel update - returns Task<Message> for async operations.
+/// Handles settings panel update — takes only SettingsState, not full UiState.
 pub fn update_settings(
-    state: &mut MainWindowState,
+    state: &mut SettingsState,
     message: crate::ui::settings::SettingsMessage,
     _model: &mut Model,
 ) -> Task<Message> {
@@ -141,7 +134,6 @@ pub fn update_settings(
         SettingsMessage::ThemeChanged(theme) => {
             Task::done(crate::message::Message::ThemeChanged(theme))
         }
-        _ => crate::ui::settings::handlers::update(&mut state.settings, message, _model)
-            .map(Message::Settings),
+        _ => crate::ui::settings::handlers::update(state, message, _model).map(Message::Settings),
     }
 }

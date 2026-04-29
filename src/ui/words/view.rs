@@ -4,7 +4,6 @@ use crate::query::SortType;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::layout::breakpoint::Breakpoint;
-use crate::ui::state::MainWindowState;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::button;
 use crate::ui::widgets::{CheckboxState, svg_checkbox};
@@ -19,22 +18,21 @@ use uuid::Uuid;
 
 // Renders the words panel.
 pub fn view<'a>(
-    state: &'a MainWindowState,
+    words_state: &'a WordsState,
     model: &'a Model,
+    theme: AppTheme,
     breakpoint: Breakpoint,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let words_state = &state.words;
     let (left_ratio, right_ratio) = breakpoint.column_ratio();
 
     // Search and filter bar
     let search_bar = build_search_bar(words_state, model, breakpoint);
 
-    // Get theme from state
-    let theme = state.theme;
+    // Get theme colors
     let colors = theme.colors();
 
     // Word tree (left panel)
-    let word_tree = build_word_tree(state, model, theme);
+    let word_tree = build_word_tree(words_state, model, theme);
 
     if breakpoint.is_single_column() {
         // Mobile: single column layout (word tree only, no detail panel)
@@ -145,12 +143,10 @@ fn build_search_bar<'a>(
 
 /// Build the word tree.
 fn build_word_tree<'a>(
-    state: &'a MainWindowState,
+    words_state: &'a WordsState,
     model: &'a Model,
     theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let words_state = &state.words;
-
     // Execute the query using the new SearchManager
     // Note: We need to clone the search state because we can't borrow mutably in a view function
     // The actual caching happens in the update loop
@@ -160,14 +156,14 @@ fn build_word_tree<'a>(
         Some(results) => results
             .iter()
             .filter_map(|(word_id, _)| model.word_registry.get(*word_id))
-            .map(|word| build_word_node(state, model, word, theme))
+            .map(|word| build_word_node(words_state, model, word, theme))
             .collect(),
         None => {
             // No results cached yet, show all words
             model
                 .word_registry
                 .iter()
-                .map(|(_, word)| build_word_node(state, model, word, theme))
+                .map(|(_, word)| build_word_node(words_state, model, word, theme))
                 .collect()
         }
     };
@@ -189,12 +185,11 @@ fn build_word_tree<'a>(
 
 /// Build a single word node with its meanings.
 fn build_word_node<'a>(
-    state: &'a MainWindowState,
+    words_state: &'a WordsState,
     model: &'a Model,
     word: &'a crate::models::Word,
     theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let words_state = &state.words;
     let is_expanded = words_state.expansion.is_expanded(word.id);
     let is_selected = words_state.selection.is_word_selected(word);
     let is_partial = words_state.selection.is_word_partial(word);
@@ -290,7 +285,7 @@ fn build_word_node<'a>(
         // Meaning nodes
         for meaning_id in &word.meaning_ids {
             if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-                content = content.push(build_meaning_node(state, model, meaning, theme));
+                content = content.push(build_meaning_node(words_state, model, meaning, theme));
             }
         }
 
@@ -341,12 +336,11 @@ fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage, AppTheme
 
 /// Build a meaning node with its clozes.
 fn build_meaning_node<'a>(
-    state: &'a MainWindowState,
+    words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
     theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let words_state = &state.words;
     let is_selected = words_state.selection.is_meaning_selected(meaning.id);
     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
     let colors = theme.colors();
@@ -397,7 +391,7 @@ fn build_meaning_node<'a>(
         .align_y(iced::Alignment::Center);
 
     // Tags row
-    let tags_row = build_tags_row(state, model, meaning, theme);
+    let tags_row = build_tags_row(words_state, model, meaning, theme);
 
     // Collect cloze preview elements (owned) - clickable to toggle detail panel
     let cloze_preview_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
@@ -452,13 +446,11 @@ fn build_meaning_actions<'a>(meaning_id: MeaningId) -> Element<'a, WordsMessage,
 
 /// Build the tags row for a meaning.
 fn build_tags_row<'a>(
-    state: &'a MainWindowState,
+    words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
     theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let words_state = &state.words;
-
     // Tag chips
     let mut tag_chips: Vec<Element<'a, WordsMessage, AppTheme>> = meaning
         .tag_ids

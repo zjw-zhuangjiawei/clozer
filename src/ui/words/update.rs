@@ -3,23 +3,23 @@
 use crate::models::types::{ClozeId, MeaningId};
 use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
-use crate::ui::state::MainWindowState;
 use crate::ui::words::manager::{DetailPanelState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
+use crate::ui::words::state::WordsState;
 use iced::Task;
 
 #[allow(deprecated)]
 pub fn update(
-    state: &mut MainWindowState,
+    state: &mut WordsState,
     message: WordsMessage,
     model: &mut Model,
 ) -> Task<WordsMessage> {
     match message {
         // Search
         WordsMessage::SearchQueryChanged(query) => {
-            state.words.search.set_query(query);
+            state.search.set_query(query);
             // Execute the query immediately
-            state.words.search.execute(
+            state.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
@@ -28,9 +28,9 @@ pub fn update(
             );
         }
         WordsMessage::SearchCleared => {
-            state.words.search.clear_query();
+            state.search.clear_query();
             // Re-execute to show all words
-            state.words.search.execute(
+            state.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
@@ -39,9 +39,9 @@ pub fn update(
             );
         }
         WordsMessage::SortTypeChanged(sort) => {
-            state.words.search.set_sort(sort);
+            state.search.set_sort(sort);
             // Re-execute with new sort
-            state.words.search.execute(
+            state.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
@@ -50,9 +50,9 @@ pub fn update(
             );
         }
         WordsMessage::SuggestionAccepted => {
-            if let Some(suggestion) = state.words.search.get_suggestion(&model.word_registry) {
-                state.words.search.set_query(suggestion);
-                state.words.search.execute(
+            if let Some(suggestion) = state.search.get_suggestion(&model.word_registry) {
+                state.search.set_query(suggestion);
+                state.search.execute(
                     &model.word_registry,
                     &model.meaning_registry,
                     &model.cloze_registry,
@@ -64,9 +64,9 @@ pub fn update(
 
         // Filter (now integrated into search query)
         WordsMessage::FiltersCleared => {
-            state.words.search.clear_filters();
+            state.search.clear_filters();
             // Re-execute to show all words
-            state.words.search.execute(
+            state.search.execute(
                 &model.word_registry,
                 &model.meaning_registry,
                 &model.cloze_registry,
@@ -79,75 +79,70 @@ pub fn update(
         WordsMessage::WordToggled(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
                 let word = word.clone();
-                state.words.selection.toggle_word(&word);
+                state.selection.toggle_word(&word);
             }
         }
         WordsMessage::MeaningToggled(meaning_id) => {
-            state.words.selection.toggle_meaning(meaning_id);
+            state.selection.toggle_meaning(meaning_id);
         }
         WordsMessage::ClozeToggled(cloze_id) => {
-            state.words.selection.toggle_cloze(cloze_id);
+            state.selection.toggle_cloze(cloze_id);
         }
         WordsMessage::SelectAllTriggered => {
-            state
-                .words
-                .selection
-                .select_all_meanings(&model.meaning_registry);
+            state.selection.select_all_meanings(&model.meaning_registry);
         }
         WordsMessage::DeselectAllTriggered => {
-            state.words.selection.clear_all();
+            state.selection.clear_all();
         }
 
         // Detail panel selection
-        WordsMessage::WordSelected(word_id) => match state.words.panel.state() {
+        WordsMessage::WordSelected(word_id) => match state.panel.state() {
             DetailPanelState::WordView { word_id: id } if *id == word_id => {
-                state.words.panel.close();
+                state.panel.close();
             }
             _ => {
-                state.words.panel.show_word(word_id);
+                state.panel.show_word(word_id);
             }
         },
-        WordsMessage::MeaningSelected(meaning_id) => match state.words.panel.state() {
+        WordsMessage::MeaningSelected(meaning_id) => match state.panel.state() {
             DetailPanelState::MeaningView { meaning_id: id } if *id == meaning_id => {
-                state.words.panel.close();
+                state.panel.close();
             }
             _ => {
-                state.words.panel.show_meaning(meaning_id);
+                state.panel.show_meaning(meaning_id);
             }
         },
-        WordsMessage::ClozeSelected(cloze_id) => match state.words.panel.state() {
+        WordsMessage::ClozeSelected(cloze_id) => match state.panel.state() {
             DetailPanelState::ClozeView { cloze_id: id } if *id == cloze_id => {
-                state.words.panel.close();
+                state.panel.close();
             }
             _ => {
-                state.words.panel.show_cloze(cloze_id);
+                state.panel.show_cloze(cloze_id);
             }
         },
         WordsMessage::DetailClosed => {
-            state.words.panel.close();
+            state.panel.close();
         }
 
         // Detail panel editing - start operations
         WordsMessage::NewWordStarted => {
-            state.words.panel.close();
-            state.words.panel.start_word_create();
+            state.panel.close();
+            state.panel.start_word_create();
         }
         WordsMessage::MeaningAddStarted { word_id } => {
-            state.words.panel.close();
-            state.words.panel.start_meaning_create(word_id);
+            state.panel.close();
+            state.panel.start_meaning_create(word_id);
         }
         WordsMessage::EditWordStarted(word_id) => {
             if let Some(word) = model.word_registry.get(word_id) {
-                state.words.panel.start_word_edit(
-                    word_id,
-                    word.content.clone(),
-                    word.language.clone(),
-                );
+                state
+                    .panel
+                    .start_word_edit(word_id, word.content.clone(), word.language.clone());
             }
         }
         WordsMessage::EditMeaningStarted(meaning_id) => {
             if let Some(meaning) = model.meaning_registry.get(meaning_id) {
-                state.words.panel.start_meaning_edit(
+                state.panel.start_meaning_edit(
                     meaning_id,
                     meaning.definition.clone(),
                     meaning.pos,
@@ -158,28 +153,28 @@ pub fn update(
 
         // Detail panel editing - field updates
         WordsMessage::EditWordContentChanged(content) => {
-            state.words.panel.word_buffer.content = content;
+            state.panel.word_buffer.content = content;
         }
         WordsMessage::EditWordLanguageChanged { input, parsed } => {
-            state.words.panel.word_buffer.language_input = input;
-            state.words.panel.word_buffer.language = parsed;
+            state.panel.word_buffer.language_input = input;
+            state.panel.word_buffer.language = parsed;
         }
         WordsMessage::EditMeaningDefinitionChanged(definition) => {
-            state.words.panel.meaning_buffer.definition = definition;
+            state.panel.meaning_buffer.definition = definition;
         }
         WordsMessage::EditMeaningPosChanged(pos) => {
-            state.words.panel.meaning_buffer.pos = pos;
+            state.panel.meaning_buffer.pos = pos;
         }
         WordsMessage::EditMeaningCefrChanged(cefr) => {
-            state.words.panel.meaning_buffer.cefr = cefr;
+            state.panel.meaning_buffer.cefr = cefr;
         }
 
         // Detail panel editing - save/cancel
         WordsMessage::EditSaved => {
-            match state.words.panel.state() {
+            match state.panel.state() {
                 DetailPanelState::WordEditing { word_id } => {
                     if let Some(word) = model.word_registry.get_mut(*word_id) {
-                        let trimmed = state.words.panel.word_buffer.content.trim();
+                        let trimmed = state.panel.word_buffer.content.trim();
                         if !trimmed.is_empty() {
                             word.content = trimmed.to_string();
                             tracing::debug!("Updated word: {} (id={})", word.content, word_id);
@@ -188,12 +183,12 @@ pub fn update(
                 }
                 DetailPanelState::MeaningEditing { meaning_id } => {
                     if let Some(meaning) = model.meaning_registry.get_mut(*meaning_id) {
-                        let trimmed = state.words.panel.meaning_buffer.definition.trim();
+                        let trimmed = state.panel.meaning_buffer.definition.trim();
                         if !trimmed.is_empty() {
                             meaning.definition = trimmed.to_string();
                         }
-                        meaning.pos = state.words.panel.meaning_buffer.pos;
-                        meaning.cefr_level = state.words.panel.meaning_buffer.cefr;
+                        meaning.pos = state.panel.meaning_buffer.pos;
+                        meaning.cefr_level = state.panel.meaning_buffer.cefr;
                         tracing::debug!(
                             "Updated meaning: {} (id={})",
                             meaning.definition,
@@ -203,15 +198,15 @@ pub fn update(
                 }
                 _ => {}
             }
-            state.words.panel.close();
+            state.panel.close();
         }
         WordsMessage::NewWordSaved => {
-            let word_buffer = &state.words.panel.word_buffer;
-            let meaning_buffer = &state.words.panel.meaning_buffer;
+            let word_buffer = &state.panel.word_buffer;
+            let meaning_buffer = &state.panel.meaning_buffer;
             let word_content = word_buffer.content.trim();
 
             if word_content.is_empty() {
-                state.words.panel.close();
+                state.panel.close();
                 return Task::none();
             }
 
@@ -220,7 +215,7 @@ pub fn update(
                 .iter()
                 .any(|(_, w)| w.content.to_lowercase() == word_content.to_lowercase());
             if exists {
-                state.words.panel.close();
+                state.panel.close();
                 return Task::none();
             }
 
@@ -260,19 +255,19 @@ pub fn update(
                 model.word_registry.add_meaning(word_id, meaning_id);
             }
 
-            state.words.panel.close();
-            state.words.panel.show_word(word_id);
+            state.panel.close();
+            state.panel.show_word(word_id);
         }
         WordsMessage::MeaningAddSaved => {
-            let buffer = &state.words.panel.meaning_buffer;
+            let buffer = &state.panel.meaning_buffer;
             let definition = buffer.definition.trim();
 
             if definition.is_empty() {
-                state.words.panel.close();
+                state.panel.close();
                 return Task::none();
             }
 
-            if let DetailPanelState::MeaningCreating { word_id } = state.words.panel.state() {
+            if let DetailPanelState::MeaningCreating { word_id } = state.panel.state() {
                 let meaning = Meaning::builder()
                     .word_id(*word_id)
                     .definition(definition.to_string())
@@ -291,12 +286,12 @@ pub fn update(
                 model.meaning_registry.add(meaning);
                 model.word_registry.add_meaning(*word_id, meaning_id);
 
-                state.words.panel.close();
-                state.words.panel.show_meaning(meaning_id);
+                state.panel.close();
+                state.panel.show_meaning(meaning_id);
             }
         }
         WordsMessage::EditCancelled => {
-            state.words.panel.close();
+            state.panel.close();
         }
 
         // Word CRUD
@@ -311,7 +306,7 @@ pub fn update(
                     let word = Word::builder().content(trimmed.to_string()).build();
                     tracing::debug!("Creating word: {} (id={})", word.content, word.id);
                     model.word_registry.add(word);
-                    state.words.search.clear_query();
+                    state.search.clear_query();
                 }
             }
         }
@@ -326,22 +321,22 @@ pub fn update(
             model.word_registry.delete(word_id);
             if let Some(word) = model.word_registry.get(word_id) {
                 for mid in &word.meaning_ids {
-                    state.words.selection.remove_meaning(mid);
+                    state.selection.remove_meaning(mid);
                 }
             }
         }
         WordsMessage::WordExpanded(word_id) => {
-            state.words.expansion.expand(word_id);
+            state.expansion.expand(word_id);
         }
         WordsMessage::WordCollapsed(word_id) => {
-            state.words.expansion.collapse(word_id);
+            state.expansion.collapse(word_id);
         }
         WordsMessage::WordsExpandedAll => {
             let ids: Vec<_> = model.word_registry.iter().map(|(id, _)| *id).collect();
-            state.words.expansion.expand_all(ids);
+            state.expansion.expand_all(ids);
         }
         WordsMessage::WordsCollapsedAll => {
-            state.words.expansion.collapse_all();
+            state.expansion.collapse_all();
         }
 
         WordsMessage::MeaningDeleted(meaning_id) => {
@@ -352,37 +347,35 @@ pub fn update(
                 model.cloze_registry.delete_by_meaning(meaning_id);
                 model.word_registry.remove_meaning(word_id, meaning_id);
                 model.meaning_registry.delete(meaning_id);
-                state.words.selection.remove_meaning(&meaning_id);
+                state.selection.remove_meaning(&meaning_id);
             }
         }
 
         // Tag operations
         WordsMessage::TagDropdownOpened { for_meaning } => {
             state
-                .words
                 .panel
                 .open_tag_dropdown(TagDropdownTarget::SingleMeaning(for_meaning));
         }
         WordsMessage::TagBatchDropdownOpened => {
             state
-                .words
                 .panel
                 .open_tag_dropdown(TagDropdownTarget::SelectedMeanings);
         }
         WordsMessage::TagSearchChanged(query) => {
-            if let Some(ref mut dropdown) = state.words.panel.tag_dropdown_mut() {
+            if let Some(ref mut dropdown) = state.panel.tag_dropdown_mut() {
                 dropdown.search = query;
             }
         }
         WordsMessage::TagAddedToMeaning { meaning_id, tag_id } => {
             model.meaning_registry.add_tag(meaning_id, tag_id);
-            state.words.panel.close_tag_dropdown();
+            state.panel.close_tag_dropdown();
         }
         WordsMessage::TagAddedToSelected { tag_id } => {
-            for meaning_id in state.words.selection.selected_meanings().iter() {
+            for meaning_id in state.selection.selected_meanings().iter() {
                 model.meaning_registry.add_tag(*meaning_id, tag_id);
             }
-            state.words.panel.close_tag_dropdown();
+            state.panel.close_tag_dropdown();
         }
         WordsMessage::TagRemovedFromMeaning { meaning_id, tag_id } => {
             model.meaning_registry.remove_tag(meaning_id, tag_id);
@@ -406,11 +399,11 @@ pub fn update(
                 };
 
                 model.meaning_registry.add_tag(meaning_id, tag_id);
-                state.words.panel.close_tag_dropdown();
+                state.panel.close_tag_dropdown();
             }
         }
         WordsMessage::TagDropdownClosed => {
-            state.words.panel.close_tag_dropdown();
+            state.panel.close_tag_dropdown();
         }
 
         // Cloze operations
@@ -421,17 +414,16 @@ pub fn update(
 
         // Batch operations
         WordsMessage::MeaningsQueuedForGeneration => {
-            let count = state.words.selection.meaning_count();
-            for meaning_id in state.words.selection.selected_meanings().iter() {
+            let count = state.selection.meaning_count();
+            for meaning_id in state.selection.selected_meanings().iter() {
                 model.queue_registry.enqueue(*meaning_id);
             }
             tracing::info!("Added {} meanings to queue", count);
-            state.words.selection.clear_all();
+            state.selection.clear_all();
         }
         WordsMessage::MeaningsDeleted => {
-            let count = state.words.selection.meaning_count();
+            let count = state.selection.meaning_count();
             let meaning_ids: Vec<MeaningId> = state
-                .words
                 .selection
                 .selected_meanings()
                 .iter()
@@ -449,24 +441,19 @@ pub fn update(
             }
 
             tracing::info!("Deleted {} meanings", count);
-            state.words.selection.clear_all();
+            state.selection.clear_all();
         }
         WordsMessage::ClozesDeleted => {
-            let count = state.words.selection.cloze_count();
-            let cloze_ids: Vec<ClozeId> = state
-                .words
-                .selection
-                .selected_clozes()
-                .iter()
-                .copied()
-                .collect();
+            let count = state.selection.cloze_count();
+            let cloze_ids: Vec<ClozeId> =
+                state.selection.selected_clozes().iter().copied().collect();
 
             for cloze_id in &cloze_ids {
                 model.cloze_registry.delete(*cloze_id);
             }
 
             tracing::info!("Deleted {} clozes", count);
-            state.words.selection.clear_clozes();
+            state.selection.clear_clozes();
         }
 
         // Export operations
@@ -477,7 +464,6 @@ pub fn update(
                 .save_file()
             {
                 let sentences: Vec<String> = state
-                    .words
                     .selection
                     .selected_clozes()
                     .iter()
