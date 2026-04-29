@@ -7,8 +7,8 @@
 
 use crate::config::LogLevel;
 use crate::config::file::ai::ProviderTypeDto;
+use crate::models::types::{ModelId, ProviderId};
 use crate::ui::AppTheme;
-use uuid::Uuid;
 
 /// Root message enum for Settings panel.
 ///
@@ -38,9 +38,9 @@ pub enum ProviderMessage {
     /// Start adding a new provider
     Add,
     /// Start editing an existing provider
-    Edit(Uuid),
+    Edit(ProviderId),
     /// Delete a provider
-    Delete(Uuid),
+    Delete(ProviderId),
     /// Save provider (new or edited)
     Save,
     /// Cancel provider editing
@@ -61,9 +61,9 @@ pub enum ModelMessage {
     /// Start adding a new model
     Add,
     /// Start editing an existing model
-    Edit(Uuid),
+    Edit(ModelId),
     /// Delete a model
-    Delete(Uuid),
+    Delete(ModelId),
     /// Save model (new or edited)
     Save,
     /// Cancel model editing
@@ -71,9 +71,9 @@ pub enum ModelMessage {
     /// Model name changed
     NameChanged(String),
     /// Model provider ID changed
-    ProviderIdChanged(Uuid),
+    ProviderIdChanged(ProviderId),
     /// Model ID changed (from provider)
     ModelIdChanged(String),
     /// Select a model as active
-    Select(Uuid),
+    Select(ModelId),
 }

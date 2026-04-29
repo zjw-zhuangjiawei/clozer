@@ -265,7 +265,17 @@ impl fmt::Display for Spacing {
 }
 
 #[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ValueEnum, Display,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    ValueEnum,
+    Display,
+    strum::VariantArray,
 )]
 #[serde(rename_all = "snake_case")]
 #[clap(rename_all = "snake_case")]

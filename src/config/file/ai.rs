@@ -6,8 +6,21 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Provider type DTO for configuration file serialization.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Deserialize,
+    Serialize,
+    Default,
+    strum::Display,
+    strum::VariantArray,
+)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum ProviderTypeDto {
     #[default]
     OpenAI,

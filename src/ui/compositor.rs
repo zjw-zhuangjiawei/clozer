@@ -149,7 +149,8 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
             }
         }
         NavItem::Settings => {
-            let settings_panel = crate::ui::settings::view::view(model).map(Message::Settings);
+            let settings_panel =
+                crate::ui::settings::view::view(&state.settings, model).map(Message::Settings);
             if breakpoint.is_single_column() {
                 iced::widget::column![settings_panel]
                     .spacing(Spacing::DEFAULT.l2)

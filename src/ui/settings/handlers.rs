@@ -1,7 +1,3 @@
-//! Settings panel command handlers.
-//!
-//! Command handlers process messages and update state.
-
 use crate::state::Model;
 use crate::ui::settings::SettingsState;
 use crate::ui::settings::message::{
@@ -9,6 +5,7 @@ use crate::ui::settings::message::{
 };
 use iced::Task;
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// Handle general settings messages.
 pub fn general(
@@ -38,8 +35,9 @@ pub fn provider(
             state.provider_edit = crate::ui::settings::state::ProviderEditState::start_new();
         }
         ProviderMessage::Edit(id) => {
+            let uuid = Uuid::from(id);
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                if let Some(provider) = config.ai.providers.iter().find(|p| p.id == id) {
+                if let Some(provider) = config.ai.providers.iter().find(|p| p.id == uuid) {
                     state.provider_edit = crate::ui::settings::state::ProviderEditState::start_edit(
                         id,
                         provider.clone(),
@@ -48,10 +46,10 @@ pub fn provider(
             }
         }
         ProviderMessage::Delete(id) => {
+            let uuid = Uuid::from(id);
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                config.ai.providers.retain(|p| p.id != id);
-                // Also remove models associated with this provider
-                config.ai.models.retain(|m| m.provider_id != id);
+                config.ai.providers.retain(|p| p.id != uuid);
+                config.ai.models.retain(|m| m.provider_id != uuid);
                 config.save_to_file();
             }
         }
@@ -63,8 +61,11 @@ pub fn provider(
                 if is_new {
                     config.ai.providers.push(provider);
                 } else if let Some(editing_id) = state.provider_edit.editing_id {
-                    if let Some(existing) =
-                        config.ai.providers.iter_mut().find(|p| p.id == editing_id)
+                    if let Some(existing) = config
+                        .ai
+                        .providers
+                        .iter_mut()
+                        .find(|p| p.id == editing_id.0)
                     {
                         *existing = provider;
                     }
@@ -103,18 +104,19 @@ pub fn model_handler(
             state.model_edit = crate::ui::settings::state::ModelEditState::start_new();
         }
         ModelMessage::Edit(id) => {
+            let uuid = Uuid::from(id);
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                if let Some(m) = config.ai.models.iter().find(|m| m.id == id) {
+                if let Some(m) = config.ai.models.iter().find(|m| m.id == uuid) {
                     state.model_edit =
                         crate::ui::settings::state::ModelEditState::start_edit(id, m.clone());
                 }
             }
         }
         ModelMessage::Delete(id) => {
+            let uuid = Uuid::from(id);
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                config.ai.models.retain(|m| m.id != id);
-                // Clear selection if deleted model was selected
-                if config.ai.selected_model_id == Some(id) {
+                config.ai.models.retain(|m| m.id != uuid);
+                if config.ai.selected_model_id == Some(uuid) {
                     config.ai.selected_model_id = None;
                 }
                 config.save_to_file();
@@ -128,7 +130,8 @@ pub fn model_handler(
                 if is_new {
                     config.ai.models.push(model_config);
                 } else if let Some(editing_id) = state.model_edit.editing_id {
-                    if let Some(existing) = config.ai.models.iter_mut().find(|m| m.id == editing_id)
+                    if let Some(existing) =
+                        config.ai.models.iter_mut().find(|m| m.id == editing_id.0)
                     {
                         *existing = model_config;
                     }
@@ -144,15 +147,15 @@ pub fn model_handler(
             state.model_edit.data.name = name;
         }
         ModelMessage::ProviderIdChanged(provider_id) => {
-            state.model_edit.data.provider_id = provider_id;
+            state.model_edit.data.provider_id = provider_id.0;
         }
         ModelMessage::ModelIdChanged(model_id) => {
             state.model_edit.data.model_id = model_id;
         }
         ModelMessage::Select(id) => {
+            let uuid = Uuid::from(id);
             if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                config.ai.selected_model_id = Some(id);
-                // Reload generator with new config
+                config.ai.selected_model_id = Some(uuid);
                 model.generator.load_from_config(&config.ai);
                 config.save_to_file();
             }
@@ -172,10 +175,6 @@ pub fn update(
         General(msg) => general(state, msg, model),
         Provider(msg) => provider(state, msg, model),
         Model(msg) => model_handler(state, msg, model),
-        ThemeChanged(_) => {
-            // Theme changes are handled at the App level via update_settings
-            // This branch intentionally does nothing - the message is caught earlier
-            Task::none()
-        }
+        ThemeChanged(_) => Task::none(),
     }
 }

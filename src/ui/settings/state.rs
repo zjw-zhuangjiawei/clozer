@@ -5,13 +5,14 @@
 //! - ModelEditState: Model editing state
 
 use crate::config::file::ai::{ModelConfig, ProviderConfig};
+use crate::models::types::{ModelId, ProviderId};
 use uuid::Uuid;
 
 /// Editing state for providers.
 #[derive(Debug, Clone)]
 pub struct ProviderEditState {
     /// Currently editing provider ID (None = adding new)
-    pub editing_id: Option<Uuid>,
+    pub editing_id: Option<ProviderId>,
     /// Editing provider data
     pub data: ProviderConfig,
     /// Whether this is a new provider
@@ -51,7 +52,7 @@ impl ProviderEditState {
     }
 
     /// Start editing an existing provider.
-    pub fn start_edit(id: Uuid, data: ProviderConfig) -> Self {
+    pub fn start_edit(id: ProviderId, data: ProviderConfig) -> Self {
         Self {
             editing_id: Some(id),
             data,
@@ -82,7 +83,7 @@ impl ProviderEditState {
 #[derive(Debug, Clone)]
 pub struct ModelEditState {
     /// Currently editing model ID (None = adding new)
-    pub editing_id: Option<Uuid>,
+    pub editing_id: Option<ModelId>,
     /// Editing model data
     pub data: ModelConfig,
     /// Whether this is a new model
@@ -120,7 +121,7 @@ impl ModelEditState {
     }
 
     /// Start editing an existing model.
-    pub fn start_edit(id: Uuid, data: ModelConfig) -> Self {
+    pub fn start_edit(id: ModelId, data: ModelConfig) -> Self {
         Self {
             editing_id: Some(id),
             data,
