@@ -114,14 +114,40 @@ pub fn build_word_node<'a>(
             .on_press(WordsMessage::WordSelected(word.id))
             .into();
 
-    let word_header = Row::new()
+    let lang_badge: Option<Element<'a, WordsMessage, AppTheme>> =
+        word.language.as_ref().map(|lang| {
+            Container::new(
+                Text::new(lang.to_string())
+                    .size(FontSize::Caption.px())
+                    .color(colors.semantic.interactive.primary),
+            )
+            .padding([1, 6])
+            .style(move |_| container::Style {
+                background: Some(colors.semantic.surface.elevated.into()),
+                border: iced::Border {
+                    color: colors.semantic.border.default,
+                    width: 1.0,
+                    radius: 4.0.into(),
+                },
+                ..Default::default()
+            })
+            .into()
+        });
+
+    let mut word_header = Row::new()
         .push(expand_icon)
         .push(checkbox)
         .push(word_content)
-        .push(Space::new())
-        .push(build_word_actions(word.id))
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
+
+    if let Some(badge) = lang_badge {
+        word_header = word_header.push(badge);
+    }
+
+    word_header = word_header
+        .push(Space::new())
+        .push(build_word_actions(word.id));
 
     if is_expanded {
         let mut content = Column::new()

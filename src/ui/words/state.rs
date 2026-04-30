@@ -21,6 +21,8 @@ pub struct WordsState {
     pub expansion: ExpansionManager,
     /// Detail panel manager (unified view/edit state)
     pub panel: DetailPanelManager,
+    /// Last used language tag, pre-filled on next word create
+    pub last_language: Option<langtag::LangTagBuf>,
 }
 
 impl WordsState {

@@ -103,9 +103,13 @@ impl DetailPanelManager {
 
     // === Edit State Transitions ===
 
-    pub fn start_word_create(&mut self) {
+    pub fn start_word_create(&mut self, last_language: Option<langtag::LangTagBuf>) {
         self.word_buffer.clear();
         self.meaning_buffer.clear();
+        if let Some(ref lang) = last_language {
+            self.word_buffer.language = Some(lang.clone());
+            self.word_buffer.language_input = lang.to_string();
+        }
         self.state = DetailPanelState::WordCreating;
     }
 

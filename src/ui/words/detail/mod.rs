@@ -110,6 +110,7 @@ pub fn view<'a>(
             word_buffer,
             meaning_buffer,
             WordsMessage::NewWordSaved,
+            theme,
         ),
 
         DetailPanelState::WordEditing { .. } => word_form(
@@ -117,6 +118,7 @@ pub fn view<'a>(
             word_buffer,
             meaning_buffer,
             WordsMessage::EditSaved,
+            theme,
         ),
 
         DetailPanelState::MeaningCreating { word_id, .. } => {

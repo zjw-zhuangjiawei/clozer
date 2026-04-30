@@ -10,7 +10,7 @@ use crate::ui::words::manager::{MeaningEditBuffer, WordEditBuffer};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Column, PickList, Row, Text};
+use iced::widget::{Button, Column, PickList, Row, Text};
 use strum::VariantArray;
 
 use super::CefrLevelOption;
@@ -21,7 +21,9 @@ pub fn word_form<'a>(
     word_buffer: &'a WordEditBuffer,
     _meaning_buffer: &'a MeaningEditBuffer,
     on_save: WordsMessage,
+    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
+    let colors = theme.colors();
     let header = Row::new()
         .push(Text::new(title).size(FontSize::Heading.px()))
         .spacing(Spacing::DEFAULT.s);
@@ -41,13 +43,91 @@ pub fn word_form<'a>(
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
+    let validation_color = if word_buffer.language_input.is_empty() {
+        colors.semantic.text.tertiary
+    } else if word_buffer.language.is_some() {
+        colors.functional.success.w600()
+    } else {
+        colors.semantic.text.error
+    };
+
+    let validation_icon = if word_buffer.language.is_some() {
+        " ✓"
+    } else if !word_buffer.language_input.is_empty() {
+        " ⚠"
+    } else {
+        ""
+    };
+
+    let lang_status = match word_buffer.language_input.as_str() {
+        "" => "e.g. en, zh-CN, fr",
+        _ if word_buffer.language.is_some() => "Valid BCP 47 tag",
+        _ => "Not a valid language tag",
+    };
+
+    let lang_row = Row::new()
+        .push(Element::new(lang_input))
+        .push(
+            Text::new(validation_icon)
+                .size(FontSize::Body.px())
+                .color(validation_color),
+        )
+        .align_y(iced::Alignment::Center)
+        .spacing(Spacing::DEFAULT.xs);
+
+    let quick_langs: &[(&str, &str)] = &[
+        ("en", "EN"),
+        ("zh", "中文"),
+        ("ja", "日本語"),
+        ("ko", "한국어"),
+        ("fr", "FR"),
+        ("de", "DE"),
+        ("es", "ES"),
+        ("pt", "PT"),
+    ];
+
+    let quick_buttons: Vec<Element<'a, WordsMessage, AppTheme>> = quick_langs
+        .iter()
+        .map(|&(tag, label)| {
+            let tag_owned = tag.to_string();
+            Button::new(Text::new(label).size(FontSize::Caption.px()))
+                .style(if word_buffer.language_input == tag {
+                    crate::ui::widgets::button::primary
+                } else {
+                    crate::ui::widgets::button::secondary
+                })
+                .padding([2, 8])
+                .on_press(WordsMessage::EditWordLanguageChanged {
+                    input: tag_owned.clone(),
+                    parsed: tag_owned.parse::<langtag::LangTagBuf>().ok(),
+                })
+                .into()
+        })
+        .collect();
+
+    let quick_row = Row::new()
+        .spacing(Spacing::DEFAULT.xs)
+        .push(
+            Text::new("Quick:")
+                .size(FontSize::Caption.px())
+                .color(colors.semantic.text.tertiary),
+        )
+        .extend(quick_buttons)
+        .align_y(iced::Alignment::Center);
+
     let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
 
     let content = Column::new()
         .spacing(Spacing::DEFAULT.l)
         .push(header)
         .push(Element::new(word_input))
-        .push(Element::new(lang_input))
+        .push(lang_row)
+        .push(quick_row)
+        .push(
+            Text::new(lang_status)
+                .size(FontSize::Caption.px())
+                .color(validation_color),
+        )
         .push(Space::new())
         .push(footer);
 

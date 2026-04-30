@@ -127,7 +127,8 @@ pub fn update(
         // Detail panel editing - start operations
         WordsMessage::NewWordStarted => {
             state.panel.close();
-            state.panel.start_word_create();
+            let last_language = state.last_language.clone();
+            state.panel.start_word_create(last_language);
         }
         WordsMessage::MeaningAddStarted { word_id } => {
             state.panel.close();
@@ -177,8 +178,10 @@ pub fn update(
                         let trimmed = state.panel.word_buffer.content.trim();
                         if !trimmed.is_empty() {
                             word.content = trimmed.to_string();
-                            tracing::debug!("Updated word: {} (id={})", word.content, word_id);
                         }
+                        word.language = state.panel.word_buffer.language.clone();
+                        state.last_language = state.panel.word_buffer.language.clone();
+                        tracing::debug!("Updated word: {} (id={})", word.content, word_id);
                     }
                 }
                 DetailPanelState::MeaningEditing { meaning_id } => {
