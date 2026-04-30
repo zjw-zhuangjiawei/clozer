@@ -24,7 +24,7 @@ pub fn build_search_bar<'a>(
     };
 
     let mut search_input =
-        crate::ui::widgets::rich_text_input::RichTextInput::new("Search words or definitions...")
+        crate::ui::widgets::advanced_input::AdvancedInput::new("Search words or definitions...")
             .value(query)
             .on_input(WordsMessage::SearchQueryChanged)
             .on_submit(WordsMessage::SuggestionAccepted)

@@ -5,11 +5,12 @@
 use crate::models::PartOfSpeech;
 use crate::ui::AppTheme;
 use crate::ui::theme::{FontSize, Spacing};
+use crate::ui::widgets::AdvancedInput;
 use crate::ui::words::manager::{MeaningEditBuffer, WordEditBuffer};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Column, PickList, Row, Text, TextInput};
+use iced::widget::{Column, PickList, Row, Text};
 use strum::VariantArray;
 
 use super::CefrLevelOption;
@@ -25,12 +26,14 @@ pub fn word_form<'a>(
         .push(Text::new(title).size(FontSize::Heading.px()))
         .spacing(Spacing::DEFAULT.s);
 
-    let word_input = TextInput::new("Word *", &word_buffer.content)
+    let word_input = AdvancedInput::new("Word *")
+        .value(&word_buffer.content)
         .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let lang_input = TextInput::new("Language (optional)", &word_buffer.language_input)
+    let lang_input = AdvancedInput::new("Language (optional)")
+        .value(&word_buffer.language_input)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
             WordsMessage::EditWordLanguageChanged { input: s, parsed }
@@ -43,8 +46,8 @@ pub fn word_form<'a>(
     let content = Column::new()
         .spacing(Spacing::DEFAULT.l)
         .push(header)
-        .push(word_input)
-        .push(lang_input)
+        .push(Element::new(word_input))
+        .push(Element::new(lang_input))
         .push(Space::new())
         .push(footer);
 
@@ -64,7 +67,8 @@ pub fn meaning_form<'a>(
 
     let word_label = Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px());
 
-    let def_input = TextInput::new("Definition *", &buffer.definition)
+    let def_input = AdvancedInput::new("Definition *")
+        .value(&buffer.definition)
         .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
@@ -100,7 +104,7 @@ pub fn meaning_form<'a>(
         .spacing(Spacing::DEFAULT.l)
         .push(header)
         .push(word_label)
-        .push(def_input)
+        .push(Element::new(def_input))
         .push(meta_row)
         .push(Space::new())
         .push(footer);

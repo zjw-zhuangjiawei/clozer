@@ -4,8 +4,9 @@ use crate::config::file::ai::{AiConfig, ProviderTypeDto};
 use crate::models::types::{ModelId, ProviderId};
 use crate::state::Model;
 use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
+use crate::ui::widgets::AdvancedInput;
 use iced::Element;
-use iced::widget::{Button, Column, PickList, Row, TextInput, rule, scrollable, text};
+use iced::widget::{Button, Column, PickList, Row, rule, scrollable, text};
 use strum::VariantArray;
 use uuid::Uuid;
 
@@ -186,7 +187,8 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
     let base_url = edit.data.base_url.clone().unwrap_or_default();
     let api_key = edit.data.api_key.clone().unwrap_or_default();
 
-    let name_input = TextInput::new("Provider Name", &name)
+    let name_input = AdvancedInput::new("Provider Name")
+        .value(&name)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::NameChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
@@ -202,12 +204,14 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
-    let base_url_input = TextInput::new("Base URL (optional)", &base_url)
+    let base_url_input = AdvancedInput::new("Base URL (optional)")
+        .value(&base_url)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::BaseUrlChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let api_key_input = TextInput::new("API Key", &api_key)
+    let api_key_input = AdvancedInput::new("API Key")
+        .value(&api_key)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::ApiKeyChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s)
@@ -230,10 +234,10 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
 
     Column::new()
         .push(text(title).size(FontSize::Title.px()))
-        .push(name_input)
+        .push(Element::new(name_input))
         .push(type_picker)
-        .push(base_url_input)
-        .push(api_key_input)
+        .push(Element::new(base_url_input))
+        .push(Element::new(api_key_input))
         .push(buttons)
         .spacing(Spacing::DEFAULT.s)
 }
@@ -315,12 +319,14 @@ fn render_model_form(
     let model_name = edit.data.name.clone();
     let model_id_value = edit.data.model_id.clone();
 
-    let name_input = TextInput::new("Model Name", &model_name)
+    let name_input = AdvancedInput::new("Model Name")
+        .value(&model_name)
         .on_input(|s| SettingsMessage::Model(ModelMessage::NameChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let model_id_input = TextInput::new("Model ID (e.g. gpt-4)", &model_id_value)
+    let model_id_input = AdvancedInput::new("Model ID (e.g. gpt-4)")
+        .value(&model_id_value)
         .on_input(|s| SettingsMessage::Model(ModelMessage::ModelIdChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
@@ -368,9 +374,9 @@ fn render_model_form(
 
     Column::new()
         .push(text(title).size(FontSize::Title.px()))
-        .push(name_input)
+        .push(Element::new(name_input))
         .push(provider_picker)
-        .push(model_id_input)
+        .push(Element::new(model_id_input))
         .push(buttons)
         .spacing(Spacing::DEFAULT.s)
 }

@@ -4,11 +4,12 @@ use crate::models::types::MeaningId;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
+use crate::ui::widgets::AdvancedInput;
 use crate::ui::widgets::button;
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::WordsState;
-use iced::widget::{Button, Column, Container, Row, Text, TextInput, container};
+use iced::widget::{Button, Column, Container, Row, Text, container};
 use iced::{Border, Element};
 use uuid::Uuid;
 
@@ -78,7 +79,8 @@ pub fn build_tag_dropdown<'a>(
         TagDropdownMode::Single { .. } => "Search or create...",
         TagDropdownMode::Batch => "Search...",
     };
-    let search = TextInput::new(placeholder, &dropdown.search)
+    let search = AdvancedInput::new(placeholder)
+        .value(&dropdown.search)
         .on_input(WordsMessage::TagSearchChanged)
         .width(iced::Length::Fixed(150.0))
         .padding(Spacing::DEFAULT.xs);
@@ -140,7 +142,7 @@ pub fn build_tag_dropdown<'a>(
 
     Container::new(
         Column::new()
-            .push(search)
+            .push(Element::new(search))
             .extend(tag_items)
             .spacing(Spacing::DEFAULT.xs)
             .padding(Spacing::DEFAULT.xs2),

@@ -1,3 +1,4 @@
+pub mod advanced_input;
 pub mod button;
 pub mod checkbox;
 pub mod combo_box;
@@ -7,7 +8,6 @@ pub mod pane_grid;
 pub mod pick_list;
 pub mod progress_bar;
 pub mod radio;
-pub mod rich_text_input;
 pub mod rule;
 pub mod scrollable;
 pub mod slider;
@@ -17,5 +17,5 @@ pub mod text_input;
 pub(crate) mod text_input_local;
 pub mod toggler;
 
+pub use self::advanced_input::AdvancedInput;
 pub use self::checkbox::{CheckboxState, svg_checkbox};
-pub use self::rich_text_input::RichTextInput;
