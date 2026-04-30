@@ -53,6 +53,8 @@ pub fn view<'a>(
             words_state.panel.state(),
             &words_state.panel.word_buffer,
             &words_state.panel.meaning_buffer,
+            words_state.panel.dictionary_loading,
+            &words_state.panel.dictionary_result,
             model,
         ))
         .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))

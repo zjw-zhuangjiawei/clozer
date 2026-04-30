@@ -64,6 +64,8 @@ pub fn view<'a>(
     state: &'a DetailPanelState,
     word_buffer: &'a WordEditBuffer,
     meaning_buffer: &'a MeaningEditBuffer,
+    dictionary_loading: bool,
+    dictionary_result: &'a Option<crate::dictionary::DictionaryEntry>,
     model: &'a Model,
 ) -> Element<'a, WordsMessage, AppTheme> {
     match state {
@@ -130,6 +132,8 @@ pub fn view<'a>(
                 title,
                 &word_content,
                 meaning_buffer,
+                dictionary_loading,
+                dictionary_result,
                 WordsMessage::MeaningAddSaved,
             )
         }
@@ -146,6 +150,8 @@ pub fn view<'a>(
                     title,
                     &word_content,
                     meaning_buffer,
+                    dictionary_loading,
+                    dictionary_result,
                     WordsMessage::EditSaved,
                 )
             } else {

@@ -170,6 +170,63 @@ pub fn update(
             state.panel.meaning_buffer.cefr = cefr;
         }
 
+        // Dictionary lookup
+        WordsMessage::DictionaryLookupTriggered => {
+            let word_content = match state.panel.state() {
+                DetailPanelState::MeaningCreating { word_id } => {
+                    model.word_registry.get(*word_id).map(|w| w.content.clone())
+                }
+                DetailPanelState::MeaningEditing { meaning_id } => {
+                    model.meaning_registry.get(*meaning_id).and_then(|m| {
+                        model
+                            .word_registry
+                            .get(m.word_id)
+                            .map(|w| w.content.clone())
+                    })
+                }
+                _ => None,
+            };
+
+            if let Some(word_content) = word_content {
+                state.panel.dictionary_loading = true;
+                state.panel.dictionary_result = None;
+                return Task::perform(
+                    async move {
+                        crate::dictionary::DictionaryProvider::FreeDictionary
+                            .lookup(&word_content)
+                            .await
+                            .map_err(|e| e.to_string())
+                    },
+                    WordsMessage::DictionaryLookupResult,
+                );
+            }
+        }
+        WordsMessage::DictionaryLookupResult(result) => {
+            state.panel.dictionary_loading = false;
+            match result {
+                Ok(entry) => {
+                    state.panel.dictionary_result = Some(entry);
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Dictionary lookup failed");
+                }
+            }
+        }
+        WordsMessage::DictionarySuggestionSelected {
+            definition,
+            pos,
+            example,
+        } => {
+            state
+                .panel
+                .meaning_buffer
+                .set_from_dictionary(definition, pos);
+            if let Some(ex) = example {
+                tracing::debug!(example = %ex, "Dictionary suggestion includes example");
+            }
+            state.panel.dictionary_result = None;
+        }
+
         // Detail panel editing - save/cancel
         WordsMessage::EditSaved => {
             match state.panel.state() {

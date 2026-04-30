@@ -67,6 +67,8 @@ pub struct DetailPanelManager {
     pub word_buffer: WordEditBuffer,
     pub meaning_buffer: MeaningEditBuffer,
     tag_dropdown: Option<TagDropdownState>,
+    pub dictionary_loading: bool,
+    pub dictionary_result: Option<crate::dictionary::DictionaryEntry>,
 }
 
 impl DetailPanelManager {
@@ -76,6 +78,8 @@ impl DetailPanelManager {
             word_buffer: WordEditBuffer::default(),
             meaning_buffer: MeaningEditBuffer::default(),
             tag_dropdown: None,
+            dictionary_loading: false,
+            dictionary_result: None,
         }
     }
 
@@ -99,6 +103,8 @@ impl DetailPanelManager {
 
     pub fn close(&mut self) {
         self.state = DetailPanelState::Empty;
+        self.dictionary_loading = false;
+        self.dictionary_result = None;
     }
 
     // === Edit State Transitions ===
@@ -128,6 +134,8 @@ impl DetailPanelManager {
 
     pub fn start_meaning_create(&mut self, word_id: WordId) {
         self.meaning_buffer.clear();
+        self.dictionary_loading = false;
+        self.dictionary_result = None;
         self.state = DetailPanelState::MeaningCreating { word_id };
     }
 
@@ -141,6 +149,8 @@ impl DetailPanelManager {
         self.meaning_buffer.definition = definition;
         self.meaning_buffer.pos = pos;
         self.meaning_buffer.cefr = cefr;
+        self.dictionary_loading = false;
+        self.dictionary_result = None;
         self.state = DetailPanelState::MeaningEditing { meaning_id };
     }
 

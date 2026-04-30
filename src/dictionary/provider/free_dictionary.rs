@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use super::error::DictionaryError;
-use crate::dictionary::models::DictionaryEntry;
+use crate::dictionary::models::{DictionaryDefinition, DictionaryEntry, DictionaryMeaning};
 
 const BASE_URL: &str = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
@@ -29,10 +29,45 @@ pub async fn lookup(word: &str) -> Result<DictionaryEntry, DictionaryError> {
     }
     let entry = api_response.remove(0);
 
-    Ok(DictionaryEntry { word: entry.word })
+    let meanings = entry
+        .meanings
+        .into_iter()
+        .map(|m| DictionaryMeaning {
+            part_of_speech: m.part_of_speech,
+            definitions: m
+                .definitions
+                .into_iter()
+                .map(|d| DictionaryDefinition {
+                    definition: d.definition,
+                    example: d.example,
+                })
+                .collect(),
+        })
+        .collect();
+
+    Ok(DictionaryEntry {
+        word: entry.word,
+        meanings,
+    })
 }
 
 #[derive(Deserialize)]
 struct ApiResponse {
     word: String,
+    #[serde(default)]
+    meanings: Vec<ApiMeaning>,
+}
+
+#[derive(Deserialize)]
+struct ApiMeaning {
+    #[serde(rename = "partOfSpeech")]
+    part_of_speech: String,
+    #[serde(default)]
+    definitions: Vec<ApiDefinition>,
+}
+
+#[derive(Deserialize)]
+struct ApiDefinition {
+    definition: String,
+    example: Option<String>,
 }

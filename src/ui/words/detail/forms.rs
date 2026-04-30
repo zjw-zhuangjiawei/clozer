@@ -1,6 +1,6 @@
 use crate::models::PartOfSpeech;
 use crate::ui::AppTheme;
-use crate::ui::theme::{FontSize, Spacing};
+use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::AdvancedInput;
 use crate::ui::widgets::text as txt;
 use crate::ui::words::manager::{MeaningEditBuffer, WordEditBuffer};
@@ -139,6 +139,8 @@ pub fn meaning_form<'a>(
     title: String,
     word_content: &str,
     buffer: &'a MeaningEditBuffer,
+    dictionary_loading: bool,
+    dictionary_result: &'a Option<crate::dictionary::DictionaryEntry>,
     on_save: WordsMessage,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = Row::new()
@@ -146,6 +148,11 @@ pub fn meaning_form<'a>(
         .spacing(Spacing::DEFAULT.s);
 
     let word_label = Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px());
+
+    let lookup_btn = Button::new(Text::new("Lookup Dictionary").size(FontSize::Body.px()))
+        .style(crate::ui::widgets::button::secondary)
+        .padding(ButtonSize::Standard.to_iced_padding())
+        .on_press(WordsMessage::DictionaryLookupTriggered);
 
     let def_input = AdvancedInput::new("Definition *")
         .value(&buffer.definition)
@@ -180,10 +187,51 @@ pub fn meaning_form<'a>(
 
     let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
 
-    let content = Column::new()
+    let mut content = Column::new()
         .spacing(Spacing::DEFAULT.l)
         .push(header)
         .push(word_label)
+        .push(lookup_btn);
+
+    if dictionary_loading {
+        content = content.push(
+            Text::new("Loading dictionary...")
+                .size(FontSize::Caption.px())
+                .style(txt::tertiary),
+        );
+    }
+
+    if let Some(entry) = dictionary_result {
+        let mut suggestions = Column::new().spacing(Spacing::DEFAULT.xs);
+        let mut has_suggestions = false;
+        for meaning in &entry.meanings {
+            if let Some(first_def) = meaning.definitions.first() {
+                let pos = crate::models::PartOfSpeech::try_from_str(&meaning.part_of_speech)
+                    .unwrap_or_default();
+                let label = format!("[{}] {}", meaning.part_of_speech, first_def.definition);
+                let btn = Button::new(Text::new(label).size(FontSize::Caption.px()))
+                    .style(crate::ui::widgets::button::tertiary)
+                    .padding(ButtonSize::Small.to_iced_padding())
+                    .on_press(WordsMessage::DictionarySuggestionSelected {
+                        definition: first_def.definition.clone(),
+                        pos,
+                        example: first_def.example.clone(),
+                    });
+                suggestions = suggestions.push(btn);
+                has_suggestions = true;
+            }
+        }
+        if has_suggestions {
+            content = content.push(
+                Text::new("Suggestions:")
+                    .size(FontSize::Caption.px())
+                    .style(txt::tertiary),
+            );
+            content = content.push(suggestions);
+        }
+    }
+
+    content = content
         .push(Element::new(def_input))
         .push(meta_row)
         .push(Space::new())

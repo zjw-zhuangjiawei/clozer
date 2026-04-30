@@ -26,6 +26,30 @@ pub enum PartOfSpeech {
     Abbreviation,
 }
 
+impl PartOfSpeech {
+    /// Attempt to parse a part of speech from a dictionary API string.
+    /// Returns `None` if the string doesn't match any known part of speech.
+    pub fn try_from_str(s: &str) -> Option<Self> {
+        let lower = s.to_lowercase();
+        match lower.as_str() {
+            "noun" => Some(PartOfSpeech::Noun),
+            "verb" => Some(PartOfSpeech::Verb),
+            "adjective" => Some(PartOfSpeech::Adjective),
+            "adverb" => Some(PartOfSpeech::Adverb),
+            "pronoun" => Some(PartOfSpeech::Pronoun),
+            "preposition" => Some(PartOfSpeech::Preposition),
+            "conjunction" => Some(PartOfSpeech::Conjunction),
+            "interjection" => Some(PartOfSpeech::Interjection),
+            "determiner" => Some(PartOfSpeech::Determiner),
+            "article" => Some(PartOfSpeech::Article),
+            "modal" | "modal verb" | "modal_verb" => Some(PartOfSpeech::Modal),
+            "numeral" | "number" => Some(PartOfSpeech::Numeral),
+            "abbreviation" | "abbrev" => Some(PartOfSpeech::Abbreviation),
+            _ => None,
+        }
+    }
+}
+
 /// CEFR (Common European Framework of Reference) language proficiency levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, VariantArray)]
 pub enum CefrLevel {

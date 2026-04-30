@@ -31,4 +31,9 @@ impl MeaningEditBuffer {
         self.pos = PartOfSpeech::Noun;
         self.cefr = None;
     }
+
+    pub fn set_from_dictionary(&mut self, definition: String, pos: PartOfSpeech) {
+        self.definition = definition;
+        self.pos = pos;
+    }
 }

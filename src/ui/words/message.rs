@@ -78,6 +78,18 @@ pub enum WordsMessage {
     /// Edit meaning CEFR level
     EditMeaningCefrChanged(Option<CefrLevel>),
 
+    // Dictionary lookup
+    /// Trigger dictionary lookup for the current word
+    DictionaryLookupTriggered,
+    /// Dictionary lookup result returned
+    DictionaryLookupResult(Result<crate::dictionary::DictionaryEntry, String>),
+    /// Select a dictionary suggestion to auto-fill the form
+    DictionarySuggestionSelected {
+        definition: String,
+        pos: PartOfSpeech,
+        example: Option<String>,
+    },
+
     // Detail panel editing - save/cancel
     /// Save current edit (for Word/Meaning edit contexts)
     EditSaved,
