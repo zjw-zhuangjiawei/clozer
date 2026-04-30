@@ -74,6 +74,27 @@ impl App {
             // Queue panel
             Message::Queue(msg) => ui::queue::update(msg, &mut self.model),
 
+            // Tags panel
+            Message::Tags(msg) => match msg {
+                crate::ui::tags::TagsMessage::NavigateToMeanings(tag_id) => {
+                    if let Some(tag) = self.model.tag_registry.get(tag_id) {
+                        self.ui.current_view = crate::ui::nav::NavItem::Words;
+                        let tag_name = tag.name.clone();
+                        self.ui.words.search.set_query(format!("#{}", tag_name));
+                        self.ui.words.search.execute(
+                            &self.model.word_registry,
+                            &self.model.meaning_registry,
+                            &self.model.cloze_registry,
+                            &self.model.queue_registry,
+                            &self.model.tag_registry,
+                        );
+                    }
+                    Task::none()
+                }
+                other => crate::ui::tags::update(&mut self.ui.tags, other, &mut self.model)
+                    .map(Message::Tags),
+            },
+
             // Settings panel
             Message::Settings(msg) => {
                 compositor::update_settings(&mut self.ui.settings, msg, &mut self.model)

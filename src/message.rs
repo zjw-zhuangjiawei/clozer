@@ -9,6 +9,7 @@ use crate::ui::nav::NavItem;
 use crate::ui::notification::Notification;
 use crate::ui::queue::QueueMessage;
 use crate::ui::settings::SettingsMessage;
+use crate::ui::tags::TagsMessage;
 use crate::ui::words::WordsMessage;
 
 /// Top-level application messages for the single-window application.
@@ -22,6 +23,9 @@ pub enum Message {
 
     // Queue panel
     Queue(QueueMessage),
+
+    // Tags panel
+    Tags(TagsMessage),
 
     // Settings panel
     Settings(SettingsMessage),

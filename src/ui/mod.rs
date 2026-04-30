@@ -9,6 +9,7 @@ pub mod nav;
 pub mod queue;
 pub mod settings;
 pub mod state;
+pub mod tags;
 pub mod theme;
 pub mod widgets;
 pub mod words;

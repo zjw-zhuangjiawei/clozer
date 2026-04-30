@@ -6,6 +6,7 @@ pub enum NavItem {
     #[default]
     Words,
     Queue,
+    Tags,
     Settings,
 }
 
@@ -15,6 +16,7 @@ impl NavItem {
         match self {
             NavItem::Words => "Words",
             NavItem::Queue => "Queue",
+            NavItem::Tags => "Tags",
             NavItem::Settings => "Settings",
         }
     }

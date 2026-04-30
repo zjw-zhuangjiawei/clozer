@@ -92,22 +92,26 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
     } else {
         Spacing::DEFAULT.s2
     };
-    let nav_buttons: Vec<Element<'a, Message, AppTheme>> =
-        [NavItem::Words, NavItem::Queue, NavItem::Settings]
-            .iter()
-            .map(|item| {
-                let is_active = state.current_view == *item;
-                let label = item.label();
-                let btn = iced::widget::button(iced::widget::text(label))
-                    .style(if is_active {
-                        button::primary
-                    } else {
-                        button::secondary
-                    })
-                    .on_press(Message::Navigate(*item));
-                btn.into()
+    let nav_buttons: Vec<Element<'a, Message, AppTheme>> = [
+        NavItem::Words,
+        NavItem::Queue,
+        NavItem::Tags,
+        NavItem::Settings,
+    ]
+    .iter()
+    .map(|item| {
+        let is_active = state.current_view == *item;
+        let label = item.label();
+        let btn = iced::widget::button(iced::widget::text(label))
+            .style(if is_active {
+                button::primary
+            } else {
+                button::secondary
             })
-            .collect();
+            .on_press(Message::Navigate(*item));
+        btn.into()
+    })
+    .collect();
 
     let nav_bar = iced::widget::Row::with_children(nav_buttons).spacing(nav_spacing);
     let (left_ratio, _right_ratio) = breakpoint.column_ratio();
@@ -142,6 +146,24 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
             } else {
                 iced::widget::row![
                     iced::widget::container(queue_panel)
+                        .width(FillPortion((left_ratio * 100.0) as u16))
+                        .padding(Spacing::DEFAULT.l2),
+                ]
+                .spacing(Spacing::DEFAULT.l2)
+                .into()
+            }
+        }
+        NavItem::Tags => {
+            let tags_panel =
+                crate::ui::tags::view(&state.tags, model, state.theme).map(Message::Tags);
+            if breakpoint.is_single_column() {
+                iced::widget::column![tags_panel]
+                    .spacing(Spacing::DEFAULT.l2)
+                    .padding(Spacing::DEFAULT.l2)
+                    .into()
+            } else {
+                iced::widget::row![
+                    iced::widget::container(tags_panel)
                         .width(FillPortion((left_ratio * 100.0) as u16))
                         .padding(Spacing::DEFAULT.l2),
                 ]
