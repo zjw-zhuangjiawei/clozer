@@ -1,7 +1,7 @@
 //! Centralized design tokens for consistent styling across the application.
 //!
 //! Design tokens are the atomic values that define the visual language:
-//! - Typography (scale with ratios)
+//! - Typography (font sizes, weights, line heights)
 //! - Spacing (proportional system)
 //! - Dimensions (components, borders, radii)
 //!
@@ -13,12 +13,12 @@
 //! 4. **Accessibility**: WCAG 2.1 AA compliance required
 //! 5. **Systematic**: Tokens drive everything, mathematical ratios control proportions
 
+use std::fmt;
+
 pub mod prelude {
     pub use super::{
-        BorderRadiusValues, DimensionTokens, FontFamily, FontWeights, IconSizeValues,
-        IconSizeVariant, InputHeightTokens, LineHeights, RadiusVariant, ScaleFactor, ScaleSystem,
-        SpacingScale, SpacingValue, TouchTargetSize, TypographyScale, TypographySizes,
-        TypographyVariant,
+        BorderRadiusValues, DimensionTokens, FontFamily, FontSize, IconSizeValues, IconSizeVariant,
+        InputHeightTokens, RadiusVariant, ScaleFactor, ScaleSystem, Spacing, TouchTargetSize,
     };
 }
 
@@ -30,9 +30,9 @@ pub struct ScaleSystem {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScaleFactor {
-    Small,  // 1.125 - subtle scaling
-    Medium, // 1.25 - perfect fourth
-    Large,  // 1.333 - perfect third
+    Small,
+    Medium,
+    Large,
 }
 
 impl Default for ScaleSystem {
@@ -101,97 +101,88 @@ impl ScaleSystem {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SpacingScale {
-    pub unit: f32,
-    pub scale: [f32; 9],
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Spacing {
+    pub xxs: f32,
+    pub xs: f32,
+    pub xs2: f32,
+    pub s: f32,
+    pub s2: f32,
+    pub m: f32,
+    pub l: f32,
+    pub l2: f32,
+    pub xl: f32,
+    pub xxl: f32,
 }
 
-impl Default for SpacingScale {
-    fn default() -> Self {
-        Self {
-            unit: 4.0,
-            scale: [2.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0, 32.0, 48.0],
-        }
+impl Spacing {
+    pub const DEFAULT: Self = Self {
+        xxs: 2.0,
+        xs: 4.0,
+        xs2: 5.0,
+        s: 8.0,
+        s2: 10.0,
+        m: 12.0,
+        l: 16.0,
+        l2: 20.0,
+        xl: 24.0,
+        xxl: 32.0,
+    };
+}
+
+impl fmt::Display for Spacing {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Spacing(xxs={}, xs={}, xs2={}, s={}, s2={}, m={}, l={}, l2={}, xl={}, xxl={})",
+            self.xxs,
+            self.xs,
+            self.xs2,
+            self.s,
+            self.s2,
+            self.m,
+            self.l,
+            self.l2,
+            self.xl,
+            self.xxl
+        )
     }
 }
 
-impl SpacingScale {
-    pub fn xxs(&self) -> f32 {
-        self.scale[0]
-    }
-    pub fn xs(&self) -> f32 {
-        self.scale[1]
-    }
-    pub fn sm(&self) -> f32 {
-        self.scale[2]
-    }
-    pub fn md(&self) -> f32 {
-        self.scale[3]
-    }
-    pub fn lg(&self) -> f32 {
-        self.scale[4]
-    }
-    pub fn xl(&self) -> f32 {
-        self.scale[5]
-    }
-    pub fn xxl(&self) -> f32 {
-        self.scale[6]
-    }
-    pub fn xxxl(&self) -> f32 {
-        self.scale[7]
-    }
-    pub fn huge(&self) -> f32 {
-        self.scale[8]
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::VariantArray)]
+pub enum FontSize {
+    #[default]
+    Caption,
+    Footnote,
+    Body,
+    Subtitle,
+    Title,
+    Heading,
+    Display,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum SpacingValue {
-    Xxs,
-    Xs,
-    Sm,
-    Md,
-    Lg,
-    Xl,
-    Xxl,
-    Xxxl,
-    Huge,
-}
-
-impl SpacingValue {
-    pub fn to_px(&self, scale: &SpacingScale) -> f32 {
+impl FontSize {
+    pub const fn px(self) -> f32 {
         match self {
-            SpacingValue::Xxs => scale.xxs(),
-            SpacingValue::Xs => scale.xs(),
-            SpacingValue::Sm => scale.sm(),
-            SpacingValue::Md => scale.md(),
-            SpacingValue::Lg => scale.lg(),
-            SpacingValue::Xl => scale.xl(),
-            SpacingValue::Xxl => scale.xxl(),
-            SpacingValue::Xxxl => scale.xxxl(),
-            SpacingValue::Huge => scale.huge(),
+            FontSize::Caption => 11.0,
+            FontSize::Footnote => 12.0,
+            FontSize::Body => 14.0,
+            FontSize::Subtitle => 16.0,
+            FontSize::Title => 18.0,
+            FontSize::Heading => 20.0,
+            FontSize::Display => 24.0,
         }
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct TypographyScale {
-    pub font_family: FontFamily,
-    pub scale_factor: f32,
-    pub sizes: TypographySizes,
-    pub weights: FontWeights,
-    pub line_heights: LineHeights,
-}
-
-impl Default for TypographyScale {
-    fn default() -> Self {
-        Self {
-            font_family: FontFamily::System,
-            scale_factor: 1.25,
-            sizes: TypographySizes::default(),
-            weights: FontWeights::default(),
-            line_heights: LineHeights::default(),
+    pub const fn line_height(self) -> f32 {
+        match self {
+            FontSize::Caption => 16.0,
+            FontSize::Footnote => 18.0,
+            FontSize::Body => 20.0,
+            FontSize::Subtitle => 24.0,
+            FontSize::Title => 26.0,
+            FontSize::Heading => 28.0,
+            FontSize::Display => 32.0,
         }
     }
 }
@@ -215,94 +206,6 @@ impl FontFamily {
             FontFamily::Monospace => "'SF Mono', 'Fira Code', 'Consolas', monospace",
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct FontWeights {
-    pub regular: u16,
-    pub medium: u16,
-    pub semibold: u16,
-    pub bold: u16,
-}
-
-impl Default for FontWeights {
-    fn default() -> Self {
-        Self {
-            regular: 400,
-            medium: 500,
-            semibold: 600,
-            bold: 700,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct LineHeights {
-    pub tight: f32,
-    pub normal: f32,
-    pub relaxed: f32,
-    pub loose: f32,
-}
-
-impl Default for LineHeights {
-    fn default() -> Self {
-        Self {
-            tight: 1.2,
-            normal: 1.5,
-            relaxed: 1.75,
-            loose: 2.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TypographySizes {
-    pub caption: f32,
-    pub footnote: f32,
-    pub body: f32,
-    pub subtitle: f32,
-    pub title: f32,
-    pub heading: f32,
-    pub display: f32,
-}
-
-impl Default for TypographySizes {
-    fn default() -> Self {
-        Self {
-            caption: 11.0,
-            footnote: 12.0,
-            body: 14.0,
-            subtitle: 16.0,
-            title: 18.0,
-            heading: 20.0,
-            display: 24.0,
-        }
-    }
-}
-
-impl TypographySizes {
-    pub fn size(&self, variant: TypographyVariant) -> f32 {
-        match variant {
-            TypographyVariant::Caption => self.caption,
-            TypographyVariant::Footnote => self.footnote,
-            TypographyVariant::Body => self.body,
-            TypographyVariant::Subtitle => self.subtitle,
-            TypographyVariant::Title => self.title,
-            TypographyVariant::Heading => self.heading,
-            TypographyVariant::Display => self.display,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypographyVariant {
-    Caption,
-    Footnote,
-    Body,
-    Subtitle,
-    Title,
-    Heading,
-    Display,
 }
 
 #[derive(Debug, Clone, Default)]

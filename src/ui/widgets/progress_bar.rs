@@ -15,8 +15,15 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn primary(_theme: &AppTheme) -> Style {
-    iced::widget::progress_bar::primary(&iced::Theme::Light)
+pub fn primary(theme: &AppTheme) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
+
+    Style {
+        background: semantic.surface.raised.into(),
+        bar: semantic.interactive.primary.into(),
+        border: iced::border::rounded(2),
+    }
 }
 
 #[allow(dead_code)]

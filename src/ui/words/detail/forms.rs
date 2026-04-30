@@ -1,11 +1,8 @@
-//! Form views for creating/editing words and meanings.
-//!
-//! Used by WordCreating, WordEditing, MeaningCreating, MeaningEditing states.
-
 use crate::models::PartOfSpeech;
 use crate::ui::AppTheme;
 use crate::ui::theme::{FontSize, Spacing};
 use crate::ui::widgets::AdvancedInput;
+use crate::ui::widgets::text as txt;
 use crate::ui::words::manager::{MeaningEditBuffer, WordEditBuffer};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
@@ -16,14 +13,40 @@ use strum::VariantArray;
 use super::CefrLevelOption;
 use super::{build_footer_row, detail_panel};
 
+fn validation_text_style(
+    is_empty: bool,
+    is_valid: bool,
+) -> impl Fn(&AppTheme) -> iced::widget::text::Style {
+    move |theme: &AppTheme| {
+        let colors = theme.colors();
+        let color = if is_empty {
+            colors.semantic.text.tertiary
+        } else if is_valid {
+            colors.functional.success.w600()
+        } else {
+            colors.semantic.text.error
+        };
+        iced::widget::text::Style { color: Some(color) }
+    }
+}
+
 pub fn word_form<'a>(
     title: String,
     word_buffer: &'a WordEditBuffer,
     _meaning_buffer: &'a MeaningEditBuffer,
     on_save: WordsMessage,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let colors = theme.colors();
+    let is_lang_empty = word_buffer.language_input.is_empty();
+    let is_lang_valid = word_buffer.language.is_some();
+
+    let (validation_icon, lang_status) = if is_lang_valid {
+        (" \u{2713}", "Valid BCP 47 tag")
+    } else if !is_lang_empty {
+        (" \u{26A0}", "Not a valid language tag")
+    } else {
+        ("", "e.g. en, zh-CN, fr")
+    };
+
     let header = Row::new()
         .push(Text::new(title).size(FontSize::Heading.px()))
         .spacing(Spacing::DEFAULT.s);
@@ -43,43 +66,21 @@ pub fn word_form<'a>(
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let validation_color = if word_buffer.language_input.is_empty() {
-        colors.semantic.text.tertiary
-    } else if word_buffer.language.is_some() {
-        colors.functional.success.w600()
-    } else {
-        colors.semantic.text.error
-    };
-
-    let validation_icon = if word_buffer.language.is_some() {
-        " ✓"
-    } else if !word_buffer.language_input.is_empty() {
-        " ⚠"
-    } else {
-        ""
-    };
-
-    let lang_status = match word_buffer.language_input.as_str() {
-        "" => "e.g. en, zh-CN, fr",
-        _ if word_buffer.language.is_some() => "Valid BCP 47 tag",
-        _ => "Not a valid language tag",
-    };
-
     let lang_row = Row::new()
         .push(Element::new(lang_input))
         .push(
             Text::new(validation_icon)
                 .size(FontSize::Body.px())
-                .color(validation_color),
+                .style(validation_text_style(is_lang_empty, is_lang_valid)),
         )
         .align_y(iced::Alignment::Center)
         .spacing(Spacing::DEFAULT.xs);
 
     let quick_langs: &[(&str, &str)] = &[
         ("en", "EN"),
-        ("zh", "中文"),
-        ("ja", "日本語"),
-        ("ko", "한국어"),
+        ("zh", "\u{4E2D}\u{6587}"),
+        ("ja", "\u{65E5}\u{672C}\u{8A9E}"),
+        ("ko", "\u{D55C}\u{AD6D}\u{C5B4}"),
         ("fr", "FR"),
         ("de", "DE"),
         ("es", "ES"),
@@ -110,7 +111,7 @@ pub fn word_form<'a>(
         .push(
             Text::new("Quick:")
                 .size(FontSize::Caption.px())
-                .color(colors.semantic.text.tertiary),
+                .style(txt::tertiary),
         )
         .extend(quick_buttons)
         .align_y(iced::Alignment::Center);
@@ -126,7 +127,7 @@ pub fn word_form<'a>(
         .push(
             Text::new(lang_status)
                 .size(FontSize::Caption.px())
-                .color(validation_color),
+                .style(validation_text_style(is_lang_empty, is_lang_valid)),
         )
         .push(Space::new())
         .push(footer);
@@ -139,7 +140,6 @@ pub fn meaning_form<'a>(
     word_content: &str,
     buffer: &'a MeaningEditBuffer,
     on_save: WordsMessage,
-    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = Row::new()
         .push(Text::new(title).size(FontSize::Heading.px()))

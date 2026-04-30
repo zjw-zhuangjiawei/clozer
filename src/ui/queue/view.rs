@@ -36,7 +36,7 @@ fn meaning_content(
     }
 }
 
-pub fn view<'a>(model: &'a Model, theme: AppTheme) -> Element<'a, QueueMessage, AppTheme> {
+pub fn view<'a>(model: &'a Model) -> Element<'a, QueueMessage, AppTheme> {
     let queue_registry = &model.queue_registry;
     let meaning_registry = &model.meaning_registry;
     let word_registry = &model.word_registry;
@@ -56,7 +56,6 @@ pub fn view<'a>(model: &'a Model, theme: AppTheme) -> Element<'a, QueueMessage, 
                     svg_checkbox(
                         selected,
                         QueueMessage::Selection(QueueSelectionMessage::Toggle(item_id)),
-                        theme,
                     )
                 } else {
                     Text::new(status_text).into()

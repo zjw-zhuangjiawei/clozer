@@ -20,40 +20,53 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(_theme: &AppTheme, status: Status) -> Style {
-    // let colors = theme.colors();
-    // let is_checked = status.is_checked();
-    // let is_hovered = matches!(status, Status::Hovered { .. });
-    // let is_focused = matches!(status, Status::Focused { .. });
+pub fn default(theme: &AppTheme, status: Status) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
 
-    // let (background, border_color) = if is_checked {
-    //     if is_hovered {
-    //         (colors.primary_hover, colors.primary_active)
-    //     } else {
-    //         (colors.primary, colors.primary_active)
-    //     }
-    // } else if is_hovered {
-    //     (colors.neutral_100, colors.border_emphasis)
-    // } else {
-    //     (colors.surface, colors.border)
-    // };
+    let is_checked = matches!(
+        status,
+        Status::Active { is_checked: true }
+            | Status::Hovered { is_checked: true }
+            | Status::Disabled { is_checked: true }
+    );
+    let is_disabled = matches!(status, Status::Disabled { .. });
+    let is_hovered = matches!(status, Status::Hovered { .. });
 
-    // Style {
-    //     background: Some(background.into()),
-    //     border: iced::Border {
-    //         color: if is_checked {
-    //             colors.primary_active
-    //         } else {
-    //             border_color
-    //         },
-    //         width: if is_focused { 2.0 } else { 1.0 },
-    //         radius: 4.0.into(),
-    //     },
-    //     icon_color: colors.text_on_primary,
-    //     text_color: Some(colors.text),
-    // }
+    let (background, border_color) = if is_checked {
+        if is_hovered {
+            (
+                semantic.interactive.primary_hover.into(),
+                semantic.interactive.primary_hover,
+            )
+        } else {
+            (
+                semantic.interactive.primary.into(),
+                semantic.interactive.primary,
+            )
+        }
+    } else if is_disabled {
+        (semantic.surface.base.into(), semantic.border.disabled)
+    } else if is_hovered {
+        (semantic.surface.raised.into(), semantic.border.hover)
+    } else {
+        (semantic.surface.base.into(), semantic.border.default)
+    };
 
-    iced::widget::checkbox::primary(&iced::Theme::Light, status)
+    Style {
+        background,
+        border: iced::Border {
+            color: border_color,
+            width: 1.0,
+            radius: 4.0.into(),
+        },
+        icon_color: if is_checked {
+            semantic.text.inverse
+        } else {
+            semantic.text.primary
+        },
+        text_color: Some(semantic.text.primary),
+    }
 }
 
 /// Checkbox selection state.
@@ -78,7 +91,6 @@ impl From<bool> for CheckboxState {
 pub fn svg_checkbox<'a, M: Clone + 'a>(
     state: impl Into<CheckboxState>,
     on_toggle: M,
-    _theme: AppTheme,
 ) -> Element<'a, M, AppTheme> {
     let icon_name = match state.into() {
         CheckboxState::Checked => "check_box_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg",

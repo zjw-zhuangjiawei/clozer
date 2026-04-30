@@ -1,5 +1,3 @@
-//! Meaning node — renders a single meaning with checkbox, tags, cloze previews, and actions.
-
 use crate::assets;
 use crate::models::types::MeaningId;
 use crate::state::Model;
@@ -7,6 +5,7 @@ use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::button;
 use crate::ui::widgets::svg_checkbox;
+use crate::ui::widgets::text as txt;
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::WordsState;
 use iced::Element;
@@ -18,13 +17,11 @@ pub fn build_meaning_node<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let is_selected = words_state.selection.is_meaning_selected(meaning.id);
     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
-    let colors = theme.colors();
 
-    let checkbox = svg_checkbox(is_selected, WordsMessage::MeaningToggled(meaning.id), theme);
+    let checkbox = svg_checkbox(is_selected, WordsMessage::MeaningToggled(meaning.id));
 
     let definition: Element<'a, WordsMessage, AppTheme> =
         Button::new(Text::new(&meaning.definition).size(FontSize::Body.px()))
@@ -40,7 +37,7 @@ pub fn build_meaning_node<'a>(
     };
     let cloze_status = Text::new(cloze_status_text)
         .size(FontSize::Caption.px())
-        .color(colors.semantic.text.tertiary);
+        .style(txt::tertiary);
 
     let meaning_header = Row::new()
         .push(checkbox)
@@ -51,7 +48,7 @@ pub fn build_meaning_node<'a>(
         .spacing(Spacing::DEFAULT.xs)
         .align_y(iced::Alignment::Center);
 
-    let tags_row = build_tags_row(words_state, model, meaning, theme);
+    let tags_row = build_tags_row(words_state, model, meaning);
 
     let cloze_preview_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .cloze_registry

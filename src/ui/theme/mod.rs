@@ -12,7 +12,6 @@ use iced::Length;
 use iced::theme::{Base as ThemeBase, Mode, Palette, Style as ThemeStyle};
 use iced::widget::button::Style;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use strum::{Display, VariantArray};
 
 pub use color::ThemeColors;
@@ -25,10 +24,14 @@ pub use role::{BackgroundRole, BorderRole, ForegroundRole, InteractiveRole};
 pub type StyleFn<'a> = Box<dyn Fn(&AppTheme, iced::widget::button::Status) -> Style + 'a>;
 
 pub use super::design_tokens::{
-    BorderRadiusValues, DimensionTokens, FontFamily, FontWeights, IconSizeValues, IconSizeVariant,
-    InputHeightTokens, LineHeights, RadiusVariant, ScaleFactor, ScaleSystem, SpacingScale,
-    SpacingValue, TouchTargetSize, TypographyScale, TypographySizes, TypographyVariant,
+    BorderRadiusValues, DimensionTokens, FontFamily, FontSize, IconSizeValues, IconSizeVariant,
+    InputHeightTokens, RadiusVariant, ScaleFactor, ScaleSystem, Spacing, TouchTargetSize,
 };
+
+use std::sync::OnceLock;
+
+static LIGHT_COLORS: OnceLock<color::ThemeColors> = OnceLock::new();
+static DARK_COLORS: OnceLock<color::ThemeColors> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum Breakpoint {
@@ -67,56 +70,6 @@ impl Breakpoint {
 
     pub fn is_single_column(&self) -> bool {
         matches!(self, Breakpoint::Mobile)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum FontSize {
-    #[default]
-    Caption,
-    Footnote,
-    Body,
-    Subtitle,
-    Title,
-    Heading,
-    Display,
-}
-
-impl FontSize {
-    pub const fn px(self) -> f32 {
-        match self {
-            FontSize::Caption => 11.0,
-            FontSize::Footnote => 12.0,
-            FontSize::Body => 14.0,
-            FontSize::Subtitle => 16.0,
-            FontSize::Title => 18.0,
-            FontSize::Heading => 20.0,
-            FontSize::Display => 24.0,
-        }
-    }
-
-    pub const fn line_height(self) -> f32 {
-        match self {
-            FontSize::Caption => 16.0,
-            FontSize::Footnote => 18.0,
-            FontSize::Body => 20.0,
-            FontSize::Subtitle => 24.0,
-            FontSize::Title => 26.0,
-            FontSize::Heading => 28.0,
-            FontSize::Display => 32.0,
-        }
-    }
-
-    pub fn to_typography_variant(&self) -> TypographyVariant {
-        match self {
-            FontSize::Caption => TypographyVariant::Caption,
-            FontSize::Footnote => TypographyVariant::Footnote,
-            FontSize::Body => TypographyVariant::Body,
-            FontSize::Subtitle => TypographyVariant::Subtitle,
-            FontSize::Title => TypographyVariant::Title,
-            FontSize::Heading => TypographyVariant::Heading,
-            FontSize::Display => TypographyVariant::Display,
-        }
     }
 }
 
@@ -169,101 +122,6 @@ impl ButtonSize {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Spacing {
-    pub xxs: f32,
-    pub xs: f32,
-    pub xs2: f32,
-    pub s: f32,
-    pub s2: f32,
-    pub m: f32,
-    pub l: f32,
-    pub l2: f32,
-    pub xl: f32,
-    pub xxl: f32,
-}
-
-impl Spacing {
-    pub const DEFAULT: Self = Self {
-        xxs: 2.0,
-        xs: 4.0,
-        xs2: 5.0,
-        s: 8.0,
-        s2: 10.0,
-        m: 12.0,
-        l: 16.0,
-        l2: 20.0,
-        xl: 24.0,
-        xxl: 32.0,
-    };
-
-    pub fn new() -> Self {
-        Self::DEFAULT
-    }
-
-    pub fn spacing_tokens(&self) -> SpacingScale {
-        SpacingScale {
-            unit: 4.0,
-            scale: [
-                self.xxs, self.xs, self.xs2, self.s, self.s2, self.m, self.l, self.l2, self.xl,
-            ],
-        }
-    }
-
-    pub fn value(&self, sv: SpacingValue) -> f32 {
-        match sv {
-            SpacingValue::Xxs => self.xxs,
-            SpacingValue::Xs => self.xs,
-            SpacingValue::Sm => self.xs2,
-            SpacingValue::Md => self.s,
-            SpacingValue::Lg => self.s2,
-            SpacingValue::Xl => self.m,
-            SpacingValue::Xxl => self.l,
-            SpacingValue::Xxxl => self.l2,
-            SpacingValue::Huge => self.xl,
-        }
-    }
-
-    pub fn tight(&self) -> f32 {
-        self.xs
-    }
-
-    pub fn compact(&self) -> f32 {
-        self.s
-    }
-
-    pub fn standard(&self) -> f32 {
-        self.m
-    }
-
-    pub fn relaxed(&self) -> f32 {
-        self.l
-    }
-
-    pub fn spacious(&self) -> f32 {
-        self.xl
-    }
-}
-
-impl fmt::Display for Spacing {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Spacing(xxs={}, xs={}, xs2={}, s={}, s2={}, m={}, l={}, l2={}, xl={}, xxl={})",
-            self.xxs,
-            self.xs,
-            self.xs2,
-            self.s,
-            self.s2,
-            self.m,
-            self.l,
-            self.l2,
-            self.xl,
-            self.xxl
-        )
-    }
-}
-
 #[derive(
     Debug,
     Clone,
@@ -286,10 +144,10 @@ pub enum AppTheme {
 }
 
 impl AppTheme {
-    pub fn colors(&self) -> color::ThemeColors {
+    pub fn colors(&self) -> &'static color::ThemeColors {
         match self {
-            AppTheme::Light => color::ThemeColors::light(),
-            AppTheme::Dark => color::ThemeColors::dark(),
+            AppTheme::Light => LIGHT_COLORS.get_or_init(color::ThemeColors::light),
+            AppTheme::Dark => DARK_COLORS.get_or_init(color::ThemeColors::dark),
         }
     }
 }

@@ -14,11 +14,12 @@ use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::button;
+use crate::ui::widgets::container::card;
 use crate::ui::words::manager::{DetailPanelState, MeaningEditBuffer, WordEditBuffer};
 use crate::ui::words::message::WordsMessage;
 use iced::Element;
 use iced::widget::Space;
-use iced::widget::{Button, Column, Container, Row, Text, container};
+use iced::widget::{Button, Column, Container, Row, Text};
 
 /// PickList adapter for optional CEFR levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::Display, strum::VariantArray)]
@@ -64,14 +65,13 @@ pub fn view<'a>(
     word_buffer: &'a WordEditBuffer,
     meaning_buffer: &'a MeaningEditBuffer,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     match state {
         DetailPanelState::Empty => placeholder_view(),
 
         DetailPanelState::WordView { word_id } => {
             if let Some(word) = model.word_registry.get(*word_id) {
-                word_detail_view(word, model, theme)
+                word_detail_view(word, model)
             } else {
                 placeholder_view()
             }
@@ -80,7 +80,7 @@ pub fn view<'a>(
         DetailPanelState::MeaningView { meaning_id } => {
             if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
                 if let Some(word) = model.word_registry.get(meaning.word_id) {
-                    meaning_detail_view(meaning, word, model, theme)
+                    meaning_detail_view(meaning, word, model)
                 } else {
                     placeholder_view()
                 }
@@ -110,7 +110,6 @@ pub fn view<'a>(
             word_buffer,
             meaning_buffer,
             WordsMessage::NewWordSaved,
-            theme,
         ),
 
         DetailPanelState::WordEditing { .. } => word_form(
@@ -118,7 +117,6 @@ pub fn view<'a>(
             word_buffer,
             meaning_buffer,
             WordsMessage::EditSaved,
-            theme,
         ),
 
         DetailPanelState::MeaningCreating { word_id, .. } => {
@@ -133,7 +131,6 @@ pub fn view<'a>(
                 &word_content,
                 meaning_buffer,
                 WordsMessage::MeaningAddSaved,
-                theme,
             )
         }
 
@@ -150,7 +147,6 @@ pub fn view<'a>(
                     &word_content,
                     meaning_buffer,
                     WordsMessage::EditSaved,
-                    theme,
                 )
             } else {
                 placeholder_view()
@@ -170,9 +166,7 @@ fn detail_panel<'a>(
         .padding(Spacing::DEFAULT.l)
         .width(iced::Length::Fill)
         .height(iced::Length::Fill)
-        .style(|_| container::Style {
-            ..Default::default()
-        })
+        .style(card)
         .into()
 }
 

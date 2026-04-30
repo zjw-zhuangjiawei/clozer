@@ -12,3 +12,39 @@ impl Catalog for AppTheme {
         class(self)
     }
 }
+
+pub fn primary(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().semantic.text.primary),
+    }
+}
+
+pub fn secondary(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().semantic.text.secondary),
+    }
+}
+
+pub fn tertiary(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().semantic.text.tertiary),
+    }
+}
+
+pub fn primary_alt(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().semantic.interactive.primary),
+    }
+}
+
+pub fn success(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().functional.success.w600()),
+    }
+}
+
+pub fn error(theme: &AppTheme) -> Style {
+    Style {
+        color: Some(theme.colors().semantic.text.error),
+    }
+}

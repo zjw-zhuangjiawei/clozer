@@ -1,5 +1,3 @@
-//! Contextual action bar — shows batch operations based on selection state.
-
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
@@ -15,7 +13,6 @@ use super::tags::{TagDropdownMode, build_tag_dropdown};
 pub fn build_action_bar<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let meaning_selected_count = words_state.selection.meaning_count();
     let cloze_selected_count = words_state.selection.cloze_count();
@@ -65,12 +62,7 @@ pub fn build_action_bar<'a>(
                             .style(button::primary)
                             .padding(ButtonSize::Standard.to_iced_padding()),
                     )
-                    .push(build_tag_dropdown(
-                        dropdown,
-                        model,
-                        theme,
-                        TagDropdownMode::Batch,
-                    ))
+                    .push(build_tag_dropdown(dropdown, model, TagDropdownMode::Batch))
                     .spacing(Spacing::DEFAULT.xxs)
                     .into(),
                 _ => Button::new(Text::new("Add Tag").size(FontSize::Body.px()))

@@ -1,4 +1,5 @@
 use crate::ui::theme::AppTheme;
+use crate::ui::theme::BorderRadiusValues;
 use iced::widget::text_input::{Catalog, Status, Style, StyleFn};
 
 impl Catalog for AppTheme {
@@ -17,7 +18,7 @@ impl Catalog for AppTheme {
 pub fn default(theme: &AppTheme, status: Status) -> Style {
     let colors = theme.colors();
     let semantic = &colors.semantic;
-    let border_radius = iced::border::radius(6.0);
+    let border_radius = iced::border::radius(BorderRadiusValues::default().md);
 
     match status {
         Status::Disabled => Style {

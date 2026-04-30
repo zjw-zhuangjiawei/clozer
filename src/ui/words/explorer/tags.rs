@@ -1,16 +1,15 @@
-//! Tag row and unified tag dropdown for word explorer.
-
 use crate::models::types::MeaningId;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::AdvancedInput;
 use crate::ui::widgets::button;
+use crate::ui::widgets::container::card;
 use crate::ui::words::manager::{TagDropdownState, TagDropdownTarget};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::WordsState;
-use iced::widget::{Button, Column, Container, Row, Text, container};
-use iced::{Border, Element};
+use iced::Element;
+use iced::widget::{Button, Column, Container, Row, Text};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
@@ -23,7 +22,6 @@ pub fn build_tags_row<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let mut tag_chips: Vec<Element<'a, WordsMessage, AppTheme>> = meaning
         .tag_ids
@@ -49,7 +47,6 @@ pub fn build_tags_row<'a>(
             TagDropdownTarget::SingleMeaning(mid) if mid == meaning.id => Some(build_tag_dropdown(
                 dropdown,
                 model,
-                theme,
                 TagDropdownMode::Single { meaning_id: mid },
             )),
             _ => None,
@@ -70,11 +67,8 @@ pub fn build_tags_row<'a>(
 pub fn build_tag_dropdown<'a>(
     dropdown: &'a TagDropdownState,
     model: &'a Model,
-    theme: AppTheme,
     mode: TagDropdownMode,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let colors = theme.colors();
-
     let placeholder = match mode {
         TagDropdownMode::Single { .. } => "Search or create...",
         TagDropdownMode::Batch => "Search...",
@@ -148,14 +142,6 @@ pub fn build_tag_dropdown<'a>(
             .padding(Spacing::DEFAULT.xs2),
     )
     .width(iced::Length::Fixed(170.0))
-    .style(move |_| container::Style {
-        background: Some(colors.semantic.surface.raised.into()),
-        border: Border {
-            color: colors.semantic.border.default,
-            width: 1.0,
-            radius: 6.0.into(),
-        },
-        ..Default::default()
-    })
+    .style(card)
     .into()
 }

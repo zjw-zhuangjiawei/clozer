@@ -13,6 +13,21 @@ impl Catalog for AppTheme {
     }
 }
 
-pub fn default(_theme: &AppTheme, status: Status) -> Style {
-    iced::widget::slider::default(&iced::Theme::Light, status)
+pub fn default(theme: &AppTheme, _status: Status) -> Style {
+    let colors = theme.colors();
+    let semantic = &colors.semantic;
+
+    iced::widget::slider::Style {
+        rail: iced::widget::slider::Rail {
+            backgrounds: (semantic.surface.raised.into(), semantic.surface.base.into()),
+            width: 2.0,
+            border: iced::Border::default(),
+        },
+        handle: iced::widget::slider::Handle {
+            shape: iced::widget::slider::HandleShape::Circle { radius: 5.0 },
+            background: semantic.interactive.primary.into(),
+            border_width: 0.0,
+            border_color: semantic.interactive.primary_hover,
+        },
+    }
 }

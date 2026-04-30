@@ -18,42 +18,85 @@ fn get_layout_config() -> &'static LayoutConfig {
     LAYOUT_CONFIG.get_or_init(LayoutConfig::adaptive)
 }
 
+fn notification_style(
+    level: NotificationLevel,
+) -> impl Fn(&AppTheme) -> iced::widget::container::Style {
+    move |theme: &AppTheme| {
+        let colors = theme.colors();
+        let bg = match level {
+            NotificationLevel::Error => colors.functional.danger.w100(),
+            NotificationLevel::Warning => colors.functional.warning.w100(),
+            NotificationLevel::Info => colors.functional.info.w100(),
+        };
+        iced::widget::container::Style {
+            background: Some(bg.into()),
+            border: iced::Border {
+                color: colors.semantic.border.default,
+                width: 1.0,
+                radius: 6.0.into(),
+            },
+            ..Default::default()
+        }
+    }
+}
+
 fn render_notifications<'a>(state: &'a UiState) -> Option<Element<'a, Message, AppTheme>> {
     if state.notifications.is_empty() {
         return None;
     }
 
-    let colors = state.theme.colors();
     let banners: Vec<Element<'a, Message, AppTheme>> = state
         .notifications
         .iter()
         .map(|n| {
-            let bg = match n.level {
-                NotificationLevel::Error => colors.functional.danger.w100(),
-                NotificationLevel::Warning => colors.functional.warning.w100(),
-                NotificationLevel::Info => colors.functional.info.w100(),
-            };
-            let text_color = match n.level {
-                NotificationLevel::Error => colors.functional.danger.w700(),
-                NotificationLevel::Warning => colors.functional.warning.w700(),
-                NotificationLevel::Info => colors.functional.info.w700(),
-            };
             let icon = match n.level {
                 NotificationLevel::Error => "\u{2715}",
                 NotificationLevel::Warning => "\u{26A0}",
                 NotificationLevel::Info => "\u{2139}",
             };
             let id = n.id;
+            let level = n.level;
 
             iced::widget::container(
                 iced::widget::row![
-                    iced::widget::text(icon).style(move |_theme| iced::widget::text::Style {
-                        color: Some(text_color),
+                    iced::widget::text(icon).style(move |theme: &AppTheme| {
+                        let tc = match level {
+                            NotificationLevel::Error => theme.colors().functional.danger.w700(),
+                            NotificationLevel::Warning => theme.colors().functional.warning.w700(),
+                            NotificationLevel::Info => theme.colors().functional.info.w700(),
+                        };
+                        iced::widget::text::Style { color: Some(tc) }
                     }),
                     iced::widget::text(&n.message)
                         .width(iced::Length::Fill)
-                        .style(move |_theme| iced::widget::text::Style {
-                            color: Some(text_color),
+                        .style(move |theme: &AppTheme| {
+                            let tc = match level {
+                                NotificationLevel::Error => theme.colors().functional.danger.w700(),
+                                NotificationLevel::Warning => {
+                                    theme.colors().functional.warning.w700()
+                                }
+                                NotificationLevel::Info => theme.colors().functional.info.w700(),
+                            };
+                            iced::widget::text::Style { color: Some(tc) }
+                        }),
+                    iced::widget::text(&n.message)
+                        .width(iced::Length::Fill)
+                        .style({
+                            let level = level;
+                            move |theme: &AppTheme| {
+                                let tc = match level {
+                                    NotificationLevel::Error => {
+                                        theme.colors().functional.danger.w700()
+                                    }
+                                    NotificationLevel::Warning => {
+                                        theme.colors().functional.warning.w700()
+                                    }
+                                    NotificationLevel::Info => {
+                                        theme.colors().functional.info.w700()
+                                    }
+                                };
+                                iced::widget::text::Style { color: Some(tc) }
+                            }
                         }),
                     iced::widget::button(iced::widget::text("\u{2715}"))
                         .style(button::secondary)
@@ -63,15 +106,7 @@ fn render_notifications<'a>(state: &'a UiState) -> Option<Element<'a, Message, A
                 .spacing(Spacing::DEFAULT.xs)
                 .align_y(iced::Alignment::Center),
             )
-            .style(move |_theme| iced::widget::container::Style {
-                background: Some(bg.into()),
-                border: iced::Border {
-                    color: colors.semantic.border.default,
-                    width: 1.0,
-                    radius: 6.0.into(),
-                },
-                ..Default::default()
-            })
+            .style(notification_style(level))
             .padding([Spacing::DEFAULT.xs, Spacing::DEFAULT.s])
             .into()
         })
@@ -82,6 +117,28 @@ fn render_notifications<'a>(state: &'a UiState) -> Option<Element<'a, Message, A
             .spacing(Spacing::DEFAULT.xs)
             .into(),
     )
+}
+
+fn responsive_panel<'a, M: 'a>(
+    content: Element<'a, M, AppTheme>,
+    breakpoint: Breakpoint,
+    left_ratio: f32,
+) -> Element<'a, M, AppTheme> {
+    let spacing = Spacing::DEFAULT.l2;
+    if breakpoint.is_single_column() {
+        iced::widget::column![content]
+            .spacing(spacing)
+            .padding(spacing)
+            .into()
+    } else {
+        iced::widget::row![
+            iced::widget::container(content)
+                .width(FillPortion((left_ratio * 100.0) as u16))
+                .padding(spacing)
+        ]
+        .spacing(spacing)
+        .into()
+    }
 }
 
 pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, AppTheme> {
@@ -117,78 +174,26 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
     let (left_ratio, _right_ratio) = breakpoint.column_ratio();
 
     let content: Element<'a, Message, AppTheme> = match state.current_view {
-        NavItem::Words => {
-            let left_panel =
-                crate::ui::words::explorer::view(&state.words, model, state.theme, breakpoint)
-                    .map(Message::Words);
-            if breakpoint.is_single_column() {
-                iced::widget::column![left_panel]
-                    .spacing(Spacing::DEFAULT.l2)
-                    .padding(Spacing::DEFAULT.l2)
-                    .into()
-            } else {
-                iced::widget::row![
-                    iced::widget::container(left_panel)
-                        .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(Spacing::DEFAULT.l2),
-                ]
-                .spacing(Spacing::DEFAULT.l2)
-                .into()
-            }
-        }
-        NavItem::Queue => {
-            let queue_panel = crate::ui::queue::view(model, state.theme).map(Message::Queue);
-            if breakpoint.is_single_column() {
-                iced::widget::column![queue_panel]
-                    .spacing(Spacing::DEFAULT.l2)
-                    .padding(Spacing::DEFAULT.l2)
-                    .into()
-            } else {
-                iced::widget::row![
-                    iced::widget::container(queue_panel)
-                        .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(Spacing::DEFAULT.l2),
-                ]
-                .spacing(Spacing::DEFAULT.l2)
-                .into()
-            }
-        }
-        NavItem::Tags => {
-            let tags_panel =
-                crate::ui::tags::view(&state.tags, model, state.theme).map(Message::Tags);
-            if breakpoint.is_single_column() {
-                iced::widget::column![tags_panel]
-                    .spacing(Spacing::DEFAULT.l2)
-                    .padding(Spacing::DEFAULT.l2)
-                    .into()
-            } else {
-                iced::widget::row![
-                    iced::widget::container(tags_panel)
-                        .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(Spacing::DEFAULT.l2),
-                ]
-                .spacing(Spacing::DEFAULT.l2)
-                .into()
-            }
-        }
-        NavItem::Settings => {
-            let settings_panel =
-                crate::ui::settings::view::view(&state.settings, model).map(Message::Settings);
-            if breakpoint.is_single_column() {
-                iced::widget::column![settings_panel]
-                    .spacing(Spacing::DEFAULT.l2)
-                    .padding(Spacing::DEFAULT.l2)
-                    .into()
-            } else {
-                iced::widget::row![
-                    iced::widget::container(settings_panel)
-                        .width(FillPortion((left_ratio * 100.0) as u16))
-                        .padding(Spacing::DEFAULT.l2),
-                ]
-                .spacing(Spacing::DEFAULT.l2)
-                .into()
-            }
-        }
+        NavItem::Words => responsive_panel(
+            crate::ui::words::explorer::view(&state.words, model, breakpoint).map(Message::Words),
+            breakpoint,
+            left_ratio,
+        ),
+        NavItem::Queue => responsive_panel(
+            crate::ui::queue::view(model).map(Message::Queue),
+            breakpoint,
+            left_ratio,
+        ),
+        NavItem::Tags => responsive_panel(
+            crate::ui::tags::view(&state.tags, model).map(Message::Tags),
+            breakpoint,
+            left_ratio,
+        ),
+        NavItem::Settings => responsive_panel(
+            crate::ui::settings::view::view(&state.settings, model).map(Message::Settings),
+            breakpoint,
+            left_ratio,
+        ),
     };
 
     let layout_config = get_layout_config();

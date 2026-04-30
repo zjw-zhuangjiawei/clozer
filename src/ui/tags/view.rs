@@ -13,8 +13,10 @@ use crate::ui::tags::state::{TagCreationState, TagsState};
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::AdvancedInput;
 use crate::ui::widgets::button;
+use crate::ui::widgets::container::card;
+use crate::ui::widgets::text as txt;
 use iced::Element;
-use iced::widget::{Button, Column, Container, PickList, Row, container, rule, scrollable, text};
+use iced::widget::{Button, Column, Container, PickList, Row, rule, scrollable, text};
 
 /// PickList adapter for parent tag selection.
 #[derive(Debug, Clone, PartialEq)]
@@ -30,22 +32,16 @@ impl std::fmt::Display for ParentOption {
 }
 
 /// Main tags panel view.
-pub fn view<'a>(
-    state: &'a TagsState,
-    model: &'a Model,
-    theme: AppTheme,
-) -> Element<'a, TagsMessage, AppTheme> {
-    let colors = theme.colors();
-
-    let left_panel = build_left_panel(state, model, theme);
+pub fn view<'a>(state: &'a TagsState, model: &'a Model) -> Element<'a, TagsMessage, AppTheme> {
+    let left_panel = build_left_panel(state, model);
 
     let right_content: Element<'a, TagsMessage, AppTheme> =
         if let Some(tag_id) = state.pending_delete {
-            build_delete_confirmation(state, tag_id, model, theme)
+            build_delete_confirmation(state, tag_id, model)
         } else if let Some(ref creation) = state.creation {
-            build_create_form(creation, model, theme)
+            build_create_form(creation, model)
         } else if let Some(tag_id) = state.selected {
-            build_detail_panel(state, tag_id, model, theme)
+            build_detail_panel(state, tag_id, model)
         } else {
             placeholder_view()
         };
@@ -53,10 +49,7 @@ pub fn view<'a>(
     let right_panel = Container::new(right_content)
         .width(iced::Length::FillPortion(6))
         .height(iced::Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(colors.semantic.surface.raised.into()),
-            ..Default::default()
-        });
+        .style(card);
 
     Row::new()
         .push(left_panel)
@@ -69,9 +62,8 @@ pub fn view<'a>(
 fn build_left_panel<'a>(
     state: &'a TagsState,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, TagsMessage, AppTheme> {
-    let search_bar = build_search_bar(state, theme);
+    let search_bar = build_search_bar(state);
 
     let visible_ids = if state.search.is_empty() {
         None
@@ -80,20 +72,12 @@ fn build_left_panel<'a>(
     };
 
     let mut items: Vec<Element<'a, TagsMessage, AppTheme>> = Vec::new();
-    collect_tag_nodes(
-        state,
-        model,
-        theme,
-        visible_ids.as_ref(),
-        &mut items,
-        0,
-        None,
-    );
+    collect_tag_nodes(state, model, visible_ids.as_ref(), &mut items, 0, None);
 
     let tree: Element<'a, TagsMessage, AppTheme> = if items.is_empty() {
         text("No tags found")
             .size(FontSize::Body.px())
-            .color(theme.colors().semantic.text.secondary)
+            .style(txt::secondary)
             .into()
     } else {
         Column::with_children(items)
@@ -118,10 +102,7 @@ fn build_left_panel<'a>(
         .into()
 }
 
-fn build_search_bar<'a>(
-    state: &'a TagsState,
-    _theme: AppTheme,
-) -> Element<'a, TagsMessage, AppTheme> {
+fn build_search_bar<'a>(state: &'a TagsState) -> Element<'a, TagsMessage, AppTheme> {
     let search_input = AdvancedInput::new("Search tags...")
         .value(&state.search)
         .on_input(TagsMessage::SearchQueryChanged)
@@ -162,7 +143,6 @@ fn build_search_bar<'a>(
 fn collect_tag_nodes<'a>(
     state: &'a TagsState,
     model: &'a Model,
-    theme: AppTheme,
     visible_ids: Option<&HashSet<TagId>>,
     items: &mut Vec<Element<'a, TagsMessage, AppTheme>>,
     depth: u32,
@@ -190,19 +170,11 @@ fn collect_tag_nodes<'a>(
             .map(|(rid, _)| *rid == *id)
             .unwrap_or(false);
 
-        let row = build_tag_row(*id, tag, depth, is_renaming, state, model, theme);
+        let row = build_tag_row(*id, tag, depth, is_renaming, state, model);
         items.push(row);
 
         if state.expanded.contains(id) || (state.search.is_empty() && visible_ids.is_none()) {
-            collect_tag_nodes(
-                state,
-                model,
-                theme,
-                visible_ids,
-                items,
-                depth + 1,
-                Some(*id),
-            );
+            collect_tag_nodes(state, model, visible_ids, items, depth + 1, Some(*id));
         }
     }
 }
@@ -214,9 +186,7 @@ fn build_tag_row<'a>(
     is_renaming: bool,
     state: &'a TagsState,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, TagsMessage, AppTheme> {
-    let colors = theme.colors();
     let is_selected = state.selected == Some(tag_id);
     let meaning_count = state.get_meaning_count(tag_id, &model.meaning_registry);
     let has_children = !tag.children_ids.is_empty();
@@ -261,7 +231,7 @@ fn build_tag_row<'a>(
     let count_element: Element<'a, TagsMessage, AppTheme> = if meaning_count > 0 {
         text(format!("({})", meaning_count))
             .size(FontSize::Footnote.px())
-            .color(colors.semantic.text.secondary)
+            .style(txt::secondary)
             .into()
     } else {
         text("").size(FontSize::Footnote.px()).into()
@@ -304,15 +274,7 @@ fn build_tag_row<'a>(
     let element: Element<'a, TagsMessage, AppTheme> = if is_selected {
         Container::new(row)
             .padding([Spacing::DEFAULT.xs, Spacing::DEFAULT.s])
-            .style(move |_| container::Style {
-                background: Some(colors.semantic.surface.raised.into()),
-                border: iced::Border {
-                    color: colors.semantic.border.default,
-                    width: 1.0,
-                    radius: 4.0.into(),
-                },
-                ..Default::default()
-            })
+            .style(card)
             .width(iced::Length::Fill)
             .into()
     } else {
@@ -338,7 +300,6 @@ fn build_detail_panel<'a>(
     state: &'a TagsState,
     tag_id: TagId,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, TagsMessage, AppTheme> {
     let tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
@@ -422,7 +383,7 @@ fn build_detail_panel<'a>(
     // Reparent form
     if state.reparenting == Some(tag_id) {
         content = content.push(rule::horizontal(1));
-        content = content.push(build_reparent_form(tag_id, model, theme));
+        content = content.push(build_reparent_form(tag_id, model));
     }
 
     Container::new(content)
@@ -432,11 +393,7 @@ fn build_detail_panel<'a>(
         .into()
 }
 
-fn build_reparent_form<'a>(
-    tag_id: TagId,
-    model: &Model,
-    _theme: AppTheme,
-) -> Element<'a, TagsMessage, AppTheme> {
+fn build_reparent_form<'a>(tag_id: TagId, model: &Model) -> Element<'a, TagsMessage, AppTheme> {
     let current_tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
         None => return placeholder_view(),
@@ -487,7 +444,6 @@ fn build_reparent_form<'a>(
 fn build_create_form<'a>(
     creation: &TagCreationState,
     model: &Model,
-    _theme: AppTheme,
 ) -> Element<'a, TagsMessage, AppTheme> {
     let name_input = AdvancedInput::new("Tag name")
         .value(&creation.name)
@@ -551,10 +507,7 @@ fn build_delete_confirmation<'a>(
     state: &TagsState,
     tag_id: TagId,
     model: &Model,
-    theme: AppTheme,
 ) -> Element<'a, TagsMessage, AppTheme> {
-    let colors = theme.colors();
-
     let tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
         None => return placeholder_view(),
@@ -583,14 +536,17 @@ fn build_delete_confirmation<'a>(
         .push(
             Container::new(text(warning_text).size(FontSize::Body.px()))
                 .padding(Spacing::DEFAULT.s)
-                .style(move |_| container::Style {
-                    background: Some(colors.functional.danger.w50().into()),
-                    border: iced::Border {
-                        color: colors.functional.danger.w200(),
-                        width: 1.0,
-                        radius: 4.0.into(),
-                    },
-                    ..Default::default()
+                .style(|theme: &AppTheme| {
+                    let colors = theme.colors();
+                    iced::widget::container::Style {
+                        background: Some(colors.functional.danger.w50().into()),
+                        border: iced::Border {
+                            color: colors.functional.danger.w200(),
+                            width: 1.0,
+                            radius: Spacing::DEFAULT.xs.into(),
+                        },
+                        ..Default::default()
+                    }
                 }),
         )
         .push(

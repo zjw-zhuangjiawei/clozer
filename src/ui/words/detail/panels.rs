@@ -15,7 +15,6 @@ use super::{build_header_row, build_icon_button, build_svg_icon, detail_panel};
 pub fn word_detail_view<'a>(
     word: &'a Word,
     model: &'a Model,
-    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = build_header_row(
         word.content.clone(),
@@ -57,7 +56,6 @@ pub fn meaning_detail_view<'a>(
     meaning: &'a Meaning,
     word: &'a Word,
     model: &'a Model,
-    _theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let tag_names: Vec<String> = meaning
         .tag_ids

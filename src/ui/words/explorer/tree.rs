@@ -1,23 +1,22 @@
-//! Word tree — build the word list with expand/collapse, selection, and actions.
-
 use crate::assets;
 use crate::models::types::WordId;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
 use crate::ui::widgets::button;
+use crate::ui::widgets::container::{badge, card};
+use crate::ui::widgets::text as txt;
 use crate::ui::widgets::{CheckboxState, svg_checkbox};
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::WordsState;
-use iced::widget::{Button, Column, Container, Row, Space, Text, container, rule, svg};
-use iced::{Border, Element, Length};
+use iced::widget::{Button, Column, Container, Row, Space, Text, rule, svg};
+use iced::{Element, Length};
 
 use super::meaning::build_meaning_node;
 
 pub fn build_word_tree<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let results = words_state.search.get_results();
 
@@ -25,12 +24,12 @@ pub fn build_word_tree<'a>(
         Some(results) => results
             .iter()
             .filter_map(|(word_id, _)| model.word_registry.get(*word_id))
-            .map(|word| build_word_node(words_state, model, word, theme))
+            .map(|word| build_word_node(words_state, model, word))
             .collect(),
         None => model
             .word_registry
             .iter()
-            .map(|(_, word)| build_word_node(words_state, model, word, theme))
+            .map(|(_, word)| build_word_node(words_state, model, word))
             .collect(),
     };
 
@@ -53,13 +52,10 @@ pub fn build_word_node<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     word: &'a crate::models::Word,
-    theme: AppTheme,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let is_expanded = words_state.expansion.is_expanded(word.id);
     let is_selected = words_state.selection.is_word_selected(word);
     let is_partial = words_state.selection.is_word_partial(word);
-
-    let colors = theme.colors();
 
     let expand_icon_name = if is_expanded {
         "keyboard_arrow_down_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
@@ -101,10 +97,9 @@ pub fn build_word_node<'a>(
         svg_checkbox(
             CheckboxState::Indeterminate,
             WordsMessage::WordToggled(word.id),
-            theme,
         )
     } else {
-        svg_checkbox(is_selected, WordsMessage::WordToggled(word.id), theme)
+        svg_checkbox(is_selected, WordsMessage::WordToggled(word.id))
     };
 
     let word_content: Element<'a, WordsMessage, AppTheme> =
@@ -119,18 +114,10 @@ pub fn build_word_node<'a>(
             Container::new(
                 Text::new(lang.to_string())
                     .size(FontSize::Caption.px())
-                    .color(colors.semantic.interactive.primary),
+                    .style(txt::primary_alt),
             )
             .padding([1, 6])
-            .style(move |_| container::Style {
-                background: Some(colors.semantic.surface.elevated.into()),
-                border: iced::Border {
-                    color: colors.semantic.border.default,
-                    width: 1.0,
-                    radius: 4.0.into(),
-                },
-                ..Default::default()
-            })
+            .style(badge)
             .into()
         });
 
@@ -164,34 +151,18 @@ pub fn build_word_node<'a>(
 
         for meaning_id in &word.meaning_ids {
             if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-                content = content.push(build_meaning_node(words_state, model, meaning, theme));
+                content = content.push(build_meaning_node(words_state, model, meaning));
             }
         }
 
         Container::new(content)
             .padding(Spacing::DEFAULT.s)
-            .style(move |_| container::Style {
-                background: Some(colors.semantic.surface.raised.into()),
-                border: Border {
-                    color: colors.semantic.border.default,
-                    width: 1.0,
-                    radius: 6.0.into(),
-                },
-                ..Default::default()
-            })
+            .style(card)
             .into()
     } else {
         Container::new(word_header)
             .padding(Spacing::DEFAULT.s)
-            .style(move |_| container::Style {
-                background: Some(colors.semantic.surface.raised.into()),
-                border: Border {
-                    color: colors.semantic.border.default,
-                    width: 1.0,
-                    radius: 6.0.into(),
-                },
-                ..Default::default()
-            })
+            .style(card)
             .into()
     }
 }
