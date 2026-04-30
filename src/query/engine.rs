@@ -264,10 +264,10 @@ impl<'a> QueryEngine<'a> {
                 results.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
             }
             SortType::Newest => {
-                results.sort_by(|a, b| b.0.cmp(&a.0));
+                results.sort_by_key(|b| std::cmp::Reverse(b.0));
             }
             SortType::Oldest => {
-                results.sort_by(|a, b| a.0.cmp(&b.0));
+                results.sort_by_key(|a| a.0);
             }
             SortType::AZ => {
                 results.sort_by(|a, b| {
@@ -332,10 +332,10 @@ pub fn search(
             results.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         }
         SortType::Newest => {
-            results.sort_by(|a, b| b.0.cmp(&a.0));
+            results.sort_by_key(|b| std::cmp::Reverse(b.0));
         }
         SortType::Oldest => {
-            results.sort_by(|a, b| a.0.cmp(&b.0));
+            results.sort_by_key(|a| a.0);
         }
         SortType::AZ => {
             results.sort_by(|a, b| {

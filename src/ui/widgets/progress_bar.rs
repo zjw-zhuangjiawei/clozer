@@ -22,7 +22,7 @@ pub fn primary(theme: &AppTheme) -> Style {
     Style {
         background: semantic.surface.raised.into(),
         bar: semantic.interactive.primary.into(),
-        border: iced::border::rounded(2),
+        border: iced::border::rounded(4),
     }
 }
 
@@ -31,6 +31,6 @@ fn styled(background: impl Into<Background>, bar: impl Into<Background>) -> Styl
     Style {
         background: background.into(),
         bar: bar.into(),
-        border: border::rounded(2),
+        border: border::rounded(4),
     }
 }

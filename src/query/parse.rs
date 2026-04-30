@@ -31,10 +31,10 @@ pub fn parse_query_raw(input: &str) -> (Vec<Token>, Condition) {
 /// First phase: Tokenize input string
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
+    let chars = input.chars();
     let mut current_token = String::new();
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         match ch {
             '|' => {
                 // Flush current token before OR
@@ -80,10 +80,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
 
     // Don't forget the last token
-    if !current_token.is_empty() {
-        if let Some(token) = parse_single_token(&current_token) {
-            tokens.push(token);
-        }
+    if !current_token.is_empty()
+        && let Some(token) = parse_single_token(&current_token)
+    {
+        tokens.push(token);
     }
 
     tokens
@@ -107,10 +107,10 @@ fn parse_single_token(s: &str) -> Option<Token> {
             if !pos_list.is_empty() {
                 return Some(Token::ExcludePos(pos_list));
             }
-        } else if let Some(status_str) = s.strip_prefix("-is:") {
-            if let Some(status) = StatusFilter::parse(status_str) {
-                return Some(Token::ExcludeStatus(status));
-            }
+        } else if let Some(status_str) = s.strip_prefix("-is:")
+            && let Some(status) = StatusFilter::parse(status_str)
+        {
+            return Some(Token::ExcludeStatus(status));
         }
         // Text starting with - but not a special token
         return Some(Token::Text(s.to_string()));
@@ -124,10 +124,10 @@ fn parse_single_token(s: &str) -> Option<Token> {
         if !pos_list.is_empty() {
             return Some(Token::IncludePos(pos_list));
         }
-    } else if let Some(status_str) = s.strip_prefix("is:") {
-        if let Some(status) = StatusFilter::parse(status_str) {
-            return Some(Token::IncludeStatus(status));
-        }
+    } else if let Some(status_str) = s.strip_prefix("is:")
+        && let Some(status) = StatusFilter::parse(status_str)
+    {
+        return Some(Token::IncludeStatus(status));
     }
 
     // Default: text search

@@ -11,6 +11,16 @@ pub enum NavItem {
 }
 
 impl NavItem {
+    /// Returns all navigation items in display order.
+    pub fn all() -> &'static [NavItem; 4] {
+        &[
+            NavItem::Words,
+            NavItem::Queue,
+            NavItem::Tags,
+            NavItem::Settings,
+        ]
+    }
+
     /// Returns the display label for this navigation item.
     pub fn label(&self) -> &'static str {
         match self {

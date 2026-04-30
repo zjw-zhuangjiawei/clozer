@@ -8,7 +8,6 @@ pub mod role;
 pub mod semantic;
 
 use clap::ValueEnum;
-use iced::Length;
 use iced::theme::{Base as ThemeBase, Mode, Palette, Style as ThemeStyle};
 use iced::widget::button::Style;
 use serde::{Deserialize, Serialize};
@@ -32,46 +31,6 @@ use std::sync::OnceLock;
 
 static LIGHT_COLORS: OnceLock<color::ThemeColors> = OnceLock::new();
 static DARK_COLORS: OnceLock<color::ThemeColors> = OnceLock::new();
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum Breakpoint {
-    #[default]
-    Desktop,
-    Tablet,
-    Mobile,
-}
-
-impl Breakpoint {
-    pub fn from_width(width: f32) -> Self {
-        if width < 600.0 {
-            Breakpoint::Mobile
-        } else if width < 1024.0 {
-            Breakpoint::Tablet
-        } else {
-            Breakpoint::Desktop
-        }
-    }
-
-    pub fn column_ratio(&self) -> (f32, f32) {
-        match self {
-            Breakpoint::Mobile => (0.0, 1.0),
-            Breakpoint::Tablet => (0.3, 0.7),
-            Breakpoint::Desktop => (0.4, 0.6),
-        }
-    }
-
-    pub fn sidebar_width(&self) -> Length {
-        match self {
-            Breakpoint::Mobile => Length::Fill,
-            Breakpoint::Tablet => Length::Fixed(200.0),
-            Breakpoint::Desktop => Length::Fixed(250.0),
-        }
-    }
-
-    pub fn is_single_column(&self) -> bool {
-        matches!(self, Breakpoint::Mobile)
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
 pub enum ButtonSize {
@@ -170,9 +129,15 @@ impl ThemeBase for AppTheme {
 
     fn base(&self) -> ThemeStyle {
         let colors = self.colors();
-        ThemeStyle {
-            background_color: colors.neutral.w50(),
-            text_color: colors.neutral.w900(),
+        match self {
+            AppTheme::Light => ThemeStyle {
+                background_color: colors.neutral.w50(),
+                text_color: colors.neutral.w900(),
+            },
+            AppTheme::Dark => ThemeStyle {
+                background_color: colors.neutral.w900(),
+                text_color: colors.neutral.w50(),
+            },
         }
     }
 

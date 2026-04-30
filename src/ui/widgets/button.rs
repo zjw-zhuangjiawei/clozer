@@ -1,4 +1,5 @@
 use crate::ui::theme::AppTheme;
+use crate::ui::theme::BorderRadiusValues;
 use iced::Color;
 use iced::theme::Base as ThemeBase;
 use iced::theme::Mode;
@@ -22,7 +23,7 @@ fn base_style(bg: Color, text: Color, border: Color) -> Style {
         border: iced::Border {
             color: border,
             width: 1.0,
-            radius: 0.0.into(),
+            radius: BorderRadiusValues::default().sm.into(),
         },
         text_color: text,
         ..Default::default()

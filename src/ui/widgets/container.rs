@@ -22,7 +22,7 @@ pub fn card(theme: &AppTheme) -> Style {
         border: iced::Border {
             color: semantic.border.default,
             width: 1.0,
-            radius: BorderRadiusValues::default().md.into(),
+            radius: BorderRadiusValues::default().lg.into(),
         },
         ..Default::default()
     }

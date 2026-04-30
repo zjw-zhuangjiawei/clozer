@@ -1,9 +1,6 @@
-//! Extended breakpoint system for responsive layouts.
+//! Breakpoint system for responsive layouts.
 
-use super::mode::LayoutConfig;
-use iced::Length;
-
-/// Extended breakpoint system with more granular breakpoints.
+/// Breakpoint based on window width for responsive UI adaptation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Breakpoint {
     #[default]
@@ -25,14 +22,8 @@ impl Breakpoint {
         }
     }
 
-    pub fn recommended_layout(self) -> LayoutConfig {
-        match self {
-            Breakpoint::XSmall | Breakpoint::Small => LayoutConfig::adaptive(),
-            Breakpoint::Medium => LayoutConfig::waterfall(2),
-            Breakpoint::Large | Breakpoint::XLarge => LayoutConfig::grid(3),
-        }
-    }
-
+    /// Column ratio for master-detail panels: (left_ratio, right_ratio).
+    /// When 0.0/1.0, the panel uses single-column mode.
     pub fn column_ratio(&self) -> (f32, f32) {
         match self {
             Breakpoint::XSmall | Breakpoint::Small => (0.0, 1.0),
@@ -41,15 +32,28 @@ impl Breakpoint {
         }
     }
 
-    pub fn sidebar_width(&self) -> Length {
+    /// Whether to use single-column layout (no detail panel).
+    pub fn is_single_column(&self) -> bool {
+        matches!(self, Breakpoint::XSmall | Breakpoint::Small)
+    }
+
+    /// Sidebar shows full width (icon + text) only on large+ screens.
+    pub fn sidebar_expanded(&self) -> bool {
+        matches!(self, Breakpoint::Large | Breakpoint::XLarge)
+    }
+
+    /// Sidebar panel width in pixels.
+    pub fn sidebar_panel_width(&self) -> f32 {
         match self {
-            Breakpoint::XSmall | Breakpoint::Small => Length::Fill,
-            Breakpoint::Medium => Length::Fixed(200.0),
-            Breakpoint::Large | Breakpoint::XLarge => Length::Fixed(250.0),
+            Breakpoint::XSmall | Breakpoint::Small => 0.0,
+            Breakpoint::Medium => 52.0,
+            Breakpoint::Large => 200.0,
+            Breakpoint::XLarge => 220.0,
         }
     }
 
-    pub fn is_single_column(&self) -> bool {
+    /// Use bottom tab bar instead of sidebar on very narrow screens.
+    pub fn use_bottom_bar(&self) -> bool {
         matches!(self, Breakpoint::XSmall | Breakpoint::Small)
     }
 }

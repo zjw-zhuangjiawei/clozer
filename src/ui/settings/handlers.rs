@@ -15,10 +15,10 @@ pub fn general(
 ) -> Task<SettingsMessage> {
     match message {
         GeneralSettingsMessage::LogLevelChanged(level) => {
-            Arc::get_mut(&mut model.app_config).map(|c| {
+            if let Some(c) = Arc::get_mut(&mut model.app_config) {
                 c.log_level = level;
                 c.save_to_file();
-            });
+            }
         }
     }
     Task::none()
@@ -36,13 +36,11 @@ pub fn provider(
         }
         ProviderMessage::Edit(id) => {
             let uuid = Uuid::from(id);
-            if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                if let Some(provider) = config.ai.providers.iter().find(|p| p.id == uuid) {
-                    state.provider_edit = crate::ui::settings::state::ProviderEditState::start_edit(
-                        id,
-                        provider.clone(),
-                    );
-                }
+            if let Some(config) = Arc::get_mut(&mut model.app_config)
+                && let Some(provider) = config.ai.providers.iter().find(|p| p.id == uuid)
+            {
+                state.provider_edit =
+                    crate::ui::settings::state::ProviderEditState::start_edit(id, provider.clone());
             }
         }
         ProviderMessage::Delete(id) => {
@@ -60,15 +58,14 @@ pub fn provider(
 
                 if is_new {
                     config.ai.providers.push(provider);
-                } else if let Some(editing_id) = state.provider_edit.editing_id {
-                    if let Some(existing) = config
+                } else if let Some(editing_id) = state.provider_edit.editing_id
+                    && let Some(existing) = config
                         .ai
                         .providers
                         .iter_mut()
                         .find(|p| p.id == editing_id.0)
-                    {
-                        *existing = provider;
-                    }
+                {
+                    *existing = provider;
                 }
                 config.save_to_file();
             }
@@ -105,11 +102,11 @@ pub fn model_handler(
         }
         ModelMessage::Edit(id) => {
             let uuid = Uuid::from(id);
-            if let Some(config) = Arc::get_mut(&mut model.app_config) {
-                if let Some(m) = config.ai.models.iter().find(|m| m.id == uuid) {
-                    state.model_edit =
-                        crate::ui::settings::state::ModelEditState::start_edit(id, m.clone());
-                }
+            if let Some(config) = Arc::get_mut(&mut model.app_config)
+                && let Some(m) = config.ai.models.iter().find(|m| m.id == uuid)
+            {
+                state.model_edit =
+                    crate::ui::settings::state::ModelEditState::start_edit(id, m.clone());
             }
         }
         ModelMessage::Delete(id) => {
@@ -129,12 +126,11 @@ pub fn model_handler(
 
                 if is_new {
                     config.ai.models.push(model_config);
-                } else if let Some(editing_id) = state.model_edit.editing_id {
-                    if let Some(existing) =
+                } else if let Some(editing_id) = state.model_edit.editing_id
+                    && let Some(existing) =
                         config.ai.models.iter_mut().find(|m| m.id == editing_id.0)
-                    {
-                        *existing = model_config;
-                    }
+                {
+                    *existing = model_config;
                 }
                 config.save_to_file();
             }

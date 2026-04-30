@@ -86,8 +86,8 @@ impl SemanticPaletteBuilder {
             tertiary: ForegroundRole::tertiary(&self.neutral, mode),
             disabled: ForegroundRole::disabled(&self.neutral, mode),
             inverse: match mode {
-                ColorMode::Light => BackgroundRole::base(&self.neutral, mode),
-                ColorMode::Dark => BackgroundRole::base(&self.neutral, mode),
+                ColorMode::Light => self.neutral.w900(),
+                ColorMode::Dark => self.neutral.w50(),
             },
             link: InteractiveRole::link(&self.primary, mode),
             error: InteractiveRole::danger(&self.functional, mode),

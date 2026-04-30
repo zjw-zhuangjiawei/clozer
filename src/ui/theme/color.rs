@@ -116,7 +116,7 @@ impl ColorScale {
                     ColorMode::Light => [
                         0.96, 0.92, 0.84, 0.70, 0.50, 0.13, 0.04, -0.08, -0.18, -0.28,
                     ],
-                    ColorMode::Dark => [0.98, 0.94, 0.86, 0.76, 0.62, 0.95, 0.84, 0.72, 0.60, 0.34],
+                    ColorMode::Dark => [0.98, 0.94, 0.86, 0.76, 0.62, 0.48, 0.34, 0.22, 0.12, 0.05],
                 };
                 weights
                     .iter()
@@ -140,10 +140,10 @@ impl ColorScale {
                         0.65 - base_oklch.l,
                         0.45 - base_oklch.l,
                         0.0,
-                        -0.12 - base_oklch.l,
-                        -0.22 - base_oklch.l,
-                        -0.32 - base_oklch.l,
-                        -0.42 - base_oklch.l,
+                        -0.12,
+                        -0.22,
+                        -0.32,
+                        -0.42,
                     ],
                     ColorMode::Dark => [
                         0.97 - base_oklch.l,
@@ -152,10 +152,10 @@ impl ColorScale {
                         0.75 - base_oklch.l,
                         0.60 - base_oklch.l,
                         0.0,
-                        -0.10 - base_oklch.l,
-                        -0.18 - base_oklch.l,
-                        -0.26 - base_oklch.l,
-                        -0.34 - base_oklch.l,
+                        -0.10,
+                        -0.18,
+                        -0.26,
+                        -0.34,
                     ],
                 };
 

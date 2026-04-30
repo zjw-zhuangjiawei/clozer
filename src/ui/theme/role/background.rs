@@ -32,7 +32,10 @@ impl BackgroundRole {
     }
 
     /// Overlay/modal backdrop
-    pub fn overlay(scale: &ColorScale, _mode: ColorMode) -> Color {
-        scale.w900()
+    pub fn overlay(scale: &ColorScale, mode: ColorMode) -> Color {
+        match mode {
+            ColorMode::Light => scale.w900(),
+            ColorMode::Dark => scale.w50(),
+        }
     }
 }

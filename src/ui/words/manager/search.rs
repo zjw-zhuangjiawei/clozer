@@ -103,17 +103,14 @@ impl SearchManager {
             self.dirty = false;
         }
 
-        self.cached_results
-            .as_ref()
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
+        self.cached_results.as_deref().unwrap_or(&[])
     }
 
     /// Gets the cached results without executing.
     ///
     /// Returns `None` if the query hasn't been executed yet.
     pub fn get_results(&self) -> Option<&[(WordId, i32)]> {
-        self.cached_results.as_ref().map(|v| v.as_slice())
+        self.cached_results.as_deref()
     }
 
     /// Returns the IDs of matching words (without scores).
