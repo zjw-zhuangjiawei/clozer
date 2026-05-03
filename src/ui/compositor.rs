@@ -10,13 +10,20 @@ use crate::ui::state::UiState;
 use crate::ui::status_bar::status_bar;
 use crate::ui::words::message::WordsMessage;
 use crate::ui::words::state::WordsState;
-use iced::widget::{Column, Row};
-use iced::{Element, Task};
+use iced::widget::{Column, Container, Row};
+use iced::{Element, Length, Task};
 
 pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, AppTheme> {
     let breakpoint = Breakpoint::from_width(state.window_width as f32);
 
     let sidebar_element = sidebar::sidebar(state, breakpoint);
+    let sidebar_panel = Container::new(sidebar_element)
+        .style(|theme: &AppTheme| iced::widget::container::Style {
+            background: Some(theme.colors().semantic.surface.raised.into()),
+            ..Default::default()
+        })
+        .width(Length::Fixed(breakpoint.sidebar_panel_width()))
+        .height(Length::Fill);
 
     let content: Element<'a, Message, AppTheme> = match state.current_view {
         NavItem::Words => {
@@ -42,14 +49,14 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
         Column::new()
             .push(
                 Row::new()
-                    .push(sidebar_element)
+                    .push(sidebar_panel)
                     .push(content)
-                    .width(iced::Length::Fill)
-                    .height(iced::Length::Fill),
+                    .width(Length::Fill)
+                    .height(Length::Fill),
             )
             .push(status_bar(&state.notifications))
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
+            .width(Length::Fill)
+            .height(Length::Fill)
             .into()
     }
 }
