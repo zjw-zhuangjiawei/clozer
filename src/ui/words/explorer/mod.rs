@@ -8,6 +8,7 @@ pub(super) use self::actions::build_action_bar;
 pub(super) use self::search::build_search_bar;
 pub(super) use self::tree::build_word_tree;
 
+use crate::i18n::I18nManager;
 use crate::state::Model;
 use crate::ui::AppTheme;
 use crate::ui::layout::breakpoint::Breakpoint;
@@ -23,22 +24,23 @@ pub fn view<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     breakpoint: Breakpoint,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let (left_ratio, right_ratio) = breakpoint.column_ratio();
 
-    let search_bar = build_search_bar(words_state, model, breakpoint);
+    let search_bar = build_search_bar(words_state, model, breakpoint, i18n);
 
-    let word_tree = build_word_tree(words_state, model);
+    let word_tree = build_word_tree(words_state, model, i18n);
 
     if breakpoint.is_single_column() {
         if let Some(ref target) = words_state.pending_delete {
-            return build_delete_confirmation(target, model);
+            return build_delete_confirmation(target, model, i18n);
         }
         Column::new()
             .push(search_bar)
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-            .push(build_action_bar(words_state, model))
+            .push(build_action_bar(words_state, model, i18n))
             .spacing(Spacing::DEFAULT.s2)
             .padding(Spacing::DEFAULT.s2)
             .height(iced::Length::Fill)
@@ -48,14 +50,14 @@ pub fn view<'a>(
             .push(search_bar)
             .push(iced::widget::rule::horizontal(1))
             .push(iced::widget::scrollable(word_tree).height(iced::Length::Fill))
-            .push(build_action_bar(words_state, model))
+            .push(build_action_bar(words_state, model, i18n))
             .spacing(Spacing::DEFAULT.s2)
             .padding(Spacing::DEFAULT.s2)
             .width(iced::Length::FillPortion((left_ratio * 10.0) as u16));
 
         let right_panel: Element<'a, WordsMessage, AppTheme> =
             if let Some(ref target) = words_state.pending_delete {
-                Container::new(build_delete_confirmation(target, model))
+                Container::new(build_delete_confirmation(target, model, i18n))
                     .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
                     .height(iced::Length::Fill)
                     .style(card)
@@ -68,6 +70,7 @@ pub fn view<'a>(
                     words_state.panel.dictionary_loading,
                     &words_state.panel.dictionary_result,
                     model,
+                    i18n,
                 ))
                 .width(iced::Length::FillPortion((right_ratio * 10.0) as u16))
                 .height(iced::Length::Fill)
@@ -87,26 +90,34 @@ pub fn view<'a>(
 fn build_delete_confirmation<'a>(
     target: &'a DeleteTarget,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
+    let unknown = i18n.tr("words-unknown-word");
     let (title, warning) = match target {
         DeleteTarget::Word(word_id) => {
             let word = model.word_registry.get(*word_id);
-            let name = word.map(|w| w.content.as_str()).unwrap_or("unknown word");
+            let name = word.map(|w| w.content.as_str()).unwrap_or(&unknown);
             let meaning_count = word.map(|w| w.meaning_ids.len()).unwrap_or(0);
             (
-                "Delete Word",
-                format!("Delete \"{}\" and its {} meaning(s)?", name, meaning_count),
+                i18n.tr("words-delete-word"),
+                i18n.tr_with(
+                    "words-delete-word-warning",
+                    &[name, &meaning_count.to_string()],
+                ),
             )
         }
         DeleteTarget::Meanings(ids) => (
-            "Delete Meanings",
-            format!("Delete {} selected meaning(s)?", ids.len()),
+            i18n.tr("words-delete-meanings"),
+            i18n.tr_with("words-delete-meanings-warning", &[&ids.len().to_string()]),
         ),
         DeleteTarget::Clozes(ids) => (
-            "Delete Clozes",
-            format!("Delete {} selected cloze(s)?", ids.len()),
+            i18n.tr("words-delete-clozes-title"),
+            i18n.tr_with("words-delete-clozes-warning", &[&ids.len().to_string()]),
         ),
     };
+
+    let delete_label = i18n.tr("words-delete-btn");
+    let cancel_label = i18n.tr("words-cancel");
 
     let content = Column::new()
         .push(Text::new(title).size(FontSize::Heading.px()))
@@ -129,13 +140,13 @@ fn build_delete_confirmation<'a>(
         .push(
             Row::new()
                 .push(
-                    Button::new(Text::new("Delete").size(FontSize::Body.px()))
+                    Button::new(Text::new(delete_label).size(FontSize::Body.px()))
                         .style(button::danger)
                         .padding(ButtonSize::Standard.to_iced_padding())
                         .on_press(WordsMessage::DeleteConfirmed(target.clone())),
                 )
                 .push(
-                    Button::new(Text::new("Cancel").size(FontSize::Body.px()))
+                    Button::new(Text::new(cancel_label).size(FontSize::Body.px()))
                         .style(button::secondary)
                         .padding(ButtonSize::Standard.to_iced_padding())
                         .on_press(WordsMessage::DeleteCancelled),

@@ -3,6 +3,7 @@
 //! Contains the top-level Message enum with flat message types for
 //! the single-window architecture.
 
+use crate::i18n::LocaleDto;
 use crate::state::QueueGenerationResult;
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
@@ -48,6 +49,9 @@ pub enum Message {
 
     // Theme change request
     ThemeChanged(AppTheme),
+
+    // Locale change request
+    LocaleChanged(LocaleDto),
 
     // Tab key pressed (for search suggestion acceptance)
     TabPressed,

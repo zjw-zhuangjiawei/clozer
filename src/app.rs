@@ -47,11 +47,13 @@ impl App {
             model.cloze_registry.count(),
         );
 
-        // Initialize UI state with theme from config
-        let ui = UiState {
+        // Initialize UI state with theme and locale from config
+        let mut ui = UiState {
             theme: config.theme,
+            locale: config.locale,
             ..UiState::new()
         };
+        ui.i18n.set_locale(config.locale.to_langid());
 
         let app = Self { config, model, ui };
 
@@ -167,6 +169,18 @@ impl App {
                     c.save_to_file();
                 }
                 tracing::info!("Theme changed to: {:?}", theme);
+                Task::none()
+            }
+
+            // Locale change
+            Message::LocaleChanged(locale) => {
+                self.ui.locale = locale;
+                self.ui.i18n.set_locale(locale.to_langid());
+                if let Some(c) = Arc::get_mut(&mut self.model.app_config) {
+                    c.locale = locale;
+                    c.save_to_file();
+                }
+                tracing::info!("Locale changed to: {:?}", locale);
                 Task::none()
             }
 

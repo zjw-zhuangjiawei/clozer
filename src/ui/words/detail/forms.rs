@@ -1,3 +1,4 @@
+use crate::i18n::I18nManager;
 use crate::models::PartOfSpeech;
 use crate::ui::AppTheme;
 use crate::ui::theme::{ButtonSize, FontSize, Spacing};
@@ -35,29 +36,30 @@ pub fn word_form<'a>(
     word_buffer: &'a WordEditBuffer,
     _meaning_buffer: &'a MeaningEditBuffer,
     on_save: WordsMessage,
+    i18n: &I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let is_lang_empty = word_buffer.language_input.is_empty();
     let is_lang_valid = word_buffer.language.is_some();
 
     let (validation_icon, lang_status) = if is_lang_valid {
-        (" \u{2713}", "Valid BCP 47 tag")
+        (" \u{2713}", i18n.tr("words-valid-bcp47"))
     } else if !is_lang_empty {
-        (" \u{26A0}", "Not a valid language tag")
+        (" \u{26A0}", i18n.tr("words-invalid-bcp47"))
     } else {
-        ("", "e.g. en, zh-CN, fr")
+        ("", i18n.tr("words-bcp47-hint"))
     };
 
     let header = Row::new()
         .push(Text::new(title).size(FontSize::Heading.px()))
         .spacing(Spacing::DEFAULT.s);
 
-    let word_input = AdvancedInput::new("Word *")
+    let word_input = AdvancedInput::new(i18n.tr("words-word-placeholder"))
         .value(&word_buffer.content)
         .on_input(WordsMessage::EditWordContentChanged)
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let lang_input = AdvancedInput::new("Language (optional)")
+    let lang_input = AdvancedInput::new(i18n.tr("words-language-placeholder"))
         .value(&word_buffer.language_input)
         .on_input(|s| {
             let parsed = s.trim().parse::<langtag::LangTagBuf>().ok();
@@ -109,14 +111,14 @@ pub fn word_form<'a>(
     let quick_row = Row::new()
         .spacing(Spacing::DEFAULT.xs)
         .push(
-            Text::new("Quick:")
+            Text::new(i18n.tr("words-quick"))
                 .size(FontSize::Caption.px())
                 .style(txt::tertiary),
         )
         .extend(quick_buttons)
         .align_y(iced::Alignment::Center);
 
-    let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
+    let footer = build_footer_row(on_save, WordsMessage::EditCancelled, i18n);
 
     let content = Column::new()
         .spacing(Spacing::DEFAULT.l)
@@ -142,19 +144,22 @@ pub fn meaning_form<'a>(
     dictionary_loading: bool,
     dictionary_result: &'a Option<crate::dictionary::DictionaryEntry>,
     on_save: WordsMessage,
+    i18n: &I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = Row::new()
         .push(Text::new(title).size(FontSize::Heading.px()))
         .spacing(Spacing::DEFAULT.s);
 
-    let word_label = Text::new(format!("Word: {}", word_content)).size(FontSize::Body.px());
+    let word_label =
+        Text::new(i18n.tr_with("words-word-label", &[word_content])).size(FontSize::Body.px());
 
-    let lookup_btn = Button::new(Text::new("Lookup Dictionary").size(FontSize::Body.px()))
-        .style(crate::ui::widgets::button::secondary)
-        .padding(ButtonSize::Standard.to_iced_padding())
-        .on_press(WordsMessage::DictionaryLookupTriggered);
+    let lookup_btn =
+        Button::new(Text::new(i18n.tr("words-lookup-dictionary")).size(FontSize::Body.px()))
+            .style(crate::ui::widgets::button::secondary)
+            .padding(ButtonSize::Standard.to_iced_padding())
+            .on_press(WordsMessage::DictionaryLookupTriggered);
 
-    let def_input = AdvancedInput::new("Definition *")
+    let def_input = AdvancedInput::new(i18n.tr("words-definition-placeholder"))
         .value(&buffer.definition)
         .on_input(WordsMessage::EditMeaningDefinitionChanged)
         .width(iced::Length::Fill)
@@ -166,7 +171,7 @@ pub fn meaning_form<'a>(
         WordsMessage::EditMeaningPosChanged,
     )
     .width(iced::Length::Fixed(140.0))
-    .placeholder("POS");
+    .placeholder(i18n.tr("words-pos-placeholder"));
 
     let cefr_picker = PickList::new(
         CefrLevelOption::VARIANTS,
@@ -174,18 +179,18 @@ pub fn meaning_form<'a>(
         |option| WordsMessage::EditMeaningCefrChanged(option.to_cefr()),
     )
     .width(iced::Length::Fixed(100.0))
-    .placeholder("CEFR");
+    .placeholder(i18n.tr("words-cefr-placeholder"));
 
     let meta_row = Row::new()
         .spacing(Spacing::DEFAULT.s)
-        .push(Text::new("POS:").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("words-pos")).size(FontSize::Body.px()))
         .push(pos_picker)
         .push(Space::new().width(iced::Length::Fill))
-        .push(Text::new("CEFR:").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("words-cefr")).size(FontSize::Body.px()))
         .push(cefr_picker)
         .align_y(iced::Alignment::Center);
 
-    let footer = build_footer_row("Save", on_save, WordsMessage::EditCancelled);
+    let footer = build_footer_row(on_save, WordsMessage::EditCancelled, i18n);
 
     let mut content = Column::new()
         .spacing(Spacing::DEFAULT.l)
@@ -195,7 +200,7 @@ pub fn meaning_form<'a>(
 
     if dictionary_loading {
         content = content.push(
-            Text::new("Loading dictionary...")
+            Text::new(i18n.tr("words-loading-dictionary"))
                 .size(FontSize::Caption.px())
                 .style(txt::tertiary),
         );
@@ -208,7 +213,10 @@ pub fn meaning_form<'a>(
             if let Some(first_def) = meaning.definitions.first() {
                 let pos = crate::models::PartOfSpeech::try_from_str(&meaning.part_of_speech)
                     .unwrap_or_default();
-                let label = format!("[{}] {}", meaning.part_of_speech, first_def.definition);
+                let label = i18n.tr_with(
+                    "dictionary-suggestion-format",
+                    &[&meaning.part_of_speech, &first_def.definition],
+                );
                 let btn = Button::new(Text::new(label).size(FontSize::Caption.px()))
                     .style(crate::ui::widgets::button::tertiary)
                     .padding(ButtonSize::Small.to_iced_padding())
@@ -223,7 +231,7 @@ pub fn meaning_form<'a>(
         }
         if has_suggestions {
             content = content.push(
-                Text::new("Suggestions:")
+                Text::new(i18n.tr("words-suggestions"))
                     .size(FontSize::Caption.px())
                     .style(txt::tertiary),
             );

@@ -7,6 +7,7 @@
 
 use crate::config::LogLevel;
 use crate::config::file::ai::ProviderTypeDto;
+use crate::i18n::LocaleDto;
 use crate::models::types::{ModelId, ProviderId};
 use crate::ui::AppTheme;
 
@@ -30,6 +31,8 @@ pub enum SettingsMessage {
 pub enum GeneralSettingsMessage {
     /// Log level changed
     LogLevelChanged(LogLevel),
+    /// Locale changed
+    LocaleChanged(LocaleDto),
 }
 
 /// AI Provider messages.

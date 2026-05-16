@@ -49,10 +49,10 @@ where
     Renderer: iced::advanced::text::Renderer,
     Message: Clone,
 {
-    pub fn new(placeholder: &'a str) -> Self {
+    pub fn new(placeholder: impl Into<String>) -> Self {
         Self {
             id: None,
-            placeholder: String::from(placeholder),
+            placeholder: placeholder.into(),
             value: String::new(),
             ghost_text: None,
             is_secure: false,

@@ -30,14 +30,16 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
 
     let content: Element<'a, Message, AppTheme> = match state.current_view {
         NavItem::Words => {
-            crate::ui::words::explorer::view(&state.words, model, breakpoint).map(Message::Words)
+            crate::ui::words::explorer::view(&state.words, model, breakpoint, &state.i18n)
+                .map(Message::Words)
         }
-        NavItem::Queue => crate::ui::queue::view(model).map(Message::Queue),
-        NavItem::Tags => crate::ui::tags::view(&state.tags, model).map(Message::Tags),
-        NavItem::Practice => practice_view(&state.practice, model).map(Message::Practice),
-        NavItem::Settings => {
-            crate::ui::settings::view::view(&state.settings, model).map(Message::Settings)
+        NavItem::Queue => crate::ui::queue::view(model, &state.i18n).map(Message::Queue),
+        NavItem::Tags => crate::ui::tags::view(&state.tags, model, &state.i18n).map(Message::Tags),
+        NavItem::Practice => {
+            practice_view(&state.practice, model, &state.i18n).map(Message::Practice)
         }
+        NavItem::Settings => crate::ui::settings::view::view(&state.settings, model, &state.i18n)
+            .map(Message::Settings),
     };
 
     if breakpoint.use_bottom_bar() {
@@ -102,6 +104,13 @@ pub fn update_settings(
     match message {
         SettingsMessage::ThemeChanged(theme) => {
             Task::done(crate::message::Message::ThemeChanged(theme))
+        }
+        SettingsMessage::General(ref msg) => {
+            if let crate::ui::settings::message::GeneralSettingsMessage::LocaleChanged(locale) = msg
+            {
+                return Task::done(crate::message::Message::LocaleChanged(*locale));
+            }
+            crate::ui::settings::handlers::update(state, message, _model).map(Message::Settings)
         }
         _ => crate::ui::settings::handlers::update(state, message, _model).map(Message::Settings),
     }

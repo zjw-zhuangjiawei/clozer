@@ -1,5 +1,6 @@
 //! Application UI state.
 
+use crate::i18n::{I18nManager, LocaleDto};
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
 use crate::ui::notification::{Notification, NotificationLevel};
@@ -10,7 +11,7 @@ use crate::ui::words::state::WordsState;
 
 /// UI presentation state for the single-window application.
 ///
-/// Contains sub-panel states, navigation, window dimensions, and theme.
+/// Contains sub-panel states, navigation, window dimensions, theme, and i18n.
 /// Queue panel has no local state — selection is managed in QueueRegistry.
 #[derive(Debug)]
 pub struct UiState {
@@ -28,6 +29,10 @@ pub struct UiState {
     pub window_width: u16,
     /// Current UI theme
     pub theme: AppTheme,
+    /// Current UI locale
+    pub locale: LocaleDto,
+    /// I18n translation manager
+    pub i18n: I18nManager,
     /// Active notifications displayed to the user
     pub notifications: Vec<Notification>,
     /// Next notification ID (monotonically increasing)
@@ -44,6 +49,8 @@ impl Default for UiState {
             current_view: NavItem::default(),
             window_width: 1024,
             theme: AppTheme::Light,
+            locale: LocaleDto::default(),
+            i18n: I18nManager::new(),
             notifications: Vec::new(),
             next_notification_id: 0,
         }

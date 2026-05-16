@@ -1,4 +1,5 @@
 use crate::assets;
+use crate::i18n::I18nManager;
 use crate::models::types::MeaningId;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -17,6 +18,7 @@ pub fn build_meaning_node<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let is_selected = words_state.selection.is_meaning_selected(meaning.id);
     let cloze_count = model.cloze_registry.iter_by_meaning_id(meaning.id).count();
@@ -31,9 +33,9 @@ pub fn build_meaning_node<'a>(
             .into();
 
     let cloze_status_text = if cloze_count > 0 {
-        format!("{} clozes", cloze_count)
+        i18n.tr_with("words-clozes-count", &[&cloze_count.to_string()])
     } else {
-        "no clozes".to_string()
+        i18n.tr("words-no-clozes").to_string()
     };
     let cloze_status = Text::new(cloze_status_text)
         .size(FontSize::Caption.px())
@@ -48,7 +50,7 @@ pub fn build_meaning_node<'a>(
         .spacing(Spacing::DEFAULT.xs)
         .align_y(iced::Alignment::Center);
 
-    let tags_row = build_tags_row(words_state, model, meaning);
+    let tags_row = build_tags_row(words_state, model, meaning, i18n);
 
     let cloze_preview_items: Vec<Element<'a, WordsMessage, AppTheme>> = model
         .cloze_registry

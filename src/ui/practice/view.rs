@@ -1,3 +1,4 @@
+use crate::i18n::I18nManager;
 use crate::models::cloze::ClozeSegment;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -13,31 +14,33 @@ use iced::{Alignment, Element, Length};
 pub fn view<'a>(
     state: &'a PracticeState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, PracticeMessage, AppTheme> {
     if !state.is_active {
-        setup_view(state, model)
+        setup_view(state, model, i18n)
     } else if state.is_session_complete() {
-        complete_view(state)
+        complete_view(state, i18n)
     } else {
-        practice_view(state, model)
+        practice_view(state, model, i18n)
     }
 }
 
 fn setup_view<'a>(
     state: &'a PracticeState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, PracticeMessage, AppTheme> {
     let tag_name = state
         .tag_filter
         .and_then(|id| model.tag_registry.get(id))
         .map(|t| t.name.clone())
-        .unwrap_or_else(|| "All Clozes".to_string());
+        .unwrap_or_else(|| i18n.tr("practice-all-clozes").to_string());
 
     let clozes_available = count_available_clozes(state, model);
 
     let tag_button = Button::new(
         Row::new()
-            .push(Text::new("Filter: ").size(FontSize::Body.px()))
+            .push(Text::new(i18n.tr("practice-filter")).size(FontSize::Body.px()))
             .push(
                 Text::new(tag_name.clone())
                     .size(FontSize::Body.px())
@@ -51,21 +54,21 @@ fn setup_view<'a>(
 
     let mut content = Column::new()
         .spacing(Spacing::DEFAULT.l)
-        .push(Text::new("Practice").size(FontSize::Display.px()))
+        .push(Text::new(i18n.tr("practice-title")).size(FontSize::Display.px()))
         .push(
-            Text::new("Test your vocabulary by filling in the blanks of cloze sentences.")
+            Text::new(i18n.tr("practice-description"))
                 .size(FontSize::Body.px())
                 .style(txt::secondary),
         )
         .push(tag_button);
 
     if state.show_tag_picker {
-        content = content.push(build_tag_picker(state, model));
+        content = content.push(build_tag_picker(state, model, i18n));
     }
 
     if state.tag_filter.is_some() {
         content = content.push(
-            Button::new(Text::new("Clear Filter").size(FontSize::Footnote.px()))
+            Button::new(Text::new(i18n.tr("practice-clear-filter")).size(FontSize::Footnote.px()))
                 .style(button::tertiary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(PracticeMessage::TagFilterCleared),
@@ -73,18 +76,22 @@ fn setup_view<'a>(
     }
 
     content = content.push(
-        Text::new(format!("{} clozes available", clozes_available))
-            .size(FontSize::Footnote.px())
-            .style(txt::secondary),
+        Text::new(i18n.tr_with(
+            "practice-clozes-available",
+            &[&clozes_available.to_string()],
+        ))
+        .size(FontSize::Footnote.px())
+        .style(txt::secondary),
     );
 
+    let start_label = i18n.tr("practice-start-session");
     let start_btn = if clozes_available > 0 {
-        Button::new(Text::new("Start Session").size(FontSize::Body.px()))
+        Button::new(Text::new(start_label).size(FontSize::Body.px()))
             .style(button::primary)
             .padding(ButtonSize::Standard.to_iced_padding())
             .on_press(PracticeMessage::StartSession)
     } else {
-        Button::new(Text::new("Start Session").size(FontSize::Body.px()))
+        Button::new(Text::new(start_label).size(FontSize::Body.px()))
             .style(button::secondary)
             .padding(ButtonSize::Standard.to_iced_padding())
     };
@@ -102,12 +109,14 @@ fn setup_view<'a>(
 fn build_tag_picker<'a>(
     state: &'a PracticeState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, PracticeMessage, AppTheme> {
-    let search_input = TextInput::new("Search tags...", &state.tag_search)
+    let search_input = TextInput::new(&i18n.tr("tags-search-placeholder"), &state.tag_search)
         .on_input(PracticeMessage::TagSearchChanged)
         .padding(Spacing::DEFAULT.xs);
 
-    let all_tags_btn = Button::new(Text::new("All Clozes").size(FontSize::Body.px()))
+    let all_tag_label = i18n.tr("practice-all-clozes");
+    let all_tags_btn = Button::new(Text::new(all_tag_label).size(FontSize::Body.px()))
         .style(if state.tag_filter.is_none() {
             button::primary
         } else {
@@ -161,6 +170,7 @@ fn build_tag_picker<'a>(
 fn practice_view<'a>(
     state: &'a PracticeState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, PracticeMessage, AppTheme> {
     let cloze = state.current_cloze(model);
     let blank_count = state.blank_segments(model).len();
@@ -168,20 +178,28 @@ fn practice_view<'a>(
     let current = state.current_index + 1;
 
     let header = Row::new()
-        .push(Text::new(format!("{} / {}", current, total)).size(FontSize::Heading.px()))
         .push(
-            Text::new(format!(
-                "Score: {}/{} ({:.0}%)",
-                state.correct_count,
-                state.total_blanks,
-                state.score_percent()
+            Text::new(i18n.tr_with(
+                "practice-progress",
+                &[&current.to_string(), &total.to_string()],
+            ))
+            .size(FontSize::Heading.px()),
+        )
+        .push(
+            Text::new(i18n.tr_with(
+                "practice-score",
+                &[
+                    &state.correct_count.to_string(),
+                    &state.total_blanks.to_string(),
+                    &format!("{:.0}", state.score_percent()),
+                ],
             ))
             .size(FontSize::Body.px())
             .style(txt::secondary),
         )
         .push(iced::widget::Space::new().width(Length::Fill))
         .push(
-            Button::new(Text::new("End Session").size(FontSize::Footnote.px()))
+            Button::new(Text::new(i18n.tr("practice-end-session")).size(FontSize::Footnote.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(PracticeMessage::EndSession),
@@ -214,9 +232,14 @@ fn practice_view<'a>(
                     None => default_input_style,
                 };
 
+                let blank_placeholder = i18n.tr_with(
+                    "practice-blank-placeholder",
+                    &[&(blank_idx + 1).to_string()],
+                );
+
                 let input: Element<'a, PracticeMessage, AppTheme> =
                     if state.submitted {
-                        TextInput::new(&format!("Blank {}:", blank_idx + 1), &user_value)
+                        TextInput::new(&blank_placeholder, &user_value)
                             .on_input(move |_| PracticeMessage::AnswerChanged {
                                 blank_index: blank_idx,
                                 value: String::new(),
@@ -225,7 +248,7 @@ fn practice_view<'a>(
                             .style(input_style)
                             .into()
                     } else {
-                        TextInput::new(&format!("Blank {}:", blank_idx + 1), &user_value)
+                        TextInput::new(&blank_placeholder, &user_value)
                         .on_input(move |s| PracticeMessage::AnswerChanged {
                             blank_index: blank_idx,
                             value: s,
@@ -256,12 +279,12 @@ fn practice_view<'a>(
 
                 if let Some(is_correct) = result {
                     let feedback: Element<'a, PracticeMessage, AppTheme> = if *is_correct {
-                        Text::new("Correct!")
+                        Text::new(i18n.tr("practice-correct"))
                             .size(FontSize::Footnote.px())
                             .style(txt::success)
                             .into()
                     } else {
-                        Text::new(format!("Correct: [{}]", answer))
+                        Text::new(i18n.tr_with("practice-correct-answer", &[answer]))
                             .size(FontSize::Footnote.px())
                             .style(txt::error)
                             .into()
@@ -281,7 +304,7 @@ fn practice_view<'a>(
 
     if !state.submitted && blank_count > 0 {
         actions = actions.push(
-            Button::new(Text::new("Check Answer").size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("practice-check-answer")).size(FontSize::Body.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(PracticeMessage::SubmitAnswers),
@@ -297,7 +320,7 @@ fn practice_view<'a>(
 
         if !all_filled {
             actions = actions.push(
-                Text::new("Fill all blanks to check")
+                Text::new(i18n.tr("practice-fill-blanks"))
                     .size(FontSize::Footnote.px())
                     .style(txt::secondary),
             );
@@ -306,7 +329,7 @@ fn practice_view<'a>(
 
     if !state.submitted {
         actions = actions.push(
-            Button::new(Text::new("Skip").size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("practice-skip")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(PracticeMessage::SkipCloze),
@@ -315,7 +338,7 @@ fn practice_view<'a>(
 
     if state.submitted {
         actions = actions.push(
-            Button::new(Text::new("Previous").size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("practice-previous")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press_maybe(
@@ -323,7 +346,7 @@ fn practice_view<'a>(
                 ),
         );
         actions = actions.push(
-            Button::new(Text::new("Next").size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("practice-next")).size(FontSize::Body.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press_maybe(
@@ -337,7 +360,7 @@ fn practice_view<'a>(
         .push(header)
         .push(rule::horizontal(1))
         .push(sentence_display)
-        .push(Text::new("Your Answers:").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("practice-your-answers")).size(FontSize::Body.px()))
         .push(blanks_section)
         .push(rule::horizontal(1))
         .push(actions)
@@ -351,16 +374,23 @@ fn practice_view<'a>(
         .into()
 }
 
-fn complete_view<'a>(state: &'a PracticeState) -> Element<'a, PracticeMessage, AppTheme> {
+fn complete_view<'a>(
+    state: &'a PracticeState,
+    i18n: &I18nManager,
+) -> Element<'a, PracticeMessage, AppTheme> {
     let percent = state.score_percent();
 
     Column::new()
         .spacing(Spacing::DEFAULT.l)
-        .push(Text::new("Session Complete!").size(FontSize::Display.px()))
+        .push(Text::new(i18n.tr("practice-session-complete")).size(FontSize::Display.px()))
         .push(
-            Text::new(format!(
-                "You got {} out of {} blanks correct ({:.0}%)",
-                state.correct_count, state.total_blanks, percent
+            Text::new(i18n.tr_with(
+                "practice-final-score",
+                &[
+                    &state.correct_count.to_string(),
+                    &state.total_blanks.to_string(),
+                    &format!("{:.0}", percent),
+                ],
             ))
             .size(FontSize::Title.px()),
         )
@@ -368,16 +398,18 @@ fn complete_view<'a>(state: &'a PracticeState) -> Element<'a, PracticeMessage, A
             Row::new()
                 .spacing(Spacing::DEFAULT.s)
                 .push(
-                    Button::new(Text::new("Practice Again").size(FontSize::Body.px()))
+                    Button::new(Text::new(i18n.tr("practice-again")).size(FontSize::Body.px()))
                         .style(button::primary)
                         .padding(ButtonSize::Standard.to_iced_padding())
                         .on_press(PracticeMessage::StartSession),
                 )
                 .push(
-                    Button::new(Text::new("Back to Setup").size(FontSize::Body.px()))
-                        .style(button::secondary)
-                        .padding(ButtonSize::Standard.to_iced_padding())
-                        .on_press(PracticeMessage::EndSession),
+                    Button::new(
+                        Text::new(i18n.tr("practice-back-to-setup")).size(FontSize::Body.px()),
+                    )
+                    .style(button::secondary)
+                    .padding(ButtonSize::Standard.to_iced_padding())
+                    .on_press(PracticeMessage::EndSession),
                 ),
         )
         .align_x(Alignment::Center)

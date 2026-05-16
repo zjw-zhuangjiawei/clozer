@@ -4,6 +4,7 @@
 
 use std::collections::HashSet;
 
+use crate::i18n::I18nManager;
 use crate::models::Tag;
 use crate::models::types::TagId;
 use crate::state::Model;
@@ -32,16 +33,20 @@ impl std::fmt::Display for ParentOption {
 }
 
 /// Main tags panel view.
-pub fn view<'a>(state: &'a TagsState, model: &'a Model) -> Element<'a, TagsMessage, AppTheme> {
-    let left_panel = build_left_panel(state, model);
+pub fn view<'a>(
+    state: &'a TagsState,
+    model: &'a Model,
+    i18n: &'a I18nManager,
+) -> Element<'a, TagsMessage, AppTheme> {
+    let left_panel = build_left_panel(state, model, i18n);
 
     let right_content: Element<'a, TagsMessage, AppTheme> =
         if let Some(tag_id) = state.pending_delete {
-            build_delete_confirmation(state, tag_id, model)
+            build_delete_confirmation(state, tag_id, model, i18n)
         } else if let Some(ref creation) = state.creation {
-            build_create_form(creation, model)
+            build_create_form(creation, model, i18n)
         } else if let Some(tag_id) = state.selected {
-            build_detail_panel(state, tag_id, model)
+            build_detail_panel(state, tag_id, model, i18n)
         } else {
             placeholder_view()
         };
@@ -62,8 +67,9 @@ pub fn view<'a>(state: &'a TagsState, model: &'a Model) -> Element<'a, TagsMessa
 fn build_left_panel<'a>(
     state: &'a TagsState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, TagsMessage, AppTheme> {
-    let search_bar = build_search_bar(state);
+    let search_bar = build_search_bar(state, i18n);
 
     let visible_ids = if state.search.is_empty() {
         None
@@ -72,10 +78,19 @@ fn build_left_panel<'a>(
     };
 
     let mut items: Vec<Element<'a, TagsMessage, AppTheme>> = Vec::new();
-    collect_tag_nodes(state, model, visible_ids.as_ref(), &mut items, 0, None);
+    collect_tag_nodes(
+        state,
+        model,
+        visible_ids.as_ref(),
+        &mut items,
+        0,
+        None,
+        i18n,
+    );
 
+    let no_tags = i18n.tr("tags-no-tags-found");
     let tree: Element<'a, TagsMessage, AppTheme> = if items.is_empty() {
-        text("No tags found")
+        text(no_tags)
             .size(FontSize::Body.px())
             .style(txt::secondary)
             .into()
@@ -90,7 +105,7 @@ fn build_left_panel<'a>(
         .push(rule::horizontal(1))
         .push(scrollable(tree).height(iced::Length::Fill))
         .push(
-            Button::new(text("+ New Tag").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-add-new")).size(FontSize::Body.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .width(iced::Length::Fill)
@@ -102,8 +117,11 @@ fn build_left_panel<'a>(
         .into()
 }
 
-fn build_search_bar<'a>(state: &'a TagsState) -> Element<'a, TagsMessage, AppTheme> {
-    let search_input = AdvancedInput::new("Search tags...")
+fn build_search_bar<'a>(
+    state: &'a TagsState,
+    i18n: &'a I18nManager,
+) -> Element<'a, TagsMessage, AppTheme> {
+    let search_input = AdvancedInput::new(i18n.tr("tags-search-placeholder"))
         .value(&state.search)
         .on_input(TagsMessage::SearchQueryChanged)
         .width(iced::Length::Fill)
@@ -116,7 +134,7 @@ fn build_search_bar<'a>(state: &'a TagsState) -> Element<'a, TagsMessage, AppThe
 
     if !state.search.is_empty() {
         row = row.push(
-            Button::new(text("Clear").size(FontSize::Footnote.px()))
+            Button::new(text(i18n.tr("tags-clear")).size(FontSize::Footnote.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(TagsMessage::SearchCleared),
@@ -124,13 +142,13 @@ fn build_search_bar<'a>(state: &'a TagsState) -> Element<'a, TagsMessage, AppThe
     }
 
     row = row.push(
-        Button::new(text("Expand All").size(FontSize::Footnote.px()))
+        Button::new(text(i18n.tr("tags-expand-all")).size(FontSize::Footnote.px()))
             .style(button::tertiary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(TagsMessage::ExpandAll),
     );
     row = row.push(
-        Button::new(text("Collapse All").size(FontSize::Footnote.px()))
+        Button::new(text(i18n.tr("tags-collapse-all")).size(FontSize::Footnote.px()))
             .style(button::tertiary)
             .padding(ButtonSize::Small.to_iced_padding())
             .on_press(TagsMessage::CollapseAll),
@@ -147,6 +165,7 @@ fn collect_tag_nodes<'a>(
     items: &mut Vec<Element<'a, TagsMessage, AppTheme>>,
     depth: u32,
     parent_id: Option<TagId>,
+    i18n: &'a I18nManager,
 ) {
     for (id, tag) in model.tag_registry.iter() {
         if tag.parent_id != parent_id {
@@ -170,11 +189,11 @@ fn collect_tag_nodes<'a>(
             .map(|(rid, _)| *rid == *id)
             .unwrap_or(false);
 
-        let row = build_tag_row(*id, tag, depth, is_renaming, state, model);
+        let row = build_tag_row(*id, tag, depth, is_renaming, state, model, i18n);
         items.push(row);
 
         if state.expanded.contains(id) || (state.search.is_empty() && visible_ids.is_none()) {
-            collect_tag_nodes(state, model, visible_ids, items, depth + 1, Some(*id));
+            collect_tag_nodes(state, model, visible_ids, items, depth + 1, Some(*id), i18n);
         }
     }
 }
@@ -186,6 +205,7 @@ fn build_tag_row<'a>(
     is_renaming: bool,
     state: &'a TagsState,
     model: &'a Model,
+    i18n: &I18nManager,
 ) -> Element<'a, TagsMessage, AppTheme> {
     let is_selected = state.selected == Some(tag_id);
     let meaning_count = state.get_meaning_count(tag_id, &model.meaning_registry);
@@ -196,7 +216,7 @@ fn build_tag_row<'a>(
 
     // Expand/collapse button
     let expand_btn: Element<'a, TagsMessage, AppTheme> = if has_children {
-        let icon = if is_expanded { "▼" } else { "▶" };
+        let icon = if is_expanded { "\u{25BC}" } else { "\u{25B6}" };
         Button::new(text(icon).size(FontSize::Footnote.px()))
             .style(button::tertiary)
             .padding([0.0, 2.0])
@@ -248,7 +268,7 @@ fn build_tag_row<'a>(
     // Action buttons for selected tag
     if is_selected && !is_renaming {
         row = row.push(
-            Button::new(text("Edit").size(FontSize::Footnote.px()))
+            Button::new(text(i18n.tr("tags-edit")).size(FontSize::Footnote.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(TagsMessage::RenameStarted(tag_id)),
@@ -258,13 +278,13 @@ fn build_tag_row<'a>(
     // Rename save/cancel buttons
     if is_renaming {
         row = row.push(
-            Button::new(text("Save").size(FontSize::Footnote.px()))
+            Button::new(text(i18n.tr("tags-save")).size(FontSize::Footnote.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(TagsMessage::RenameSaved(tag_id)),
         );
         row = row.push(
-            Button::new(text("Cancel").size(FontSize::Footnote.px()))
+            Button::new(text(i18n.tr("tags-cancel")).size(FontSize::Footnote.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(TagsMessage::RenameCancelled),
@@ -300,6 +320,7 @@ fn build_detail_panel<'a>(
     state: &'a TagsState,
     tag_id: TagId,
     model: &'a Model,
+    i18n: &I18nManager,
 ) -> Element<'a, TagsMessage, AppTheme> {
     let tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
@@ -315,7 +336,7 @@ fn build_detail_panel<'a>(
         .push(text(&tag.name).size(FontSize::Heading.px()))
         .push(iced::widget::Space::new().width(iced::Length::Fill))
         .push(
-            Button::new(text("✕").size(FontSize::Footnote.px()))
+            Button::new(text("\u{2715}").size(FontSize::Footnote.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Small.to_iced_padding())
                 .on_press(TagsMessage::DetailClosed),
@@ -331,7 +352,7 @@ fn build_detail_panel<'a>(
     if !parent_path.is_empty() {
         content = content.push(
             Row::new()
-                .push(text("Parent: ").size(FontSize::Body.px()))
+                .push(text(i18n.tr("tags-parent")).size(FontSize::Body.px()))
                 .push(text(parent_path).size(FontSize::Body.px()))
                 .spacing(Spacing::DEFAULT.s),
         );
@@ -339,14 +360,14 @@ fn build_detail_panel<'a>(
 
     content = content.push(
         Row::new()
-            .push(text("Meanings: ").size(FontSize::Body.px()))
+            .push(text(i18n.tr("tags-meanings")).size(FontSize::Body.px()))
             .push(text(format!("{}", meaning_count)).size(FontSize::Body.px()))
             .spacing(Spacing::DEFAULT.s),
     );
 
     if meaning_count > 0 {
         content = content.push(
-            Button::new(text("View Meanings").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-view-meanings")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::NavigateToMeanings(tag_id)),
@@ -359,31 +380,31 @@ fn build_detail_panel<'a>(
     let actions = Row::new()
         .spacing(Spacing::DEFAULT.s)
         .push(
-            Button::new(text("Rename").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-rename")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::RenameStarted(tag_id)),
         )
         .push(
-            Button::new(text("Reparent").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-reparent")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::ReparentStarted(tag_id)),
         )
         .push(
-            Button::new(text("Delete").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-delete")).size(FontSize::Body.px()))
                 .style(button::danger)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::DeleteRequested(tag_id)),
         );
 
-    content = content.push(text("Actions").size(FontSize::Title.px()));
+    content = content.push(text(i18n.tr("tags-actions")).size(FontSize::Title.px()));
     content = content.push(actions);
 
     // Reparent form
     if state.reparenting == Some(tag_id) {
         content = content.push(rule::horizontal(1));
-        content = content.push(build_reparent_form(tag_id, model));
+        content = content.push(build_reparent_form(tag_id, model, i18n));
     }
 
     Container::new(content)
@@ -393,16 +414,21 @@ fn build_detail_panel<'a>(
         .into()
 }
 
-fn build_reparent_form<'a>(tag_id: TagId, model: &Model) -> Element<'a, TagsMessage, AppTheme> {
+fn build_reparent_form<'a>(
+    tag_id: TagId,
+    model: &Model,
+    i18n: &I18nManager,
+) -> Element<'a, TagsMessage, AppTheme> {
     let current_tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
         None => return placeholder_view(),
     };
 
     // Build parent options: None (root) + all tags except self and descendants
+    let root_label = i18n.tr("tags-root-no-parent");
     let mut options: Vec<ParentOption> = vec![ParentOption {
         id: None,
-        label: "(Root - no parent)".to_string(),
+        label: root_label.to_string(),
     }];
 
     for (id, _tag) in model.tag_registry.iter() {
@@ -427,10 +453,10 @@ fn build_reparent_form<'a>(tag_id: TagId, model: &Model) -> Element<'a, TagsMess
 
     Column::new()
         .spacing(Spacing::DEFAULT.s)
-        .push(text("Select New Parent").size(FontSize::Title.px()))
+        .push(text(i18n.tr("tags-select-new-parent")).size(FontSize::Title.px()))
         .push(
             Row::new()
-                .push(text("Parent:").size(FontSize::Body.px()))
+                .push(text(i18n.tr("tags-parent")).size(FontSize::Body.px()))
                 .push(
                     PickList::new(options, current, |po| TagsMessage::ReparentChanged(po.id))
                         .width(iced::Length::Fixed(200.0)),
@@ -444,17 +470,19 @@ fn build_reparent_form<'a>(tag_id: TagId, model: &Model) -> Element<'a, TagsMess
 fn build_create_form<'a>(
     creation: &TagCreationState,
     model: &Model,
+    i18n: &I18nManager,
 ) -> Element<'a, TagsMessage, AppTheme> {
-    let name_input = AdvancedInput::new("Tag name")
+    let name_input = AdvancedInput::new(i18n.tr("tags-name-placeholder"))
         .value(&creation.name)
         .on_input(TagsMessage::NewTagNameChanged)
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
     // Parent options
+    let root_label = i18n.tr("tags-root-no-parent");
     let mut options: Vec<ParentOption> = vec![ParentOption {
         id: None,
-        label: "(Root - no parent)".to_string(),
+        label: root_label.to_string(),
     }];
 
     for (id, _tag) in model.tag_registry.iter() {
@@ -468,7 +496,7 @@ fn build_create_form<'a>(
     let current = options.iter().find(|o| o.id == creation.parent_id).cloned();
 
     let parent_picker = Row::new()
-        .push(text("Parent:").size(FontSize::Body.px()))
+        .push(text(i18n.tr("tags-parent")).size(FontSize::Body.px()))
         .push(
             PickList::new(options, current, |po| {
                 TagsMessage::NewTagParentChanged(po.id)
@@ -481,13 +509,13 @@ fn build_create_form<'a>(
     let buttons = Row::new()
         .spacing(Spacing::DEFAULT.s)
         .push(
-            Button::new(text("Save").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-save")).size(FontSize::Body.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::NewTagSaved),
         )
         .push(
-            Button::new(text("Cancel").size(FontSize::Body.px()))
+            Button::new(text(i18n.tr("tags-cancel")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(TagsMessage::NewTagCancelled),
@@ -495,7 +523,7 @@ fn build_create_form<'a>(
 
     Column::new()
         .spacing(Spacing::DEFAULT.l)
-        .push(text("New Tag").size(FontSize::Heading.px()))
+        .push(text(i18n.tr("tags-new-tag")).size(FontSize::Heading.px()))
         .push(Element::new(name_input))
         .push(parent_picker)
         .push(buttons)
@@ -507,6 +535,7 @@ fn build_delete_confirmation<'a>(
     state: &TagsState,
     tag_id: TagId,
     model: &Model,
+    i18n: &I18nManager,
 ) -> Element<'a, TagsMessage, AppTheme> {
     let tag = match model.tag_registry.get(tag_id) {
         Some(t) => t,
@@ -517,22 +546,22 @@ fn build_delete_confirmation<'a>(
     let meaning_count = state.get_meaning_count(tag_id, &model.meaning_registry);
 
     let warning_text = if descendant_count > 0 {
-        format!(
-            "This will delete \"{}\" and its {} child tag(s). Associated meanings will be unlinked.",
-            tag.name, descendant_count
+        i18n.tr_with(
+            "tags-delete-children-warning",
+            &[&tag.name, &descendant_count.to_string()],
         )
     } else if meaning_count > 0 {
-        format!(
-            "This will delete \"{}\" and unlink it from {} meaning(s).",
-            tag.name, meaning_count
+        i18n.tr_with(
+            "tags-delete-meanings-warning",
+            &[&tag.name, &meaning_count.to_string()],
         )
     } else {
-        format!("Delete \"{}\"?", tag.name)
+        i18n.tr_with("tags-delete-confirm", &[&tag.name])
     };
 
     Column::new()
         .spacing(Spacing::DEFAULT.l)
-        .push(text("Confirm Deletion").size(FontSize::Heading.px()))
+        .push(text(i18n.tr("tags-confirm-deletion")).size(FontSize::Heading.px()))
         .push(
             Container::new(text(warning_text).size(FontSize::Body.px()))
                 .padding(Spacing::DEFAULT.s)
@@ -553,13 +582,13 @@ fn build_delete_confirmation<'a>(
             Row::new()
                 .spacing(Spacing::DEFAULT.s)
                 .push(
-                    Button::new(text("Delete").size(FontSize::Body.px()))
+                    Button::new(text(i18n.tr("tags-delete")).size(FontSize::Body.px()))
                         .style(button::danger)
                         .padding(ButtonSize::Standard.to_iced_padding())
                         .on_press(TagsMessage::DeleteConfirmed(tag_id)),
                 )
                 .push(
-                    Button::new(text("Cancel").size(FontSize::Body.px()))
+                    Button::new(text(i18n.tr("tags-cancel")).size(FontSize::Body.px()))
                         .style(button::secondary)
                         .padding(ButtonSize::Standard.to_iced_padding())
                         .on_press(TagsMessage::DeleteCancelled),

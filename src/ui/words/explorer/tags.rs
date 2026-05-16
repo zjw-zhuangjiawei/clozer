@@ -1,3 +1,4 @@
+use crate::i18n::I18nManager;
 use crate::models::types::MeaningId;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -22,6 +23,7 @@ pub fn build_tags_row<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     meaning: &'a crate::models::Meaning,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let mut tag_chips: Vec<Element<'a, WordsMessage, AppTheme>> = meaning
         .tag_ids
@@ -48,6 +50,7 @@ pub fn build_tags_row<'a>(
                 dropdown,
                 model,
                 TagDropdownMode::Single { meaning_id: mid },
+                i18n,
             )),
             _ => None,
         }
@@ -68,10 +71,11 @@ pub fn build_tag_dropdown<'a>(
     dropdown: &'a TagDropdownState,
     model: &'a Model,
     mode: TagDropdownMode,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let placeholder = match mode {
-        TagDropdownMode::Single { .. } => "Search or create...",
-        TagDropdownMode::Batch => "Search...",
+        TagDropdownMode::Single { .. } => i18n.tr("words-tag-search-create"),
+        TagDropdownMode::Batch => i18n.tr("words-tag-search"),
     };
     let search = AdvancedInput::new(placeholder)
         .value(&dropdown.search)
@@ -123,8 +127,9 @@ pub fn build_tag_dropdown<'a>(
         } else {
             MeaningId(Uuid::nil())
         };
+        let create_label = i18n.tr_with("words-tag-create", &[&search]);
         tag_items.push(
-            Button::new(Text::new(format!("Create \"{}\"", search)).size(FontSize::Footnote.px()))
+            Button::new(Text::new(create_label).size(FontSize::Footnote.px()))
                 .width(iced::Length::Fill)
                 .on_press(WordsMessage::TagQuickCreated {
                     meaning_id,

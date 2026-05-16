@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use crate::config::LogLevel;
+use crate::i18n::LocaleDto;
 use crate::ui::theme::AppTheme;
 
 /// Configuration loaded from command-line arguments.
@@ -27,6 +28,10 @@ pub struct CliConfig {
     /// UI theme (light, dark)
     #[clap(long, value_enum)]
     pub theme: Option<AppTheme>,
+
+    /// UI locale (en-us, zh-cn, ja-jp, ko-kr)
+    #[clap(long)]
+    pub locale: Option<LocaleDto>,
 }
 
 impl CliConfig {

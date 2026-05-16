@@ -1,5 +1,6 @@
 //! Detail panel views — word, meaning, and cloze views.
 
+use crate::i18n::I18nManager;
 use crate::models::types::ClozeId;
 use crate::models::{Cloze, Meaning, Word};
 use crate::state::Model;
@@ -15,6 +16,7 @@ use super::{build_header_row, build_icon_button, build_svg_icon, detail_panel};
 pub fn word_detail_view<'a>(
     word: &'a Word,
     model: &'a Model,
+    i18n: &I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = build_header_row(
         word.content.clone(),
@@ -46,7 +48,7 @@ pub fn word_detail_view<'a>(
         .spacing(Spacing::DEFAULT.l)
         .push(header)
         .push(rule::horizontal(1))
-        .push(Text::new("Meanings").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("words-meanings")).size(FontSize::Body.px()))
         .extend(meaning_items);
 
     detail_panel(content)
@@ -56,6 +58,7 @@ pub fn meaning_detail_view<'a>(
     meaning: &'a Meaning,
     word: &'a Word,
     model: &'a Model,
+    i18n: &I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let tag_names: Vec<String> = meaning
         .tag_ids
@@ -91,14 +94,16 @@ pub fn meaning_detail_view<'a>(
 
     if !tag_names.is_empty() {
         let tags_text = tag_names.join(", ");
-        content =
-            content.push(Text::new(format!("Tags: {}", tags_text)).size(FontSize::Footnote.px()));
+        content = content.push(
+            Text::new(i18n.tr_with("words-tags-label", &[&tags_text]))
+                .size(FontSize::Footnote.px()),
+        );
     }
 
     if !cloze_items.is_empty() {
         content = content
             .push(rule::horizontal(1))
-            .push(Text::new("Clozes").size(FontSize::Body.px()))
+            .push(Text::new(i18n.tr("words-clozes")).size(FontSize::Body.px()))
             .extend(cloze_items);
     }
 
@@ -110,6 +115,7 @@ pub fn cloze_detail_view<'a>(
     cloze: &'a Cloze,
     meaning: &'a Meaning,
     word: &'a Word,
+    i18n: &I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let header = build_header_row(word.content.clone(), None, WordsMessage::DetailClosed);
 
@@ -126,10 +132,10 @@ pub fn cloze_detail_view<'a>(
         .push(rule::horizontal(1))
         .push(Text::new(meaning.definition.clone()).size(FontSize::Body.px()))
         .push(rule::horizontal(1))
-        .push(Text::new("Cloze Sentence").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("words-cloze-sentence")).size(FontSize::Body.px()))
         .push(Text::new(cloze.render_blanks()).size(FontSize::Subtitle.px()))
         .push(rule::horizontal(1))
-        .push(Text::new("Answer").size(FontSize::Body.px()))
+        .push(Text::new(i18n.tr("words-answer")).size(FontSize::Body.px()))
         .push(Text::new(cloze.render_answers()).size(FontSize::Subtitle.px()))
         .push(rule::horizontal(1))
         .push(delete_btn);

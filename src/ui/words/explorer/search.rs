@@ -1,5 +1,6 @@
 //! Search bar with query input, sort picker, and clear button.
 
+use crate::i18n::I18nManager;
 use crate::query::SortType;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -15,6 +16,7 @@ pub fn build_search_bar<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     breakpoint: Breakpoint,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let query = &words_state.search.query;
     let suggestion = if !query.is_empty() {
@@ -24,7 +26,7 @@ pub fn build_search_bar<'a>(
     };
 
     let mut search_input =
-        crate::ui::widgets::advanced_input::AdvancedInput::new("Search words or definitions...")
+        crate::ui::widgets::advanced_input::AdvancedInput::new(i18n.tr("words-search-placeholder"))
             .value(query)
             .on_input(WordsMessage::SearchQueryChanged)
             .on_submit(WordsMessage::SuggestionAccepted)
@@ -48,7 +50,7 @@ pub fn build_search_bar<'a>(
         WordsMessage::SortTypeChanged,
     )
     .width(sort_width)
-    .placeholder("Sort");
+    .placeholder(i18n.tr("words-sort"));
 
     let mut row = Row::new()
         .push(search_with_ghost)
@@ -58,7 +60,7 @@ pub fn build_search_bar<'a>(
 
     if words_state.search.has_active_filters() {
         row = row.push(
-            Button::new(Text::new("Clear"))
+            Button::new(Text::new(i18n.tr("words-clear-filters")))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(WordsMessage::FiltersCleared),

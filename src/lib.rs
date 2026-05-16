@@ -9,6 +9,7 @@ pub use self::message::Message;
 pub mod assets;
 pub mod config;
 pub mod dictionary;
+pub mod i18n;
 pub mod models;
 pub mod persistence;
 pub mod query;

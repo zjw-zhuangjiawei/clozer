@@ -3,6 +3,7 @@
 //! Vertical tab strip with icon + label. Collapses to icon-only
 //! on medium screens, recedes to bottom tab bar on small screens.
 
+use crate::i18n::I18nManager;
 use crate::message::Message;
 use crate::ui::design_tokens::{FontSize, Spacing, TouchTargetSize};
 use crate::ui::layout::breakpoint::Breakpoint;
@@ -23,14 +24,14 @@ pub fn sidebar<'a>(state: &'a UiState, breakpoint: Breakpoint) -> Element<'a, Me
     let width = breakpoint.sidebar_panel_width();
 
     // Brand header
-    let header = sidebar_header(expanded);
+    let header = sidebar_header(expanded, &state.i18n);
 
     // Main navigation items
     let main_items: Vec<Element<'a, Message, AppTheme>> = NavItem::main()
         .iter()
         .map(|&item| {
             let is_active = state.current_view == item;
-            nav_button(item, is_active, expanded)
+            nav_button(item, is_active, expanded, &state.i18n)
         })
         .collect();
 
@@ -39,7 +40,7 @@ pub fn sidebar<'a>(state: &'a UiState, breakpoint: Breakpoint) -> Element<'a, Me
         .iter()
         .map(|&item| {
             let is_active = state.current_view == item;
-            nav_button(item, is_active, expanded)
+            nav_button(item, is_active, expanded, &state.i18n)
         })
         .collect();
 
@@ -59,7 +60,7 @@ pub fn sidebar<'a>(state: &'a UiState, breakpoint: Breakpoint) -> Element<'a, Me
 }
 
 /// Brand header at the top of the sidebar.
-fn sidebar_header<'a>(expanded: bool) -> Element<'a, Message, AppTheme> {
+fn sidebar_header<'a>(expanded: bool, i18n: &I18nManager) -> Element<'a, Message, AppTheme> {
     let brand_font = Font {
         weight: iced::font::Weight::Bold,
         family: iced::font::Family::SansSerif,
@@ -67,7 +68,7 @@ fn sidebar_header<'a>(expanded: bool) -> Element<'a, Message, AppTheme> {
     };
     if expanded {
         Container::new(
-            Text::new("clozer")
+            Text::new(i18n.tr("sidebar-brand"))
                 .font(brand_font)
                 .size(FontSize::Title.px()),
         )
@@ -76,7 +77,7 @@ fn sidebar_header<'a>(expanded: bool) -> Element<'a, Message, AppTheme> {
         .into()
     } else {
         Container::new(
-            Text::new("C")
+            Text::new(i18n.tr("sidebar-brand-collapsed"))
                 .font(brand_font)
                 .size(FontSize::Title.px())
                 .align_x(Alignment::Center)
@@ -93,11 +94,12 @@ fn nav_button<'a>(
     item: NavItem,
     is_active: bool,
     expanded: bool,
+    i18n: &crate::i18n::I18nManager,
 ) -> Element<'a, Message, AppTheme> {
     let icon_size = if expanded { 20.0 } else { 24.0 };
 
     let icon = nav_icon(item, icon_size);
-    let label = item.label();
+    let label = i18n.tr(item.label_key()).to_string();
 
     let label_font = Font {
         weight: if is_active {
@@ -112,9 +114,13 @@ fn nav_button<'a>(
     let content: Element<'a, Message, AppTheme> = if expanded {
         Row::new()
             .push(icon)
-            .push(Text::new(label).size(FontSize::Body.px()).font(label_font))
+            .push(
+                Text::new(label.clone())
+                    .size(FontSize::Body.px())
+                    .font(label_font),
+            )
             .push(Space::new().width(Length::Fill))
-            .push(keyboard_hint(item))
+            .push(keyboard_hint(item, i18n))
             .spacing(Spacing::DEFAULT.s)
             .align_y(Alignment::Center)
             .into()
@@ -135,7 +141,7 @@ fn nav_button<'a>(
     if expanded {
         button.into()
     } else {
-        Tooltip::new(button, label, tooltip::Position::Right).into()
+        Tooltip::new(button, Text::new(label), tooltip::Position::Right).into()
     }
 }
 
@@ -155,15 +161,13 @@ fn nav_icon<'a>(item: NavItem, size: f32) -> Element<'a, Message, AppTheme> {
 }
 
 /// Keyboard shortcut hint shown on expanded sidebar items.
-fn keyboard_hint<'a>(item: NavItem) -> Element<'a, Message, AppTheme> {
-    let shortcut = match item {
-        NavItem::Words => "Ctrl+1",
-        NavItem::Queue => "Ctrl+2",
-        NavItem::Tags => "Ctrl+3",
-        NavItem::Practice => "Ctrl+4",
-        NavItem::Settings => "Ctrl+5",
-    };
-    Text::new(shortcut).size(FontSize::Caption.px()).into()
+fn keyboard_hint<'a>(
+    item: NavItem,
+    i18n: &crate::i18n::I18nManager,
+) -> Element<'a, Message, AppTheme> {
+    Text::new(i18n.tr(item.shortcut_key()))
+        .size(FontSize::Caption.px())
+        .into()
 }
 
 /// Horizontal separator line.
@@ -222,7 +226,7 @@ pub fn bottom_tab_bar<'a>(state: &'a UiState) -> Element<'a, Message, AppTheme> 
         .map(|&item| {
             let is_active = state.current_view == item;
             let icon = nav_icon(item, 20.0);
-            let label = item.label();
+            let label = state.i18n.tr(item.label_key());
 
             let content = Column::new()
                 .push(icon)

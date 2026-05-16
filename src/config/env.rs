@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use crate::i18n::LocaleDto;
 use crate::ui::theme::AppTheme;
 use serde::Deserialize;
 
@@ -13,6 +14,7 @@ pub struct EnvConfig {
     pub config_file: Option<String>,
     pub log_level: Option<super::LogLevel>,
     pub theme: Option<AppTheme>,
+    pub locale: Option<LocaleDto>,
 }
 
 impl EnvConfig {

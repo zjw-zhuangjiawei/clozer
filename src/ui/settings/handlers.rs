@@ -20,6 +20,9 @@ pub fn general(
                 c.save_to_file();
             }
         }
+        GeneralSettingsMessage::LocaleChanged(_locale) => {
+            // Handled by compositor::update_settings which routes to Message::LocaleChanged
+        }
     }
     Task::none()
 }

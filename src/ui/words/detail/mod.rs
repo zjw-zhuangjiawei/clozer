@@ -9,6 +9,7 @@ pub(super) use self::forms::{meaning_form, word_form};
 pub(super) use self::panels::{cloze_detail_view, meaning_detail_view, word_detail_view};
 
 use crate::assets;
+use crate::i18n::I18nManager;
 use crate::models::CefrLevel;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -63,20 +64,22 @@ impl CefrLevelOption {
 fn try_meaning_view<'a>(
     meaning_id: crate::models::types::MeaningId,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Option<Element<'a, WordsMessage, AppTheme>> {
     let meaning = model.meaning_registry.get(meaning_id)?;
     let word = model.word_registry.get(meaning.word_id)?;
-    Some(meaning_detail_view(meaning, word, model))
+    Some(meaning_detail_view(meaning, word, model, i18n))
 }
 
 fn try_cloze_view<'a>(
     cloze_id: crate::models::types::ClozeId,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Option<Element<'a, WordsMessage, AppTheme>> {
     let cloze = model.cloze_registry.get(cloze_id)?;
     let meaning = model.meaning_registry.get(cloze.meaning_id)?;
     let word = model.word_registry.get(meaning.word_id)?;
-    Some(cloze_detail_view(cloze_id, cloze, meaning, word))
+    Some(cloze_detail_view(cloze_id, cloze, meaning, word, i18n))
 }
 
 pub fn view<'a>(
@@ -86,6 +89,7 @@ pub fn view<'a>(
     dictionary_loading: bool,
     dictionary_result: &'a Option<crate::dictionary::DictionaryEntry>,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     match state {
         DetailPanelState::Empty => placeholder_view(),
@@ -93,29 +97,31 @@ pub fn view<'a>(
         DetailPanelState::WordView { word_id } => model
             .word_registry
             .get(*word_id)
-            .map(|word| word_detail_view(word, model))
+            .map(|word| word_detail_view(word, model, i18n))
             .unwrap_or_else(placeholder_view),
 
         DetailPanelState::MeaningView { meaning_id } => {
-            try_meaning_view(*meaning_id, model).unwrap_or_else(placeholder_view)
+            try_meaning_view(*meaning_id, model, i18n).unwrap_or_else(placeholder_view)
         }
 
         DetailPanelState::ClozeView { cloze_id } => {
-            try_cloze_view(*cloze_id, model).unwrap_or_else(placeholder_view)
+            try_cloze_view(*cloze_id, model, i18n).unwrap_or_else(placeholder_view)
         }
 
         DetailPanelState::WordCreating => word_form(
-            "Add New Word".to_string(),
+            i18n.tr("words-add-new-word").to_string(),
             word_buffer,
             meaning_buffer,
             WordsMessage::NewWordSaved,
+            i18n,
         ),
 
         DetailPanelState::WordEditing { .. } => word_form(
-            "Edit Word".to_string(),
+            i18n.tr("words-edit-word").to_string(),
             word_buffer,
             meaning_buffer,
             WordsMessage::EditSaved,
+            i18n,
         ),
 
         DetailPanelState::MeaningCreating { word_id, .. } => {
@@ -124,7 +130,7 @@ pub fn view<'a>(
                 .get(*word_id)
                 .map(|w| w.content.clone())
                 .unwrap_or_default();
-            let title = format!("Add Meaning to \"{}\"", word_content);
+            let title = i18n.tr_with("words-add-meaning-to", &[&word_content]);
             meaning_form(
                 title,
                 &word_content,
@@ -132,6 +138,7 @@ pub fn view<'a>(
                 dictionary_loading,
                 dictionary_result,
                 WordsMessage::MeaningAddSaved,
+                i18n,
             )
         }
 
@@ -142,7 +149,7 @@ pub fn view<'a>(
                     .get(meaning.word_id)
                     .map(|w| w.content.clone())
                     .unwrap_or_default();
-                let title = "Edit Meaning".to_string();
+                let title = i18n.tr("words-edit-meaning").to_string();
                 meaning_form(
                     title,
                     &word_content,
@@ -150,6 +157,7 @@ pub fn view<'a>(
                     dictionary_loading,
                     dictionary_result,
                     WordsMessage::EditSaved,
+                    i18n,
                 )
             } else {
                 placeholder_view()
@@ -226,20 +234,20 @@ fn build_header_row<'a>(
 }
 
 fn build_footer_row<'a>(
-    primary_label: &'a str,
     on_primary: WordsMessage,
     on_cancel: WordsMessage,
+    i18n: &I18nManager,
 ) -> Row<'a, WordsMessage, AppTheme> {
     Row::new()
         .spacing(Spacing::DEFAULT.s)
         .push(
-            Button::new(Text::new(primary_label).size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("words-save")).size(FontSize::Body.px()))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(on_primary),
         )
         .push(
-            Button::new(Text::new("Cancel").size(FontSize::Body.px()))
+            Button::new(Text::new(i18n.tr("words-cancel")).size(FontSize::Body.px()))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(on_cancel),

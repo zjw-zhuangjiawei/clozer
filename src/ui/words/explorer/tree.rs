@@ -1,4 +1,5 @@
 use crate::assets;
+use crate::i18n::I18nManager;
 use crate::models::types::WordId;
 use crate::state::Model;
 use crate::ui::AppTheme;
@@ -29,6 +30,7 @@ fn load_svg_handle(name: &str) -> svg::Handle {
 pub fn build_word_tree<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let results = words_state.search.get_results();
 
@@ -36,19 +38,19 @@ pub fn build_word_tree<'a>(
         Some(results) => results
             .iter()
             .filter_map(|(word_id, _)| model.word_registry.get(*word_id))
-            .map(|word| build_word_node(words_state, model, word))
+            .map(|word| build_word_node(words_state, model, word, i18n))
             .collect(),
         None => model
             .word_registry
             .iter()
-            .map(|(_, word)| build_word_node(words_state, model, word))
+            .map(|(_, word)| build_word_node(words_state, model, word, i18n))
             .collect(),
     };
 
     if word_nodes.is_empty() {
         Column::new()
             .push(
-                Container::new(Text::new("No words found. Add a word to get started."))
+                Container::new(Text::new(i18n.tr("words-no-words")))
                     .center_x(Length::Fill)
                     .padding(Spacing::DEFAULT.l2),
             )
@@ -162,6 +164,7 @@ fn build_word_expanded_content<'a>(
     word: &'a crate::models::Word,
     words_state: &'a WordsState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Column<'a, WordsMessage, AppTheme> {
     let mut content = Column::new()
         .push(build_word_header_row(word, words_state))
@@ -169,7 +172,7 @@ fn build_word_expanded_content<'a>(
         .spacing(Spacing::DEFAULT.xs2);
 
     content = content.push(
-        Button::new(Text::new("+ Add Meaning"))
+        Button::new(Text::new(i18n.tr("words-add-meaning")))
             .style(button::primary)
             .padding(ButtonSize::Medium.to_iced_padding())
             .on_press(WordsMessage::MeaningAddStarted { word_id: word.id }),
@@ -177,7 +180,7 @@ fn build_word_expanded_content<'a>(
 
     for meaning_id in &word.meaning_ids {
         if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-            content = content.push(build_meaning_node(words_state, model, meaning));
+            content = content.push(build_meaning_node(words_state, model, meaning, i18n));
         }
     }
 
@@ -188,11 +191,12 @@ pub fn build_word_node<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
     word: &'a crate::models::Word,
+    i18n: &'a I18nManager,
 ) -> Element<'a, WordsMessage, AppTheme> {
     let is_expanded = words_state.expansion.is_expanded(word.id);
 
     if is_expanded {
-        Container::new(build_word_expanded_content(word, words_state, model))
+        Container::new(build_word_expanded_content(word, words_state, model, i18n))
             .padding(Spacing::DEFAULT.s)
             .style(card)
             .into()

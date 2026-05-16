@@ -1,6 +1,7 @@
-use super::message::{ModelMessage, ProviderMessage, SettingsMessage};
+use super::message::{GeneralSettingsMessage, ModelMessage, ProviderMessage, SettingsMessage};
 use super::state::SettingsState;
 use crate::config::file::ai::{AiConfig, ProviderTypeDto};
+use crate::i18n::{I18nManager, LocaleDto};
 use crate::models::types::{ModelId, ProviderId};
 use crate::state::Model;
 use crate::ui::theme::{AppTheme, ButtonSize, FontSize, Spacing};
@@ -50,11 +51,12 @@ impl ProviderOption {
 pub fn view<'a>(
     state: &'a SettingsState,
     model: &'a Model,
+    i18n: &'a I18nManager,
 ) -> Element<'a, SettingsMessage, AppTheme> {
     let ai_config = &model.app_config.ai;
 
     let theme_picker = Row::new()
-        .push(text("Theme:"))
+        .push(text(i18n.tr("settings-theme")))
         .push(
             PickList::new(
                 AppTheme::VARIANTS,
@@ -66,54 +68,73 @@ pub fn view<'a>(
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
+    let locale_picker = Row::new()
+        .push(text(i18n.tr("settings-locale")))
+        .push(
+            PickList::new(
+                LocaleDto::VARIANTS,
+                Some(model.app_config.locale),
+                |locale| SettingsMessage::General(GeneralSettingsMessage::LocaleChanged(locale)),
+            )
+            .width(iced::Length::Fixed(140.0))
+            .text_shaping(iced::widget::text::Shaping::Advanced),
+        )
+        .spacing(Spacing::DEFAULT.s)
+        .align_y(iced::Alignment::Center);
+
     let log_level_row = Row::new()
-        .push(text("Log Level:"))
+        .push(text(i18n.tr("settings-log-level")))
         .push(text(format!("{:?}", model.app_config.log_level)))
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
     let general_section = Column::new()
-        .push(text("General").size(FontSize::Title.px()))
+        .push(text(i18n.tr("settings-general")).size(FontSize::Title.px()))
         .push(theme_picker)
+        .push(locale_picker)
         .push(log_level_row)
         .spacing(Spacing::DEFAULT.s);
 
     let providers_section =
         if state.provider_edit.is_new || state.provider_edit.editing_id.is_some() {
-            render_provider_form(state)
+            render_provider_form(state, i18n)
         } else {
-            render_provider_list(ai_config)
+            render_provider_list(ai_config, i18n)
         };
 
     let models_section = if state.model_edit.is_new || state.model_edit.editing_id.is_some() {
-        render_model_form(state, ai_config)
+        render_model_form(state, ai_config, i18n)
     } else {
-        render_model_list(ai_config)
+        render_model_list(ai_config, i18n)
     };
 
     let (selected_name, _) = ai_config
         .selected_model_id
         .and_then(|id| ai_config.models.iter().find(|m| m.id == id))
         .map(|m| (m.name.clone(), true))
-        .unwrap_or(("<none>".to_string(), false));
+        .unwrap_or((i18n.tr("settings-none").to_string(), false));
 
     let selected_model_section = Column::new()
-        .push(text("Active Model").size(FontSize::Title.px()))
+        .push(text(i18n.tr("settings-active-model")).size(FontSize::Title.px()))
         .push(
             Row::new()
-                .push(text("Selected: "))
+                .push(text(i18n.tr("settings-selected")))
                 .push(text(selected_name))
                 .spacing(Spacing::DEFAULT.s),
         )
         .spacing(Spacing::DEFAULT.s);
 
     let data_dir_section = Column::new()
-        .push(text("Data").size(FontSize::Title.px()))
-        .push(text(format!("Directory: {:?}", model.app_config.data_dir)))
+        .push(text(i18n.tr("settings-data")).size(FontSize::Title.px()))
+        .push(text(format!(
+            "{} {:?}",
+            i18n.tr("settings-directory"),
+            model.app_config.data_dir
+        )))
         .spacing(Spacing::DEFAULT.s);
 
     let content = Column::new()
-        .push(text("Settings").size(FontSize::Display.px()))
+        .push(text(i18n.tr("settings-title")).size(FontSize::Display.px()))
         .push(general_section)
         .push(rule::horizontal(1))
         .push(providers_section)
@@ -129,7 +150,13 @@ pub fn view<'a>(
     scrollable(content).into()
 }
 
-fn render_provider_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, AppTheme> {
+fn render_provider_list(
+    ai_config: &AiConfig,
+    i18n: &I18nManager,
+) -> Column<'static, SettingsMessage, AppTheme> {
+    let edit_label = i18n.tr("settings-edit");
+    let delete_label = i18n.tr("settings-delete");
+
     let items: Vec<Element<'static, SettingsMessage, AppTheme>> = ai_config
         .providers
         .iter()
@@ -143,13 +170,13 @@ fn render_provider_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage
                 .push(text(name).width(iced::Length::Fill))
                 .push(text(pt))
                 .push(
-                    Button::new(text("Edit"))
+                    Button::new(text(edit_label.clone()))
                         .style(button::secondary)
                         .padding(ButtonSize::Small.to_iced_padding())
                         .on_press(SettingsMessage::Provider(ProviderMessage::Edit(edit_id))),
                 )
                 .push(
-                    Button::new(text("Delete"))
+                    Button::new(text(delete_label.clone()))
                         .style(button::danger)
                         .padding(ButtonSize::Small.to_iced_padding())
                         .on_press(SettingsMessage::Provider(ProviderMessage::Delete(
@@ -163,10 +190,10 @@ fn render_provider_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage
         .collect();
 
     Column::new()
-        .push(text("AI Providers").size(FontSize::Title.px()))
+        .push(text(i18n.tr("settings-ai-providers")).size(FontSize::Title.px()))
         .push(Column::with_children(items).spacing(Spacing::DEFAULT.xs))
         .push(
-            Button::new(text("Add Provider"))
+            Button::new(text(i18n.tr("settings-add-provider")))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Provider(ProviderMessage::Add)),
@@ -174,12 +201,15 @@ fn render_provider_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage
         .spacing(Spacing::DEFAULT.s)
 }
 
-fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessage, AppTheme> {
+fn render_provider_form(
+    state: &SettingsState,
+    i18n: &I18nManager,
+) -> Column<'static, SettingsMessage, AppTheme> {
     let edit = &state.provider_edit;
     let title = if edit.is_new {
-        "Add Provider"
+        i18n.tr("settings-add-provider-title")
     } else {
-        "Edit Provider"
+        i18n.tr("settings-edit-provider")
     };
 
     let name = edit.data.name.clone();
@@ -187,14 +217,17 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
     let base_url = edit.data.base_url.clone().unwrap_or_default();
     let api_key = edit.data.api_key.clone().unwrap_or_default();
 
-    let name_input = AdvancedInput::new("Provider Name")
+    let save_label = i18n.tr("settings-save");
+    let cancel_label = i18n.tr("settings-cancel");
+
+    let name_input = AdvancedInput::new(i18n.tr("settings-provider-name"))
         .value(&name)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::NameChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
     let type_picker = Row::new()
-        .push(text("Type:"))
+        .push(text(i18n.tr("settings-type")))
         .push(
             PickList::new(ProviderTypeDto::VARIANTS, Some(provider_type), |t| {
                 SettingsMessage::Provider(ProviderMessage::TypeChanged(t))
@@ -204,13 +237,13 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
         .spacing(Spacing::DEFAULT.s)
         .align_y(iced::Alignment::Center);
 
-    let base_url_input = AdvancedInput::new("Base URL (optional)")
+    let base_url_input = AdvancedInput::new(i18n.tr("settings-base-url"))
         .value(&base_url)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::BaseUrlChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let api_key_input = AdvancedInput::new("API Key")
+    let api_key_input = AdvancedInput::new(i18n.tr("settings-api-key"))
         .value(&api_key)
         .on_input(|s| SettingsMessage::Provider(ProviderMessage::ApiKeyChanged(s)))
         .width(iced::Length::Fill)
@@ -219,13 +252,13 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
 
     let buttons = Row::new()
         .push(
-            Button::new(text("Save"))
+            Button::new(text(save_label))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Provider(ProviderMessage::Save)),
         )
         .push(
-            Button::new(text("Cancel"))
+            Button::new(text(cancel_label))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Provider(ProviderMessage::Cancel)),
@@ -242,7 +275,16 @@ fn render_provider_form(state: &SettingsState) -> Column<'static, SettingsMessag
         .spacing(Spacing::DEFAULT.s)
 }
 
-fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, AppTheme> {
+fn render_model_list(
+    ai_config: &AiConfig,
+    i18n: &I18nManager,
+) -> Column<'static, SettingsMessage, AppTheme> {
+    let edit_label = i18n.tr("settings-edit");
+    let delete_label = i18n.tr("settings-delete");
+    let select_label = i18n.tr("settings-select");
+    let active_label = i18n.tr("settings-active");
+    let unknown = i18n.tr("settings-unknown-provider");
+
     let items: Vec<Element<'static, SettingsMessage, AppTheme>> = ai_config
         .models
         .iter()
@@ -253,7 +295,7 @@ fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, A
                 .iter()
                 .find(|p| p.id == m.provider_id)
                 .map(|p| p.name.clone())
-                .unwrap_or("<unknown>".to_string());
+                .unwrap_or(unknown.to_string());
             let model_id = m.model_id.clone();
             let edit_id = ModelId::from(m.id);
             let delete_id = ModelId::from(m.id);
@@ -261,9 +303,9 @@ fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, A
             let is_selected = ai_config.selected_model_id == Some(m.id);
 
             let select_element: Element<'static, SettingsMessage, AppTheme> = if is_selected {
-                text("Active").into()
+                text(active_label.clone()).into()
             } else {
-                Button::new(text("Select"))
+                Button::new(text(select_label.clone()))
                     .style(button::secondary)
                     .padding(ButtonSize::Small.to_iced_padding())
                     .on_press(SettingsMessage::Model(ModelMessage::Select(select_id)))
@@ -276,13 +318,13 @@ fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, A
                 .push(text(model_id))
                 .push(select_element)
                 .push(
-                    Button::new(text("Edit"))
+                    Button::new(text(edit_label.clone()))
                         .style(button::secondary)
                         .padding(ButtonSize::Small.to_iced_padding())
                         .on_press(SettingsMessage::Model(ModelMessage::Edit(edit_id))),
                 )
                 .push(
-                    Button::new(text("Delete"))
+                    Button::new(text(delete_label.clone()))
                         .style(button::danger)
                         .padding(ButtonSize::Small.to_iced_padding())
                         .on_press(SettingsMessage::Model(ModelMessage::Delete(delete_id))),
@@ -294,10 +336,10 @@ fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, A
         .collect();
 
     Column::new()
-        .push(text("AI Models").size(FontSize::Title.px()))
+        .push(text(i18n.tr("settings-ai-models")).size(FontSize::Title.px()))
         .push(Column::with_children(items).spacing(Spacing::DEFAULT.xs))
         .push(
-            Button::new(text("Add Model"))
+            Button::new(text(i18n.tr("settings-add-model")))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Model(ModelMessage::Add)),
@@ -308,24 +350,28 @@ fn render_model_list(ai_config: &AiConfig) -> Column<'static, SettingsMessage, A
 fn render_model_form(
     state: &SettingsState,
     ai_config: &AiConfig,
+    i18n: &I18nManager,
 ) -> Column<'static, SettingsMessage, AppTheme> {
     let edit = &state.model_edit;
     let title = if edit.is_new {
-        "Add Model"
+        i18n.tr("settings-add-model-title")
     } else {
-        "Edit Model"
+        i18n.tr("settings-edit-model")
     };
 
     let model_name = edit.data.name.clone();
     let model_id_value = edit.data.model_id.clone();
 
-    let name_input = AdvancedInput::new("Model Name")
+    let save_label = i18n.tr("settings-save");
+    let cancel_label = i18n.tr("settings-cancel");
+
+    let name_input = AdvancedInput::new(i18n.tr("settings-model-name"))
         .value(&model_name)
         .on_input(|s| SettingsMessage::Model(ModelMessage::NameChanged(s)))
         .width(iced::Length::Fill)
         .padding(Spacing::DEFAULT.s);
 
-    let model_id_input = AdvancedInput::new("Model ID (e.g. gpt-4)")
+    let model_id_input = AdvancedInput::new(i18n.tr("settings-model-id"))
         .value(&model_id_value)
         .on_input(|s| SettingsMessage::Model(ModelMessage::ModelIdChanged(s)))
         .width(iced::Length::Fill)
@@ -347,7 +393,7 @@ fn render_model_form(
     };
 
     let provider_picker = Row::new()
-        .push(text("Provider:"))
+        .push(text(i18n.tr("settings-provider")))
         .push(
             PickList::new(provider_options, current_provider, |po| {
                 SettingsMessage::Model(ModelMessage::ProviderIdChanged(po.id))
@@ -359,13 +405,13 @@ fn render_model_form(
 
     let buttons = Row::new()
         .push(
-            Button::new(text("Save"))
+            Button::new(text(save_label))
                 .style(button::primary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Model(ModelMessage::Save)),
         )
         .push(
-            Button::new(text("Cancel"))
+            Button::new(text(cancel_label))
                 .style(button::secondary)
                 .padding(ButtonSize::Standard.to_iced_padding())
                 .on_press(SettingsMessage::Model(ModelMessage::Cancel)),

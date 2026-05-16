@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::LogLevel;
+use crate::i18n::LocaleDto;
 use crate::ui::AppTheme;
 
 /// General configuration for file-based config.
@@ -14,4 +15,5 @@ pub struct GeneralConfig {
     pub data_dir: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
     pub theme: Option<AppTheme>,
+    pub locale: Option<LocaleDto>,
 }

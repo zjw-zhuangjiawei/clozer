@@ -11,6 +11,7 @@ pub mod env;
 pub mod error;
 pub mod file;
 
+use crate::i18n::LocaleDto;
 use crate::ui::theme::AppTheme;
 use clap::ValueEnum;
 pub use cli::CliConfig;
@@ -69,6 +70,9 @@ pub struct AppConfig {
     /// UI theme
     pub theme: AppTheme,
 
+    /// UI locale
+    pub locale: LocaleDto,
+
     /// AI configuration
     pub ai: AiConfig,
 }
@@ -80,6 +84,7 @@ impl Default for AppConfig {
             config_file: paths::config_file(),
             log_level: LogLevel::DEFAULT,
             theme: AppTheme::Light,
+            locale: LocaleDto::default(),
             ai: AiConfig::default(),
         }
     }
@@ -134,6 +139,7 @@ impl AppConfig {
                 data_dir: Some(self.data_dir.clone()),
                 log_level: Some(self.log_level),
                 theme: Some(self.theme),
+                locale: Some(self.locale),
             },
             ai: self.ai.clone(),
         }
@@ -199,11 +205,19 @@ impl AppConfig {
             .or(file_config.general.theme)
             .unwrap_or_default();
 
+        // Resolve locale with priority: CLI > env > file > default
+        let locale = cli
+            .locale
+            .or(env.locale)
+            .or(file_config.general.locale)
+            .unwrap_or_default();
+
         tracing::info!(
-            "Configuration loaded: data_dir={:?}, log_level={:?}, theme={:?}",
+            "Configuration loaded: data_dir={:?}, log_level={:?}, theme={:?}, locale={:?}",
             data_dir,
             log_level,
-            theme
+            theme,
+            locale
         );
 
         Self {
@@ -211,6 +225,7 @@ impl AppConfig {
             config_file,
             log_level,
             theme,
+            locale,
             ai: file_config.ai,
         }
     }

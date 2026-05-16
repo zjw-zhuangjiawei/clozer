@@ -38,14 +38,25 @@ impl NavItem {
         &[NavItem::Settings]
     }
 
-    /// Returns the display label for this navigation item.
-    pub fn label(&self) -> &'static str {
+    /// Returns the i18n key for this navigation item's label.
+    pub fn label_key(&self) -> &'static str {
         match self {
-            NavItem::Words => "Words",
-            NavItem::Queue => "Queue",
-            NavItem::Tags => "Tags",
-            NavItem::Practice => "Practice",
-            NavItem::Settings => "Settings",
+            NavItem::Words => "nav-words",
+            NavItem::Queue => "nav-queue",
+            NavItem::Tags => "nav-tags",
+            NavItem::Practice => "nav-practice",
+            NavItem::Settings => "nav-settings",
+        }
+    }
+
+    /// Returns the keyboard shortcut hint for this navigation item.
+    pub fn shortcut_key(&self) -> &'static str {
+        match self {
+            NavItem::Words => "sidebar-shortcut-words",
+            NavItem::Queue => "sidebar-shortcut-queue",
+            NavItem::Tags => "sidebar-shortcut-tags",
+            NavItem::Practice => "sidebar-shortcut-practice",
+            NavItem::Settings => "sidebar-shortcut-settings",
         }
     }
 }
