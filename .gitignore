@@ -4,4 +4,120 @@
 /.clozer-data
 /.clozer.toml
 
+# AI agent configs & instruction files
+CLAUDE.md
+AGENTS.md
+CURSOR.md
+WINDSURF.md
+.cursorrules
+.windsurfrules
+.aider*
+# Claude / Anthropic
+/.claude
+# Cline / Roo Code
+/.cline
+/.roo
+# Cursor
+/.cursor
+# Windsurf / Codeium
+/.windsurf
+/.codeium
+# Continue
+/.continue
+# Google Gemini CLI
+/.gemini
+# Kilo Code
+/.kilocode
+/.kilo
+# Trae (ByteDance)
+/.trae
+# Augment Code
+/.augment
+# OpenAI Codex CLI
+/.codex
+# Qoder
+/.qoder
+# GitHub Copilot
+/.copilot
+/.github/copilot-instructions.md
+# Avante.nvim
+/.avante
+# Amazon Q Developer
+/.amazonq
+# PearAI
+/.pearai
+# Void editor
+/.void
+# Aide / Codestory
+/.codestory
+# OpenCode
+/.opencode
+# Mentat
+/.mentat
+# GPT Pilot
+/.gpt-pilot
+# Sweep AI
+/.sweep
+# Tabnine
+/.tabnine
+# Cody (Sourcegraph)
+/.cody
+/.sourcegraph
+# Replit AI
+/.replit
+# Vercel v0
+/.v0
+# Bolt.new
+/.bolt
+# Lovable
+/.lovable
+# OpenHands (formerly OpenDevin)
+/.openhands
+# Devin (Cognition)
+/.devin
+# Goose AI
+/.goose
+# Codium / Codiumate
+/.codium
+/.codiumate
+# Warp terminal AI
+/.warp
+/.warp-ai
+# Zed editor AI
+/.zed
+# SupeMaven
+/.supermaven
+# Blackbox AI
+/.blackbox
+# Traycer
+/.traycer
+# Kodus
+/.kodus
+# AppMap Navie
+/.appmap
+# Ellipsis
+/.ellipsis
+# GitButler
+/.gitbutler
+# Patched
+/.patched
+# PR Agent (Codium)
+/.pr-agent
+# Greptile
+/.greptile
+# Code Companion
+/.code-companion
+# Cosine
+/.cosine
+# Potpie
+/.potpie
+# Factory
+/.factory
+# Unblocked
+/.unblocked
+# generic
+/.ai
+/.ai-tools
+/.llm
+
 .VSCodeCounter
