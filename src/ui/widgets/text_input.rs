@@ -18,7 +18,7 @@ impl Catalog for AppTheme {
 pub fn default(theme: &AppTheme, status: Status) -> Style {
     let colors = theme.colors();
     let semantic = &colors.semantic;
-    let border_radius = iced::border::radius(BorderRadiusValues::default().md);
+    let border_radius = iced::border::radius(BorderRadiusValues::DEFAULT.md);
 
     match status {
         Status::Disabled => Style {

@@ -885,7 +885,11 @@ where
         let style = theme.style(&self.class, map_status(current_status));
 
         let bounds = layout.bounds();
-        let text_bounds = layout.children().next().unwrap().bounds();
+        let text_bounds = layout
+            .children()
+            .next()
+            .expect("AdvancedInput: text child node missing in layout")
+            .bounds();
 
         renderer.fill_quad(
             renderer::Quad {
@@ -994,7 +998,11 @@ where
 
         let font = self.font.unwrap_or_else(|| renderer.default_font());
         let text_size = self.size.unwrap_or_else(|| renderer.default_size());
-        let text_bounds = layout.children().next().unwrap().bounds();
+        let text_bounds = layout
+            .children()
+            .next()
+            .expect("AdvancedInput: text child node missing during update")
+            .bounds();
 
         update_placeholder_and_ghost::<Renderer>(
             state,
@@ -1116,7 +1124,11 @@ where
                     .is_some_and(|f| f.is_window_focused)
                 {
                     let cursor_position = {
-                        let text_bounds = layout.children().next().unwrap().bounds();
+                        let text_bounds = layout
+                            .children()
+                            .next()
+                            .expect("AdvancedInput: text child node missing for IME bounds")
+                            .bounds();
                         let value_width = state
                             .value_paragraph
                             .raw()

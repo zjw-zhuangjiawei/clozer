@@ -154,9 +154,40 @@ pub enum WordsMessage {
     /// Delete all selected clozes
     ClozesDeleted,
 
+    // Delete confirmation
+    /// Request delete confirmation
+    DeleteRequested(DeleteTarget),
+    /// Confirm delete
+    DeleteConfirmed(DeleteTarget),
+    /// Cancel delete
+    DeleteCancelled,
+
+    // Notifications
+    /// Trigger a notification (converted by compositor to PushNotification)
+    Notify {
+        level: NotificationLevel,
+        message: String,
+    },
+
     // Export operations
     /// Export to plaintext
     ExportPlaintext,
     /// Export failed with error message
     ExportFailed(String),
+}
+
+/// Notification severity level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotificationLevel {
+    Error,
+    Warning,
+    Info,
+}
+
+/// Target of a pending delete confirmation.
+#[derive(Debug, Clone)]
+pub enum DeleteTarget {
+    Word(WordId),
+    Meanings(Vec<MeaningId>),
+    Clozes(Vec<ClozeId>),
 }

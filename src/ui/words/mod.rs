@@ -12,6 +12,6 @@ pub use self::manager::{
     DetailPanelManager, DetailPanelState, ExpansionManager, MeaningEditBuffer, SearchManager,
     SelectionManager, TagDropdownState, TagDropdownTarget, WordEditBuffer,
 };
-pub use self::message::WordsMessage;
+pub use self::message::{DeleteTarget, WordsMessage};
 pub use self::state::WordsState;
 pub use self::update::update;

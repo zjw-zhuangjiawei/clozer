@@ -2,6 +2,7 @@
 
 pub mod compositor;
 pub mod notification;
+pub mod practice;
 
 pub mod design_tokens;
 pub mod layout;

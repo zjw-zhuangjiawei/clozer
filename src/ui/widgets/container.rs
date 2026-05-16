@@ -22,7 +22,7 @@ pub fn card(theme: &AppTheme) -> Style {
         border: iced::Border {
             color: semantic.border.default,
             width: 1.0,
-            radius: BorderRadiusValues::default().lg.into(),
+            radius: BorderRadiusValues::DEFAULT.lg.into(),
         },
         ..Default::default()
     }
@@ -36,7 +36,7 @@ pub fn badge(theme: &AppTheme) -> Style {
         border: iced::Border {
             color: semantic.border.default,
             width: 1.0,
-            radius: BorderRadiusValues::default().sm.into(),
+            radius: BorderRadiusValues::DEFAULT.sm.into(),
         },
         ..Default::default()
     }

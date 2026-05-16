@@ -226,16 +226,20 @@ pub struct BorderRadiusValues {
     pub full: f32,
 }
 
+impl BorderRadiusValues {
+    pub const DEFAULT: Self = Self {
+        none: 0.0,
+        sm: 4.0,
+        md: 6.0,
+        lg: 8.0,
+        xl: 12.0,
+        full: 9999.0,
+    };
+}
+
 impl Default for BorderRadiusValues {
     fn default() -> Self {
-        Self {
-            none: 0.0,
-            sm: 4.0,
-            md: 6.0,
-            lg: 8.0,
-            xl: 12.0,
-            full: 9999.0,
-        }
+        Self::DEFAULT
     }
 }
 

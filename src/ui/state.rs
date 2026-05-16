@@ -3,6 +3,7 @@
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
 use crate::ui::notification::{Notification, NotificationLevel};
+use crate::ui::practice::state::PracticeState;
 use crate::ui::settings::state::SettingsState;
 use crate::ui::tags::state::TagsState;
 use crate::ui::words::state::WordsState;
@@ -17,6 +18,8 @@ pub struct UiState {
     pub words: WordsState,
     /// Tags panel state
     pub tags: TagsState,
+    /// Practice panel state
+    pub practice: PracticeState,
     /// Settings panel state
     pub settings: SettingsState,
     /// Current navigation view
@@ -36,6 +39,7 @@ impl Default for UiState {
         Self {
             words: WordsState::new(),
             tags: TagsState::new(),
+            practice: PracticeState::new(),
             settings: SettingsState::new(),
             current_view: NavItem::default(),
             window_width: 1024,

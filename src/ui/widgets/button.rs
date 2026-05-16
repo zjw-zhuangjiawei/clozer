@@ -23,7 +23,7 @@ fn base_style(bg: Color, text: Color, border: Color) -> Style {
         border: iced::Border {
             color: border,
             width: 1.0,
-            radius: BorderRadiusValues::default().sm.into(),
+            radius: BorderRadiusValues::DEFAULT.sm.into(),
         },
         text_color: text,
         ..Default::default()

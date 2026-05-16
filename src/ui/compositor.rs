@@ -4,6 +4,9 @@ use crate::ui::AppTheme;
 use crate::ui::layout::breakpoint::Breakpoint;
 use crate::ui::nav::NavItem;
 use crate::ui::notification::Notification as NotificationData;
+use crate::ui::practice::{
+    PracticeMessage, PracticeState, update as practice_update, view as practice_view,
+};
 use crate::ui::settings::state::SettingsState;
 use crate::ui::sidebar;
 use crate::ui::state::UiState;
@@ -31,6 +34,7 @@ pub fn view<'a>(state: &'a UiState, model: &'a Model) -> Element<'a, Message, Ap
         }
         NavItem::Queue => crate::ui::queue::view(model).map(Message::Queue),
         NavItem::Tags => crate::ui::tags::view(&state.tags, model).map(Message::Tags),
+        NavItem::Practice => practice_view(&state.practice, model).map(Message::Practice),
         NavItem::Settings => {
             crate::ui::settings::view::view(&state.settings, model).map(Message::Settings)
         }
@@ -67,6 +71,20 @@ pub fn update_words(
     model: &mut Model,
 ) -> Task<Message> {
     crate::ui::words::update(state, message, model).map(|msg| match msg {
+        WordsMessage::Notify { level, message } => {
+            let notification = match level {
+                crate::ui::words::message::NotificationLevel::Error => {
+                    NotificationData::error(0, message)
+                }
+                crate::ui::words::message::NotificationLevel::Warning => {
+                    NotificationData::warning(0, message)
+                }
+                crate::ui::words::message::NotificationLevel::Info => {
+                    NotificationData::info(0, message)
+                }
+            };
+            Message::PushNotification(notification)
+        }
         WordsMessage::ExportFailed(err) => Message::PushNotification(NotificationData::error(
             0,
             format!("Export failed: {}", err),
@@ -87,4 +105,28 @@ pub fn update_settings(
         }
         _ => crate::ui::settings::handlers::update(state, message, _model).map(Message::Settings),
     }
+}
+
+pub fn update_practice(
+    state: &mut PracticeState,
+    message: PracticeMessage,
+    model: &mut Model,
+) -> Task<Message> {
+    practice_update(state, message, model).map(|msg| match msg {
+        PracticeMessage::Notify { level, message } => {
+            let notification = match level {
+                crate::ui::practice::message::NotificationLevel::Error => {
+                    NotificationData::error(0, message)
+                }
+                crate::ui::practice::message::NotificationLevel::Warning => {
+                    NotificationData::warning(0, message)
+                }
+                crate::ui::practice::message::NotificationLevel::Info => {
+                    NotificationData::info(0, message)
+                }
+            };
+            Message::PushNotification(notification)
+        }
+        other => Message::Practice(other),
+    })
 }

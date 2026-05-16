@@ -4,7 +4,7 @@ use crate::models::types::{ClozeId, MeaningId};
 use crate::models::{Meaning, Tag, Word};
 use crate::state::Model;
 use crate::ui::words::manager::{DetailPanelState, TagDropdownTarget};
-use crate::ui::words::message::WordsMessage;
+use crate::ui::words::message::{DeleteTarget, NotificationLevel, WordsMessage};
 use crate::ui::words::state::WordsState;
 use iced::Task;
 
@@ -259,11 +259,19 @@ pub fn update(
                 _ => {}
             }
             state.panel.close();
+            return Task::done(WordsMessage::Notify {
+                level: NotificationLevel::Info,
+                message: "Saved changes".to_string(),
+            });
         }
         WordsMessage::NewWordSaved => {
             let word_buffer = &state.panel.word_buffer;
             let meaning_buffer = &state.panel.meaning_buffer;
-            let word_content = word_buffer.content.trim();
+            let word_content = word_buffer.content.trim().to_string();
+            let language = word_buffer.language.clone();
+            let meaning_def = meaning_buffer.definition.trim().to_string();
+            let meaning_pos = meaning_buffer.pos;
+            let meaning_cefr = meaning_buffer.cefr;
 
             if word_content.is_empty() {
                 state.panel.close();
@@ -279,9 +287,9 @@ pub fn update(
                 return Task::none();
             }
 
-            let word_id = if let Some(ref lang) = word_buffer.language {
+            let word_id = if let Some(ref lang) = language {
                 let word = Word::builder()
-                    .content(word_content.to_string())
+                    .content(word_content.clone())
                     .language(lang.clone())
                     .build();
                 tracing::debug!("Creating word: {} (id={})", word.content, word.id);
@@ -289,19 +297,19 @@ pub fn update(
                 model.word_registry.add(word);
                 id
             } else {
-                let word = Word::builder().content(word_content.to_string()).build();
+                let word = Word::builder().content(word_content.clone()).build();
                 tracing::debug!("Creating word: {} (id={})", word.content, word.id);
                 let id = word.id;
                 model.word_registry.add(word);
                 id
             };
 
-            if !meaning_buffer.definition.trim().is_empty() {
+            if !meaning_def.is_empty() {
                 let meaning = Meaning::builder()
                     .word_id(word_id)
-                    .definition(meaning_buffer.definition.trim().to_string())
-                    .pos(meaning_buffer.pos)
-                    .cefr_level(meaning_buffer.cefr)
+                    .definition(meaning_def)
+                    .pos(meaning_pos)
+                    .cefr_level(meaning_cefr)
                     .build();
 
                 tracing::debug!(
@@ -317,10 +325,16 @@ pub fn update(
 
             state.panel.close();
             state.panel.show_word(word_id);
+            return Task::done(WordsMessage::Notify {
+                level: NotificationLevel::Info,
+                message: format!("Created word \"{}\"", word_content),
+            });
         }
         WordsMessage::MeaningAddSaved => {
             let buffer = &state.panel.meaning_buffer;
-            let definition = buffer.definition.trim();
+            let definition = buffer.definition.trim().to_string();
+            let pos = buffer.pos;
+            let cefr = buffer.cefr;
 
             if definition.is_empty() {
                 state.panel.close();
@@ -328,11 +342,12 @@ pub fn update(
             }
 
             if let DetailPanelState::MeaningCreating { word_id } = state.panel.state() {
+                let word_id = *word_id;
                 let meaning = Meaning::builder()
-                    .word_id(*word_id)
-                    .definition(definition.to_string())
-                    .pos(buffer.pos)
-                    .cefr_level(buffer.cefr)
+                    .word_id(word_id)
+                    .definition(definition.clone())
+                    .pos(pos)
+                    .cefr_level(cefr)
                     .build();
 
                 tracing::debug!(
@@ -344,10 +359,14 @@ pub fn update(
 
                 let meaning_id = meaning.id;
                 model.meaning_registry.add(meaning);
-                model.word_registry.add_meaning(*word_id, meaning_id);
+                model.word_registry.add_meaning(word_id, meaning_id);
 
                 state.panel.close();
                 state.panel.show_meaning(meaning_id);
+                return Task::done(WordsMessage::Notify {
+                    level: NotificationLevel::Info,
+                    message: format!("Added meaning \"{}\"", definition),
+                });
             }
         }
         WordsMessage::EditCancelled => {
@@ -367,23 +386,15 @@ pub fn update(
                     tracing::debug!("Creating word: {} (id={})", word.content, word.id);
                     model.word_registry.add(word);
                     state.search.clear_query();
+                    return Task::done(WordsMessage::Notify {
+                        level: NotificationLevel::Info,
+                        message: format!("Created word \"{}\"", trimmed),
+                    });
                 }
             }
         }
         WordsMessage::WordDeleted(word_id) => {
-            tracing::debug!("Deleting word: {}", word_id);
-            if let Some(word) = model.word_registry.get(word_id) {
-                for meaning_id in &word.meaning_ids {
-                    model.cloze_registry.delete_by_meaning(*meaning_id);
-                }
-            }
-            model.meaning_registry.delete_by_word(word_id);
-            model.word_registry.delete(word_id);
-            if let Some(word) = model.word_registry.get(word_id) {
-                for mid in &word.meaning_ids {
-                    state.selection.remove_meaning(mid);
-                }
-            }
+            state.pending_delete = Some(DeleteTarget::Word(word_id));
         }
         WordsMessage::WordExpanded(word_id) => {
             state.expansion.expand(word_id);
@@ -430,12 +441,21 @@ pub fn update(
         WordsMessage::TagAddedToMeaning { meaning_id, tag_id } => {
             model.meaning_registry.add_tag(meaning_id, tag_id);
             state.panel.close_tag_dropdown();
+            return Task::done(WordsMessage::Notify {
+                level: NotificationLevel::Info,
+                message: "Tag added to meaning".to_string(),
+            });
         }
         WordsMessage::TagAddedToSelected { tag_id } => {
+            let count = state.selection.meaning_count();
             for meaning_id in state.selection.selected_meanings().iter() {
                 model.meaning_registry.add_tag(*meaning_id, tag_id);
             }
             state.panel.close_tag_dropdown();
+            return Task::done(WordsMessage::Notify {
+                level: NotificationLevel::Info,
+                message: format!("Tag added to {} meaning(s)", count),
+            });
         }
         WordsMessage::TagRemovedFromMeaning { meaning_id, tag_id } => {
             model.meaning_registry.remove_tag(meaning_id, tag_id);
@@ -460,6 +480,10 @@ pub fn update(
 
                 model.meaning_registry.add_tag(meaning_id, tag_id);
                 state.panel.close_tag_dropdown();
+                return Task::done(WordsMessage::Notify {
+                    level: NotificationLevel::Info,
+                    message: format!("Created and added tag \"{}\"", trimmed),
+                });
             }
         }
         WordsMessage::TagDropdownClosed => {
@@ -468,8 +492,7 @@ pub fn update(
 
         // Cloze operations
         WordsMessage::ClozeDeleted(cloze_id) => {
-            model.cloze_registry.delete(cloze_id);
-            tracing::debug!("Deleted cloze: {}", cloze_id);
+            state.pending_delete = Some(DeleteTarget::Clozes(vec![cloze_id]));
         }
 
         // Batch operations
@@ -480,40 +503,92 @@ pub fn update(
             }
             tracing::info!("Added {} meanings to queue", count);
             state.selection.clear_all();
+            return Task::done(WordsMessage::Notify {
+                level: NotificationLevel::Info,
+                message: format!("Added {} meaning(s) to queue", count),
+            });
         }
         WordsMessage::MeaningsDeleted => {
-            let count = state.selection.meaning_count();
             let meaning_ids: Vec<MeaningId> = state
                 .selection
                 .selected_meanings()
                 .iter()
                 .copied()
                 .collect();
-
-            for meaning_id in &meaning_ids {
-                let word_id = model.meaning_registry.get(*meaning_id).map(|m| m.word_id);
-
-                if let Some(word_id) = word_id {
-                    model.cloze_registry.delete_by_meaning(*meaning_id);
-                    model.word_registry.remove_meaning(word_id, *meaning_id);
-                    model.meaning_registry.delete(*meaning_id);
-                }
+            if !meaning_ids.is_empty() {
+                state.pending_delete = Some(DeleteTarget::Meanings(meaning_ids));
             }
-
-            tracing::info!("Deleted {} meanings", count);
-            state.selection.clear_all();
         }
         WordsMessage::ClozesDeleted => {
-            let count = state.selection.cloze_count();
             let cloze_ids: Vec<ClozeId> =
                 state.selection.selected_clozes().iter().copied().collect();
-
-            for cloze_id in &cloze_ids {
-                model.cloze_registry.delete(*cloze_id);
+            if !cloze_ids.is_empty() {
+                state.pending_delete = Some(DeleteTarget::Clozes(cloze_ids));
             }
+        }
 
-            tracing::info!("Deleted {} clozes", count);
-            state.selection.clear_clozes();
+        // Delete confirmation
+        WordsMessage::DeleteRequested(target) => {
+            state.pending_delete = Some(target);
+        }
+        WordsMessage::DeleteCancelled => {
+            state.pending_delete = None;
+        }
+        WordsMessage::DeleteConfirmed(target) => {
+            let notify_msg = match &target {
+                DeleteTarget::Word(word_id) => {
+                    tracing::debug!("Deleting word: {}", word_id);
+                    if let Some(word) = model.word_registry.get(*word_id) {
+                        for meaning_id in &word.meaning_ids {
+                            model.cloze_registry.delete_by_meaning(*meaning_id);
+                        }
+                    }
+                    model.meaning_registry.delete_by_word(*word_id);
+                    model.word_registry.delete(*word_id);
+                    if let Some(word) = model.word_registry.get(*word_id) {
+                        for mid in &word.meaning_ids {
+                            state.selection.remove_meaning(mid);
+                        }
+                    }
+                    Some(WordsMessage::Notify {
+                        level: NotificationLevel::Info,
+                        message: "Word deleted".to_string(),
+                    })
+                }
+                DeleteTarget::Meanings(meaning_ids) => {
+                    let count = meaning_ids.len();
+                    for meaning_id in meaning_ids {
+                        let word_id = model.meaning_registry.get(*meaning_id).map(|m| m.word_id);
+                        if let Some(word_id) = word_id {
+                            model.cloze_registry.delete_by_meaning(*meaning_id);
+                            model.word_registry.remove_meaning(word_id, *meaning_id);
+                            model.meaning_registry.delete(*meaning_id);
+                        }
+                    }
+                    tracing::info!("Deleted {} meanings", count);
+                    state.selection.clear_all();
+                    Some(WordsMessage::Notify {
+                        level: NotificationLevel::Info,
+                        message: format!("Deleted {} meaning(s)", count),
+                    })
+                }
+                DeleteTarget::Clozes(cloze_ids) => {
+                    let count = cloze_ids.len();
+                    for cloze_id in cloze_ids {
+                        model.cloze_registry.delete(*cloze_id);
+                    }
+                    tracing::info!("Deleted {} clozes", count);
+                    state.selection.clear_clozes();
+                    Some(WordsMessage::Notify {
+                        level: NotificationLevel::Info,
+                        message: format!("Deleted {} cloze(s)", count),
+                    })
+                }
+            };
+            state.pending_delete = None;
+            if let Some(msg) = notify_msg {
+                return Task::done(msg);
+            }
         }
 
         // Export operations
@@ -545,6 +620,8 @@ pub fn update(
         }
         // Export failure — converted to PushNotification in compositor layer
         WordsMessage::ExportFailed(_) => {}
+        // Notify — consumed by compositor, no local state change needed
+        WordsMessage::Notify { .. } => {}
         // Ignore deprecated messages
         WordsMessage::SearchResultsReady(_) | WordsMessage::TagFilterChanged(_) => {
             tracing::warn!("Received deprecated message: {:?}", message);

@@ -9,6 +9,7 @@
 use crate::ui::words::manager::{
     DetailPanelManager, ExpansionManager, SearchManager, SelectionManager,
 };
+use crate::ui::words::message::DeleteTarget;
 
 /// Complete state for Words panel using Manager pattern.
 #[derive(Debug, Default)]
@@ -23,6 +24,8 @@ pub struct WordsState {
     pub panel: DetailPanelManager,
     /// Last used language tag, pre-filled on next word create
     pub last_language: Option<langtag::LangTagBuf>,
+    /// Pending delete confirmation
+    pub pending_delete: Option<DeleteTarget>,
 }
 
 impl WordsState {

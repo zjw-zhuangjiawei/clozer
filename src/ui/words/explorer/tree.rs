@@ -14,6 +14,18 @@ use iced::{Element, Length};
 
 use super::meaning::build_meaning_node;
 
+fn load_svg_handle(name: &str) -> svg::Handle {
+    assets::get_svg(name)
+        .map(svg::Handle::from_memory)
+        .unwrap_or_else(|| {
+            tracing::warn!(
+                asset = %name,
+                "SVG icon not found, using empty handle"
+            );
+            svg::Handle::from_memory(Vec::new())
+        })
+}
+
 pub fn build_word_tree<'a>(
     words_state: &'a WordsState,
     model: &'a Model,
@@ -48,24 +60,17 @@ pub fn build_word_tree<'a>(
     }
 }
 
-pub fn build_word_node<'a>(
-    words_state: &'a WordsState,
-    model: &'a Model,
-    word: &'a crate::models::Word,
+fn build_expand_icon<'a>(
+    is_expanded: bool,
+    word_id: WordId,
 ) -> Element<'a, WordsMessage, AppTheme> {
-    let is_expanded = words_state.expansion.is_expanded(word.id);
-    let is_selected = words_state.selection.is_word_selected(word);
-    let is_partial = words_state.selection.is_word_partial(word);
-
     let expand_icon_name = if is_expanded {
         "keyboard_arrow_down_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
     } else {
         "keyboard_arrow_right_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg"
     };
-    let expand_icon_handle = assets::get_svg(expand_icon_name)
-        .map(svg::Handle::from_memory)
-        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
-    let expand_icon: Element<'a, WordsMessage, AppTheme> = Button::new(
+    let expand_icon_handle = load_svg_handle(expand_icon_name);
+    Button::new(
         svg(expand_icon_handle)
             .width(Length::Fixed(16.0))
             .height(Length::Fixed(16.0)),
@@ -73,17 +78,21 @@ pub fn build_word_node<'a>(
     .style(button::secondary)
     .padding(ButtonSize::Small.to_iced_padding())
     .on_press(if is_expanded {
-        WordsMessage::WordCollapsed(word.id)
+        WordsMessage::WordCollapsed(word_id)
     } else {
-        WordsMessage::WordExpanded(word.id)
+        WordsMessage::WordExpanded(word_id)
     })
-    .into();
+    .into()
+}
 
-    let checkbox: Element<'a, WordsMessage, AppTheme> = if word.meaning_ids.is_empty() {
+fn build_word_checkbox<'a>(
+    word: &'a crate::models::Word,
+    is_selected: bool,
+    is_partial: bool,
+) -> Element<'a, WordsMessage, AppTheme> {
+    if word.meaning_ids.is_empty() {
         let radio_handle =
-            assets::get_svg("radio_button_unchecked_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-                .map(svg::Handle::from_memory)
-                .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+            load_svg_handle("radio_button_unchecked_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg");
         Button::new(
             svg(radio_handle)
                 .width(Length::Fixed(20.0))
@@ -100,7 +109,19 @@ pub fn build_word_node<'a>(
         )
     } else {
         svg_checkbox(is_selected, WordsMessage::WordToggled(word.id))
-    };
+    }
+}
+
+fn build_word_header_row<'a>(
+    word: &'a crate::models::Word,
+    words_state: &'a WordsState,
+) -> Row<'a, WordsMessage, AppTheme> {
+    let is_expanded = words_state.expansion.is_expanded(word.id);
+    let is_selected = words_state.selection.is_word_selected(word);
+    let is_partial = words_state.selection.is_word_partial(word);
+
+    let expand_icon = build_expand_icon(is_expanded, word.id);
+    let checkbox = build_word_checkbox(word, is_selected, is_partial);
 
     let word_content: Element<'a, WordsMessage, AppTheme> =
         Button::new(Text::new(&word.content).size(FontSize::Subtitle.px()))
@@ -132,35 +153,51 @@ pub fn build_word_node<'a>(
         word_header = word_header.push(badge);
     }
 
-    word_header = word_header
+    word_header
         .push(Space::new())
-        .push(build_word_actions(word.id));
+        .push(build_word_actions(word.id))
+}
+
+fn build_word_expanded_content<'a>(
+    word: &'a crate::models::Word,
+    words_state: &'a WordsState,
+    model: &'a Model,
+) -> Column<'a, WordsMessage, AppTheme> {
+    let mut content = Column::new()
+        .push(build_word_header_row(word, words_state))
+        .push(rule::horizontal(1))
+        .spacing(Spacing::DEFAULT.xs2);
+
+    content = content.push(
+        Button::new(Text::new("+ Add Meaning"))
+            .style(button::primary)
+            .padding(ButtonSize::Medium.to_iced_padding())
+            .on_press(WordsMessage::MeaningAddStarted { word_id: word.id }),
+    );
+
+    for meaning_id in &word.meaning_ids {
+        if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
+            content = content.push(build_meaning_node(words_state, model, meaning));
+        }
+    }
+
+    content
+}
+
+pub fn build_word_node<'a>(
+    words_state: &'a WordsState,
+    model: &'a Model,
+    word: &'a crate::models::Word,
+) -> Element<'a, WordsMessage, AppTheme> {
+    let is_expanded = words_state.expansion.is_expanded(word.id);
 
     if is_expanded {
-        let mut content = Column::new()
-            .push(word_header)
-            .push(rule::horizontal(1))
-            .spacing(Spacing::DEFAULT.xs2);
-
-        content = content.push(
-            Button::new(Text::new("+ Add Meaning"))
-                .style(button::primary)
-                .padding(ButtonSize::Medium.to_iced_padding())
-                .on_press(WordsMessage::MeaningAddStarted { word_id: word.id }),
-        );
-
-        for meaning_id in &word.meaning_ids {
-            if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-                content = content.push(build_meaning_node(words_state, model, meaning));
-            }
-        }
-
-        Container::new(content)
+        Container::new(build_word_expanded_content(word, words_state, model))
             .padding(Spacing::DEFAULT.s)
             .style(card)
             .into()
     } else {
-        Container::new(word_header)
+        Container::new(build_word_header_row(word, words_state))
             .padding(Spacing::DEFAULT.s)
             .style(card)
             .into()
@@ -168,9 +205,7 @@ pub fn build_word_node<'a>(
 }
 
 pub fn build_word_actions<'a>(word_id: WordId) -> Element<'a, WordsMessage, AppTheme> {
-    let delete_icon_handle = assets::get_svg("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg")
-        .map(svg::Handle::from_memory)
-        .unwrap_or_else(|| svg::Handle::from_memory(Vec::new()));
+    let delete_icon_handle = load_svg_handle("delete_24dp_000000_FILL0_wght400_GRAD0_opsz24.svg");
     let delete_icon = svg(delete_icon_handle)
         .width(Length::Fixed(16.0))
         .height(Length::Fixed(16.0));

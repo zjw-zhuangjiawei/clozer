@@ -60,6 +60,25 @@ impl CefrLevelOption {
     }
 }
 
+fn try_meaning_view<'a>(
+    meaning_id: crate::models::types::MeaningId,
+    model: &'a Model,
+) -> Option<Element<'a, WordsMessage, AppTheme>> {
+    let meaning = model.meaning_registry.get(meaning_id)?;
+    let word = model.word_registry.get(meaning.word_id)?;
+    Some(meaning_detail_view(meaning, word, model))
+}
+
+fn try_cloze_view<'a>(
+    cloze_id: crate::models::types::ClozeId,
+    model: &'a Model,
+) -> Option<Element<'a, WordsMessage, AppTheme>> {
+    let cloze = model.cloze_registry.get(cloze_id)?;
+    let meaning = model.meaning_registry.get(cloze.meaning_id)?;
+    let word = model.word_registry.get(meaning.word_id)?;
+    Some(cloze_detail_view(cloze_id, cloze, meaning, word))
+}
+
 pub fn view<'a>(
     state: &'a DetailPanelState,
     word_buffer: &'a WordEditBuffer,
@@ -71,40 +90,18 @@ pub fn view<'a>(
     match state {
         DetailPanelState::Empty => placeholder_view(),
 
-        DetailPanelState::WordView { word_id } => {
-            if let Some(word) = model.word_registry.get(*word_id) {
-                word_detail_view(word, model)
-            } else {
-                placeholder_view()
-            }
-        }
+        DetailPanelState::WordView { word_id } => model
+            .word_registry
+            .get(*word_id)
+            .map(|word| word_detail_view(word, model))
+            .unwrap_or_else(placeholder_view),
 
         DetailPanelState::MeaningView { meaning_id } => {
-            if let Some(meaning) = model.meaning_registry.get(*meaning_id) {
-                if let Some(word) = model.word_registry.get(meaning.word_id) {
-                    meaning_detail_view(meaning, word, model)
-                } else {
-                    placeholder_view()
-                }
-            } else {
-                placeholder_view()
-            }
+            try_meaning_view(*meaning_id, model).unwrap_or_else(placeholder_view)
         }
 
         DetailPanelState::ClozeView { cloze_id } => {
-            if let Some(cloze) = model.cloze_registry.get(*cloze_id) {
-                if let Some(meaning) = model.meaning_registry.get(cloze.meaning_id) {
-                    if let Some(word) = model.word_registry.get(meaning.word_id) {
-                        cloze_detail_view(*cloze_id, cloze, meaning, word)
-                    } else {
-                        placeholder_view()
-                    }
-                } else {
-                    placeholder_view()
-                }
-            } else {
-                placeholder_view()
-            }
+            try_cloze_view(*cloze_id, model).unwrap_or_else(placeholder_view)
         }
 
         DetailPanelState::WordCreating => word_form(
@@ -161,7 +158,7 @@ pub fn view<'a>(
     }
 }
 
-fn placeholder_view() -> Element<'static, WordsMessage, AppTheme> {
+fn placeholder_view<'a>() -> Element<'a, WordsMessage, AppTheme> {
     Column::new().into()
 }
 
@@ -177,13 +174,25 @@ fn detail_panel<'a>(
 }
 
 fn build_svg_icon(name: &str, size: f32) -> Element<'static, WordsMessage, AppTheme> {
-    let handle = assets::get_svg(name)
-        .map(iced::widget::svg::Handle::from_memory)
-        .unwrap_or_else(|| iced::widget::svg::Handle::from_memory(Vec::new()));
-    iced::widget::svg(handle)
-        .width(iced::Length::Fixed(size))
-        .height(iced::Length::Fixed(size))
-        .into()
+    match assets::get_svg(name) {
+        Some(data) => iced::widget::svg(iced::widget::svg::Handle::from_memory(data))
+            .width(iced::Length::Fixed(size))
+            .height(iced::Length::Fixed(size))
+            .into(),
+        None => {
+            tracing::warn!(
+                asset = %name,
+                "SVG icon not found, using fallback text"
+            );
+            iced::widget::Text::new("?")
+                .size(size)
+                .width(iced::Length::Fixed(size))
+                .height(iced::Length::Fixed(size))
+                .align_x(iced::Alignment::Center)
+                .align_y(iced::Alignment::Center)
+                .into()
+        }
+    }
 }
 
 fn build_header_row<'a>(

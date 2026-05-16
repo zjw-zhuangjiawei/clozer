@@ -95,6 +95,11 @@ impl App {
                     .map(Message::Tags),
             },
 
+            // Practice panel
+            Message::Practice(msg) => {
+                compositor::update_practice(&mut self.ui.practice, msg, &mut self.model)
+            }
+
             // Settings panel
             Message::Settings(msg) => {
                 compositor::update_settings(&mut self.ui.settings, msg, &mut self.model)

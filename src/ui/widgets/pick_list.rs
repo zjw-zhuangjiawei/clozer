@@ -30,7 +30,7 @@ fn base_style(
         border: iced::Border {
             color: border_color,
             width: 1.0,
-            radius: BorderRadiusValues::default().sm.into(),
+            radius: BorderRadiusValues::DEFAULT.sm.into(),
         },
     }
 }

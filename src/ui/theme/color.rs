@@ -126,7 +126,7 @@ impl ColorScale {
                         Color::from_rgb(c, c, c)
                     })
                     .collect_array()
-                    .unwrap()
+                    .expect("RGB color scale must produce exactly 10 colors")
             }
             ColorScaleSpace::Oklch => {
                 let base_srgb = Srgb::<f32>::from_iced(base);
@@ -200,7 +200,7 @@ impl ColorScale {
                         oklch.into_iced()
                     })
                     .collect_array()
-                    .unwrap()
+                    .expect("OKLCH color scale must produce exactly 10 colors")
             }
         };
 

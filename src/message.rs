@@ -7,6 +7,7 @@ use crate::state::QueueGenerationResult;
 use crate::ui::AppTheme;
 use crate::ui::nav::NavItem;
 use crate::ui::notification::Notification;
+use crate::ui::practice::PracticeMessage;
 use crate::ui::queue::QueueMessage;
 use crate::ui::settings::SettingsMessage;
 use crate::ui::tags::TagsMessage;
@@ -26,6 +27,9 @@ pub enum Message {
 
     // Tags panel
     Tags(TagsMessage),
+
+    // Practice panel
+    Practice(PracticeMessage),
 
     // Settings panel
     Settings(SettingsMessage),

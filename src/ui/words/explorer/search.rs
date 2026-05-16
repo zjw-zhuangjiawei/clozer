@@ -50,22 +50,20 @@ pub fn build_search_bar<'a>(
     .width(sort_width)
     .placeholder("Sort");
 
-    let clear_btn = if words_state.search.has_active_filters() {
-        Button::new(Text::new("Clear"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-            .on_press(WordsMessage::FiltersCleared)
-    } else {
-        Button::new(Text::new("Clear"))
-            .style(button::secondary)
-            .padding(ButtonSize::Standard.to_iced_padding())
-    };
-
-    Row::new()
+    let mut row = Row::new()
         .push(search_with_ghost)
         .push(sort_picker)
-        .push(clear_btn)
         .spacing(Spacing::DEFAULT.s2)
-        .align_y(iced::Alignment::Center)
-        .into()
+        .align_y(iced::Alignment::Center);
+
+    if words_state.search.has_active_filters() {
+        row = row.push(
+            Button::new(Text::new("Clear"))
+                .style(button::secondary)
+                .padding(ButtonSize::Standard.to_iced_padding())
+                .on_press(WordsMessage::FiltersCleared),
+        );
+    }
+
+    row.into()
 }

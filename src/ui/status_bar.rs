@@ -2,50 +2,57 @@
 
 use crate::message::Message;
 use crate::ui::notification::{Notification, NotificationLevel};
-use crate::ui::theme::AppTheme;
+use crate::ui::theme::{AppTheme, Spacing};
 use crate::ui::widgets::button;
-use iced::widget::{Button, Container, Row, Text};
+use iced::widget::{Button, Column, Container, Row, Text};
 use iced::{Alignment, Element, Length};
 
-/// Renders a persistent status bar. Shows the first active notification.
+/// Renders a persistent status bar. Shows all active notifications stacked.
 pub fn status_bar<'a>(notifications: &'a [Notification]) -> Element<'a, Message, AppTheme> {
-    let spacing = 8.0;
-    let padding = [4.0, 12.0];
-    let height = 32.0;
+    let notification_spacing = Spacing::DEFAULT.xxs;
+    let padding = [Spacing::DEFAULT.xs, Spacing::DEFAULT.m];
+    let height = 28.0;
 
-    if let Some(n) = notifications.first() {
-        let icon = match n.level {
-            NotificationLevel::Error => "\u{2715}",
-            NotificationLevel::Warning => "\u{26A0}",
-            NotificationLevel::Info => "\u{2139}",
-        };
-
-        Container::new(
-            Row::new()
-                .push(Text::new(icon))
-                .push(Text::new(&n.message).width(Length::Fill))
-                .push(
-                    Button::new(Text::new("\u{2715}"))
-                        .style(button::secondary)
-                        .padding(4)
-                        .on_press(Message::DismissNotification(n.id)),
-                )
-                .spacing(spacing)
-                .align_y(Alignment::Center),
-        )
-        .style(move |theme: &AppTheme| status_style(theme, n.level))
-        .padding(padding)
-        .width(Length::Fill)
-        .height(height)
-        .align_y(Alignment::Center)
-        .into()
-    } else {
-        Container::new(Row::new())
+    if notifications.is_empty() {
+        return Container::new(Row::new())
             .style(|theme: &AppTheme| empty_style(theme))
             .width(Length::Fill)
             .height(height)
-            .into()
+            .into();
     }
+
+    let items: Vec<Element<'a, Message, AppTheme>> = notifications
+        .iter()
+        .map(|n| {
+            let icon = match n.level {
+                NotificationLevel::Error => "\u{2715}",
+                NotificationLevel::Warning => "\u{26A0}",
+                NotificationLevel::Info => "\u{2139}",
+            };
+
+            Container::new(
+                Row::new()
+                    .push(Text::new(icon))
+                    .push(Text::new(&n.message).width(Length::Fill))
+                    .push(
+                        Button::new(Text::new("\u{2715}"))
+                            .style(button::secondary)
+                            .padding(Spacing::DEFAULT.xs)
+                            .on_press(Message::DismissNotification(n.id)),
+                    )
+                    .spacing(notification_spacing)
+                    .align_y(Alignment::Center),
+            )
+            .style(move |theme: &AppTheme| status_style(theme, n.level))
+            .padding(padding)
+            .width(Length::Fill)
+            .height(height)
+            .align_y(Alignment::Center)
+            .into()
+        })
+        .collect();
+
+    Column::with_children(items).into()
 }
 
 fn status_style(theme: &AppTheme, level: NotificationLevel) -> iced::widget::container::Style {

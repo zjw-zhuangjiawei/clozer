@@ -7,23 +7,30 @@ pub enum NavItem {
     Words,
     Queue,
     Tags,
+    Practice,
     Settings,
 }
 
 impl NavItem {
     /// Returns all navigation items in display order.
-    pub fn all() -> &'static [NavItem; 4] {
+    pub fn all() -> &'static [NavItem; 5] {
         &[
             NavItem::Words,
             NavItem::Queue,
             NavItem::Tags,
+            NavItem::Practice,
             NavItem::Settings,
         ]
     }
 
     /// Primary navigation items (main application views).
-    pub fn main() -> &'static [NavItem; 3] {
-        &[NavItem::Words, NavItem::Queue, NavItem::Tags]
+    pub fn main() -> &'static [NavItem; 4] {
+        &[
+            NavItem::Words,
+            NavItem::Queue,
+            NavItem::Tags,
+            NavItem::Practice,
+        ]
     }
 
     /// Secondary navigation items (utility/views).
@@ -37,6 +44,7 @@ impl NavItem {
             NavItem::Words => "Words",
             NavItem::Queue => "Queue",
             NavItem::Tags => "Tags",
+            NavItem::Practice => "Practice",
             NavItem::Settings => "Settings",
         }
     }

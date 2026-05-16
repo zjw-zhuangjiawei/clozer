@@ -10,7 +10,7 @@ use crate::ui::nav::NavItem;
 use crate::ui::state::UiState;
 use crate::ui::theme::{AppTheme, BorderRadiusValues};
 use iced::widget::{Button, Column, Container, Row, Space, Text, Tooltip, tooltip};
-use iced::{Alignment, Element, Length, Padding};
+use iced::{Alignment, Element, Font, Length, Padding};
 
 /// Build the full sidebar panel for the current state.
 /// Returns a no-op element if the bottom bar is being used instead.
@@ -60,13 +60,15 @@ pub fn sidebar<'a>(state: &'a UiState, breakpoint: Breakpoint) -> Element<'a, Me
 
 /// Brand header at the top of the sidebar.
 fn sidebar_header<'a>(expanded: bool) -> Element<'a, Message, AppTheme> {
+    let brand_font = Font {
+        weight: iced::font::Weight::Bold,
+        family: iced::font::Family::SansSerif,
+        ..Default::default()
+    };
     if expanded {
         Container::new(
             Text::new("clozer")
-                .font(iced::Font {
-                    weight: iced::font::Weight::Bold,
-                    ..Default::default()
-                })
+                .font(brand_font)
                 .size(FontSize::Title.px()),
         )
         .padding([Spacing::DEFAULT.l, Spacing::DEFAULT.s])
@@ -75,10 +77,7 @@ fn sidebar_header<'a>(expanded: bool) -> Element<'a, Message, AppTheme> {
     } else {
         Container::new(
             Text::new("C")
-                .font(iced::Font {
-                    weight: iced::font::Weight::Bold,
-                    ..Default::default()
-                })
+                .font(brand_font)
                 .size(FontSize::Title.px())
                 .align_x(Alignment::Center)
                 .width(Length::Fill),
@@ -100,17 +99,20 @@ fn nav_button<'a>(
     let icon = nav_icon(item, icon_size);
     let label = item.label();
 
+    let label_font = Font {
+        weight: if is_active {
+            iced::font::Weight::Semibold
+        } else {
+            iced::font::Weight::Normal
+        },
+        family: iced::font::Family::SansSerif,
+        ..Default::default()
+    };
+
     let content: Element<'a, Message, AppTheme> = if expanded {
         Row::new()
             .push(icon)
-            .push(Text::new(label).size(FontSize::Body.px()).font(iced::Font {
-                weight: if is_active {
-                    iced::font::Weight::Semibold
-                } else {
-                    iced::font::Weight::Normal
-                },
-                ..Default::default()
-            }))
+            .push(Text::new(label).size(FontSize::Body.px()).font(label_font))
             .push(Space::new().width(Length::Fill))
             .push(keyboard_hint(item))
             .spacing(Spacing::DEFAULT.s)
@@ -143,6 +145,7 @@ fn nav_icon<'a>(item: NavItem, size: f32) -> Element<'a, Message, AppTheme> {
         NavItem::Words => "\u{1F4DD}",
         NavItem::Queue => "\u{1F4CB}",
         NavItem::Tags => "\u{1F3F7}\u{FE0F}",
+        NavItem::Practice => "\u{1F3AF}",
         NavItem::Settings => "\u{2699}\u{FE0F}",
     };
     Text::new(icon_text)
@@ -157,7 +160,8 @@ fn keyboard_hint<'a>(item: NavItem) -> Element<'a, Message, AppTheme> {
         NavItem::Words => "Ctrl+1",
         NavItem::Queue => "Ctrl+2",
         NavItem::Tags => "Ctrl+3",
-        NavItem::Settings => "Ctrl+4",
+        NavItem::Practice => "Ctrl+4",
+        NavItem::Settings => "Ctrl+5",
     };
     Text::new(shortcut).size(FontSize::Caption.px()).into()
 }
@@ -181,7 +185,7 @@ fn nav_button_style(
     move |theme: &AppTheme, status: iced::widget::button::Status| {
         let colors = theme.colors();
         let semantic = &colors.semantic;
-        let radius = BorderRadiusValues::default();
+        let radius = BorderRadiusValues::DEFAULT;
 
         let bg = match (is_active, status) {
             (true, _) => semantic.surface.raised,
